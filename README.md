@@ -140,7 +140,7 @@ Written for Linux and macOS (bash, POSIX find); CI runs on Linux.
 bash tests/run.sh
 ```
 
-Covers the shell parts: darkmoon's transcript extractor and read-only hook, velka's digest and collector, `install.sh`, and the agent-to-hook wiring. CI runs the same suite on every push that touches them.
+Covers the shell parts: darkmoon's transcript extractor and read-only hook, velka's digest and collector, `install.sh`, and the agent-to-hook wiring. CI runs the same suite on every push that touches them, and scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks) on every push.
 
 Skills themselves are prompts, so they are tested by running them on real inputs. `/kiln` checks structure, `/jury` checks consistency.
 
