@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # darkmoon-readonly.sh - PreToolUse hook for the darkmoon-skeptic agent: allow read-only Bash only.
 # Exit 2 blocks the call; stderr is shown to the agent as the reason.
-# ponytail: allowlist tripwire, not a sandbox - writes hidden inside quoted awk/jq programs,
+# An allowlist tripwire, not a sandbox - writes hidden inside quoted awk/jq programs,
 # sed w/e commands, uniq's output-file arg, and mktemp -p are not caught.
 # Upgrade path: run the skeptic in a read-only container.
 

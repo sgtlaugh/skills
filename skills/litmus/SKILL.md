@@ -41,7 +41,6 @@ Pick the cheapest deterministic check that decides the claim, **run it, and keep
 - **`grep`/`rg`** for symbols, callers, imports, string usage, `except`/`catch` clauses, flag reads. The workhorse.
 - **AST / language tooling** when text search is ambiguous (overloaded names, scoping) - `ast.grep`-style or the repo's own tooling.
 - **A command's output** when the claim is about behavior of a tool/config (`--help`, a config dump) and it's safe/read-only.
-- **graphify out** *only if* a current graph exists for the repo - query it for callers/paths as an accelerator. It's never a substitute for live grep when freshness is uncertain; prefer live search for the verdict.
 - **Authoritative web doc** - *external-factual claims only.* `WebFetch` the official doc / changelog / release-notes / spec (`WebSearch` to find it) and **quote the exact line.** **Authoritative sources ONLY** - a blog / StackOverflow / forum is NOT evidence (the eyeball-bluff one step removed); if that's all there is → `Can't-determine`. **Pin the version**: fetch the doc for the *claimed* version, quote it with version + date (deprecations move). **Never assert from training memory** - it's stale on versions; fetch or `Can't-determine`.
 
 Rules that make the check trustworthy:

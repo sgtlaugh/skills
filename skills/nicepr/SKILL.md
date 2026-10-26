@@ -128,7 +128,7 @@ Adapt to PR size:
 
 ### Writing style
 
-Follow the persona from `~/.claude/CLAUDE.md` - direct, evidence-first, no filler. Write like a human engineer, not an AI. The #1 rule: if it sounds like AI wrote it, rewrite it.
+Follow the persona in the user's CLAUDE.md if it defines one; either way: direct, evidence-first, no filler. Write like a human engineer, not an AI. The #1 rule: if it sounds like AI wrote it, rewrite it.
 
 Humor is welcome when it fits naturally - a witty commit reference, a self-deprecating note about a gnarly fix, a short quip in the Why section. Never forced, never unprofessional. If you have to try to be funny, skip it.
 
