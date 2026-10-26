@@ -29,7 +29,7 @@ check "hook is linked" '[ -L "$H/.claude/hooks/darkmoon-readonly.sh" ]'
 check "existing file backed up, not lost" 'grep -q hand-edited "$H/.claude/skills/darkmoon/SKILL.md.bak"'
 check "dangling link and its empty dir pruned" '[ ! -e "$H/.claude/skills/retired-skill" ]'
 check "services.md seeded from the template" 'cmp -s "$REPO/services.example.md" "$H/.config/claude-skills/services.md"'
-check "credentials.json created mode 600" '[ "$(stat -c %a "$H/.config/claude-skills/credentials.json")" = 600 ]'
+check "credentials.json created mode 600" '[ "$(stat -c %a "$H/.config/claude-skills/credentials.json" 2>/dev/null || stat -f %Lp "$H/.config/claude-skills/credentials.json")" = 600 ]'
 
 echo '{"jiraApiToken": "estus-flask"}' > "$H/.config/claude-skills/credentials.json"
 echo "# my catalog" > "$H/.config/claude-skills/services.md"

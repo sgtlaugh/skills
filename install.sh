@@ -23,7 +23,7 @@ for kind in skills agents hooks; do
         ln -sf "$src" "$dest"
     done
     # A file deleted from the repo leaves a dangling link behind
-    find "$HOME/.claude/$kind" -xtype l -delete
+    find "$HOME/.claude/$kind" -type l ! -exec test -e {} \; -delete
     find "$HOME/.claude/$kind" -mindepth 1 -type d -empty -delete
     echo "  $kind ✓"
 done
