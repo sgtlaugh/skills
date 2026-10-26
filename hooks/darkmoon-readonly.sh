@@ -67,6 +67,6 @@ while read -r seg; do
             esac ;;
         *) block "'$w' is not in the read-only allowlist" ;;
     esac
-done < <(printf '%s\n' "$stripped" | sed -E 's/\|\||&&|[|;&]/\n/g')
+done < <(printf '%s\n' "$stripped" | awk '{ gsub(/\|\||&&|[|;&]/, "\n"); print }')
 
 exit 0
