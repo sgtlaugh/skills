@@ -49,7 +49,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 
 **`/solaire`** - grounded research, before answering
 
-    /solaire <question>           # answer under six fixed checks
+    /solaire <question>           # answer under seven fixed checks
 
 ## Building and debugging
 
@@ -147,5 +147,5 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 - **Review, then describe.** `/occam` before committing, `/nicepr --create` to open the PR.
 - **Doubt the confident answer.** When a response sounds too sure, `/darkmoon` it.
 - **Spec loop.** `/forge` drafts, `/gadfly` attacks, you decide, repeat until no blockers remain.
-- **High stakes, more runs.** `/jury aristarchus <PR> --n 3` shows which findings were consistent and which were luck.
+- **High stakes, more runs.** `/jury aristarchus <PR> --n 3 --headless` shows which findings were consistent and which were luck.
 - **After editing a skill,** `/kiln` it before you commit. Don't you dare go hollow.

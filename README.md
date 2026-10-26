@@ -5,7 +5,7 @@
 
 > *Liar ahead. Therefore, try grep.*
 
-Claude Code skills that make the agent prove it. Every verdict ships with its evidence (a grep, a query, a `file:line`) or says `Can't-determine`. Reviews run in a fresh context so the author's reasoning can't wave its own work through. Everything is read-only unless you ask for a write.
+Claude Code skills that make the agent prove it. Every verdict ships with its evidence (a grep, a query, a `file:line`) or says `Can't-determine`. Reviews run in a fresh context so the author's reasoning can't wave its own work through. Review and investigation skills are read-only; the ones that build (bonfire, forge, nicepr `--create`, jira create) write only what you asked for.
 
 ## Contents
 
@@ -44,7 +44,7 @@ Restart Claude Code, then type `/` to see the skills. Usage patterns for each ar
 |---|---|
 | [`/darkmoon`](skills/darkmoon/SKILL.md) | Summons an independent skeptic to challenge the last answer. Each claim is upheld, refuted with evidence, or marked can't-determine. It never invents a counter-argument |
 | [`/litmus`](skills/litmus/SKILL.md) | Settles one specific claim against the code: Confirmed, Refuted or Can't-determine, with the deterministic evidence shown |
-| [`/solaire`](skills/solaire/SKILL.md) | Run it *before* a research or feasibility question. Six fixed checks keep the answer grounded the first time. Jolly cooperation \[T]/ |
+| [`/solaire`](skills/solaire/SKILL.md) | Run it *before* a research or feasibility question. Seven fixed checks keep the answer grounded the first time. Jolly cooperation \[T]/ |
 
 **Building and debugging**
 
@@ -93,15 +93,17 @@ flowchart LR
     firewatch --> jira
     aristarchus --> darkmoon
     aristarchus --> fathom
+    aristarchus --> jira
     forge --> gadfly
     nicepr --> jira
+    nicepr -. optional .-> humanize
     darkmoon --> skeptic([darkmoon-skeptic agent])
 
     classDef verifier fill:#4c3a72,stroke:#2e2347,color:#fff
     class darkmoon,skeptic verifier
 ```
 
-darkmoon spawns the `darkmoon-skeptic` agent in a fresh context. The agent runs behind a `PreToolUse` hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) that allows only read commands, so a skeptic can look but can't touch.
+darkmoon spawns the `darkmoon-skeptic` agent in a fresh context. The agent runs behind a `PreToolUse` hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) that blocks anything outside a read-command allowlist, so a skeptic can look but not touch. It is a tripwire, not a sandbox.
 
 ## Configuration
 
@@ -113,9 +115,9 @@ Two files live in `~/.config/claude-skills/`. `install.sh` creates both from the
 |---|---|---|
 | `datadogPAT`, `datadogSite` | `/firewatch` | Datadog → Personal Access Tokens (read scopes); site such as `datadoghq.com` or `datadoghq.eu` |
 | `jenkinsUser`, `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
-| `jiraApiToken`, `jiraBaseUrl`, `jiraEmail` | `/jira`, `/gadfly`, `/duck`, `/forge`, `/nicepr` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens); your site URL and email |
+| `jiraApiToken`, `jiraBaseUrl`, `jiraEmail` | `/jira`, `/gadfly`, `/duck`; others through `/jira` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens); your site URL and email |
 | `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management (read access) |
-| `sentryAuthToken`, `sentryOrg` | `/sentry` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`); your org slug |
+| `sentryAuthToken`, `sentryOrg` | `/sentry`; triage and firewatch through it | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`); your org slug |
 | `opsgenieApiBase`, `sentryApiBase` | optional | Only for an EU Opsgenie account or a self-hosted Sentry. Defaults: `https://api.opsgenie.com`, `https://sentry.io/api/0` |
 
 **`services.md`** is the service catalog, the facts about *your* systems that sentry, triage and firewatch need: which repo a Sentry project lives in, your log search skill, alert patterns, Jenkins and Datadog naming, health-check queries. Fill in what applies and leave the rest. A skill that needs a missing value asks instead of guessing. See [`services.example.md`](services.example.md).
@@ -128,11 +130,12 @@ Skills that need no config work right after install.
 |---|---|
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | everything |
 | [jq](https://jqlang.github.io/jq/) | install, darkmoon, velka, and every skill that calls an API |
-| [gh](https://cli.github.com/) | PR and code-history work: aristarchus, nicepr, occam, triage, sentry, litmus |
+| [gh](https://cli.github.com/) | PR and code-history work: aristarchus, nicepr, triage, sentry, firewatch, litmus |
 | curl | the API skills |
 | [pandoc](https://pandoc.org/) | document conversion in jira, gadfly, forge, dialectic |
+| python + [pytest](https://pytest.org/) | bonfire, and duck's `--quack` repro |
 
-Written for Linux and macOS (bash, POSIX find); CI runs on Linux.
+Written for Linux and macOS (bash 3.2+, GNU or BSD find); CI runs on Linux.
 
 ## Tests
 
