@@ -1,0 +1,4 @@
+{"type":"user","origin":{"kind":"human"},"message":{"role":"user","content":"<div class=\"owl\"> renders twice after the 3am power cut, why?"}}
+{"type":"user","origin":{"kind":"human"},"message":{"role":"user","content":"Why is caveman mode eating my commit messages again?"}}
+{"type":"user","origin":{"kind":"human"},"message":{"role":"user","content":"<local-command-stdout>owl census: 42</local-command-stdout>"}}
+{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Looking."}],"usage":{"input_tokens":1,"output_tokens":1}}}

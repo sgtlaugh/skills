@@ -1,0 +1,2 @@
+{"type":"user","message":{"content":"Hello world"},"sessionId":"test-nodm","cwd":"/tmp","timestamp":"2026-01-01T00:00:00Z"}
+{"type":"assistant","message":{"id":"msg1","content":[{"type":"text","text":"Hi there."}],"usage":{"input_tokens":10,"output_tokens":5}},"sessionId":"test-nodm","timestamp":"2026-01-01T00:00:01Z"}

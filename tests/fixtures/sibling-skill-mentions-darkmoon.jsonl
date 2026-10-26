@@ -1,0 +1,5 @@
+{"type":"user","message":{"content":"<command-message>solaire</command-message>\n<command-name>/solaire</command-name>\n<command-args>Should we shard the order-events table by customer?</command-args>"}}
+{"type":"user","message":{"content":[{"type":"text","text":"Base directory for this skill: /home/user/.claude/skills/solaire\n\nThis is the proactive complement to darkmoon's reactive skeptic."}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Recommendation: do not shard; hot partitions come from the order-id key, not the customer."}]}}
+{"type":"user","message":{"content":"<command-message>darkmoon</command-message>\n<command-name>/darkmoon</command-name>"}}
+{"type":"user","message":{"content":[{"type":"text","text":"Base directory for this skill: /home/user/.claude/skills/darkmoon\n\n# /darkmoon"}]}}

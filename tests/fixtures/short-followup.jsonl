@@ -1,0 +1,5 @@
+{"type":"user","message":{"content":"Walk me through how the thumbnail service caches resized images in Redis."}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"It keys each image by a hash of the URL and size, with a 7-day TTL."}]}}
+{"type":"user","message":{"content":"Is that write race-safe?"}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"Yes - the writes are last-writer-wins and every resize is deterministic."}]}}
+{"type":"user","message":{"content":"<command-message>darkmoon</command-message>\n<command-name>/darkmoon</command-name>"}}
