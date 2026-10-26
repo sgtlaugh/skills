@@ -191,7 +191,7 @@ echo ""
 
 # Extract ALL answer lines (full response chain)
 echo "=== ANSWER ==="
-echo "$TARGETS" | grep -E "^(answer|followup)" | while read -r kind line; do
+echo "$TARGETS" | { grep -E "^(answer|followup)" || true; } | while read -r kind line; do
     if [ "$kind" = "followup" ]; then
         echo "[User follow-up]"
         extract_text "$line"

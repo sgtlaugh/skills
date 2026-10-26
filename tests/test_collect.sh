@@ -30,6 +30,8 @@ TMPROOT=$(mktemp -d)
 TMPPROJECT="$TMPROOT/test-project"
 mkdir -p "$TMPPROJECT"
 cp "$FIX/basic-session.jsonl" "$TMPPROJECT/session-hobbit.jsonl"
+# bash 3.2 compares -nt in whole seconds; an old mtime keeps the cache check from racing the copy
+touch -t 202601050000 "$TMPPROJECT/session-hobbit.jsonl"
 
 export VELKA_DIGDIR="$TMPROOT/digests"
 

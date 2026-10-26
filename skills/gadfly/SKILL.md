@@ -59,7 +59,7 @@ curl -sS --fail-with-body "$JIRA_URL/wiki/rest/api/content/$PAGE_ID/child/attach
 ### Local file
 - `.md` / `.txt` / `.pdf` → Read directly (Read handles PDF).
 - `.docx` → `pandoc -f docx -t gfm <file>`. No pandoc → say so, ask for an `.md`/`.pdf` export.
-- **Stamp** = file path + mtime (`stat -c '%y' <file>`) - no version system.
+- **Stamp** = file path + mtime (`stat -c '%y' <file> 2>/dev/null || stat -f '%Sm' <file>`, GNU then BSD) - no version system.
 
 ### Diagrams - read them, don't punt (mandatory)
 Specs put the schema / architecture in diagrams - often the most review-relevant content. **Download every image attachment and `Read` it (Read does vision on png/jpg)** - do not just list it. Save into the work dir the fetch printed (a literal path - `$G` does not survive between calls):

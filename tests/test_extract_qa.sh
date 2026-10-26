@@ -113,6 +113,11 @@ assert_exit "short-followup exits 0" 0 "$rc"
 assert_contains "short follow-up kept" "Is that write race-safe?" "$out"
 assert_contains "answer to follow-up kept" "last-writer-wins" "$out"
 
+# Question answered by nothing before /darkmoon: report the question, never die silently
+out=$(bash "$SCRIPT" "$FIX/question-without-answer.jsonl" 2>&1); rc=$?
+assert_exit "question without an answer exits 0" 0 "$rc"
+assert_contains "question without an answer still shown" "skip the last day of every month" "$out"
+
 # Test 12: no transcript arg resolves from CLAUDE_CODE_SESSION_ID
 fake_home=$(mktemp -d)
 mkdir -p "$fake_home/.claude/projects/-home-moonlit-grove"
