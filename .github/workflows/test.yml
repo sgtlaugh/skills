@@ -7,6 +7,9 @@ on:
       - 'hooks/**'
       - 'skills/**/*.sh'
       - 'install.sh'
+      - 'credentials.example.json'
+      - 'services.example.md'
+      - '.github/workflows/test.yml'
       - 'tests/**'
   pull_request:
     paths:
@@ -14,6 +17,9 @@ on:
       - 'hooks/**'
       - 'skills/**/*.sh'
       - 'install.sh'
+      - 'credentials.example.json'
+      - 'services.example.md'
+      - '.github/workflows/test.yml'
       - 'tests/**'
 
 jobs:
