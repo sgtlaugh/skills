@@ -2,7 +2,7 @@
 name: jury
 description: Run another skill N times in parallel and merge the outputs into a frequency ledger - surfaces non-determinism and unions findings across runs. For high-stakes reviews and experiments.
 trigger: /jury
-allowed-tools: Agent, Read, Write, Grep, Glob, Bash(mkdir:*), Bash(mktemp:*), Bash(date:*), Bash(seq:*), Bash(claude -p:*), Bash(jq:*), Bash(ps:*), Bash(ls:*)
+allowed-tools: Agent, Read, Write, Grep, Glob, Bash(mkdir:*), Bash(mktemp:*), Bash(date:*), Bash(seq:*), Bash(claude -p:*), Bash(jq:*), Bash(ps:*), Bash(echo:*), Bash(wait:*)
 ---
 
 # /jury - Repeat a skill N times, merge into a ledger
@@ -23,9 +23,9 @@ Runs a target skill N times concurrently in **independent** contexts, then merge
 
 - `--merge <dir>` → skip Steps 2-4; go straight to Step 5 reading the raws in `<dir>`.
 - Otherwise: **the target name is the first non-flag token after `/jury`, copied verbatim from the input.** Do NOT replace it with any skill named elsewhere in this document - copy exactly what was typed (`code-review` stays `code-review`, `triage` stays `triage`). Everything after the name is its args, except `--n N` (default 3, min 2, cap 6) and `--headless` (jury's own flags, not the target's). **Echo `target=<the verbatim token> | args=<…> | N=<n>`; if it doesn't match the input, re-read the input** - a wrong target wastes the whole fan-out.
-- **Strip write/mutating flags from the target's args** (any `--submit`/`--post`-style flag). Fan-out is **read-only**: running a mutating skill N times would multiply side effects (N duplicate PR comments, N tickets). The human acts once, on the merged result.
+- **Strip write/mutating flags from the target's args** (any `--submit`/`--post`-style flag). Fan-out is **read-only**: running a mutating skill N times would multiply side effects (N duplicate PR comments, N tickets). The human acts once, on the merged result. This is an instruction, not a grant boundary: headless jurors run with `--dangerously-skip-permissions`, which bypasses the target's own grants, so only settings-level deny rules still apply.
 - Identify the target skill name (strip a leading slash if present) and confirm it exists - check `~/.claude/skills/<name>/SKILL.md`, and if that dir isn't found, match it against an **available skill's registered name** (the dir can differ from the name, e.g. a plugin skill registered as `caveman:caveman` lives under `~/.claude/plugins/`). Each fan-out agent will **invoke** this skill itself - **do not invoke it in this (orchestrator) session**, and do NOT paste its file content into the agents (pasted-as-text runs shallower than the harness-loaded skill - agents skip steps and reason less deeply).
-- **`--headless`** (default off): run jurors as independent **root processes** instead of Task subagents (Step 3). **Self-fanning targets need it.** Grep the target's `SKILL.md` for `subagent` / `Agent` / `fan out` / `parallel` - if it spawns its own subagents, run it headless: under a Task subagent its own subagents report back asynchronously, and some hosts disallow nesting outright, so the target can degrade (grounds shallower or serially). Flag this and **suggest `--headless`** before fanning out; don't silently run a degraded sample.
+- **`--headless`** (default off): run jurors as independent **root processes** instead of Agent subagents (Step 3). **Self-fanning targets need it.** Grep the target's `SKILL.md` for `subagent` / `Agent` / `fan out` / `parallel` - if it spawns its own subagents, run it headless: under an Agent subagent its own subagents report back asynchronously, and some hosts disallow nesting outright, so the target can degrade (grounds shallower or serially). Flag this and **suggest `--headless`** before fanning out; don't silently run a degraded sample.
 
 ## Step 2 - Cost gate (confirm before fan-out)
 
@@ -48,13 +48,13 @@ for i in $(seq 1 N); do
   claude -p "/<target> <args>" --dangerously-skip-permissions --max-budget-usd <2x the per-run estimate from Step 2> --output-format json > "$D/run-$i.json" 2>"$D/run-$i.err" &
 done
 wait
-# The merge reads run-N.md; a target that saves a full report prints a "Full report → <path>" line - Read that file instead of the summary
+# The merge reads run-N.md. A run that printed "Full report → <path>": copy that file to run-N.full.md, which Step 5 reads instead of the summary
 for f in "$D"/run-*.json; do jq -r '.result // empty' "$f" > "${f%.json}.md"; done
 ```
 Each root process loads the target via the harness (full fidelity) and **can fan out fully**. Pull `.result` from each `run-$i.json` for the merge - these ARE the saved raws (Step 4 already satisfied). Heavier than subagents (N cold starts, no shared cache, and headless may lack interactively-authenticated MCP servers), so use it **only** when the target self-fans.
 
 **Don't misread an in-flight run as a crash (this WILL bite you).** `--output-format json` writes the **whole blob atomically at the end** - so mid-run the `run-$i.json` is **0 bytes**, and that means *still running*, NEVER crashed. Rules:
-- **Run the launch + `wait` as ONE blocking foreground call** (not `run_in_background`). The bash tool then returns only when every juror has exited - no polling, no guessing. A heavy target (e.g. gadfly ≈ 7 min) means this call blocks for minutes; that's expected - let it.
+- **Run the launch + `wait` as ONE blocking foreground call with `timeout: 600000`** (the Bash tool's 2-minute default would cut it off). Only a target estimated past ~9 minutes per run goes `run_in_background` instead - then wait for its exit notification, never poll. The bash tool then returns only when every juror has exited - no polling, no guessing. A heavy target (e.g. gadfly ≈ 7 min) means this call blocks for minutes; that's expected - let it.
 - **Judge done-ness by the process, not the file** - `wait` returning (or the PID gone from `ps`) is the done signal. Empty json + live PID = working. Do **not** declare a crash, and do **not** launch a diagnostic "test run" (it wastes a full target run's cost), from a 0-byte file alone.
 - **Run the cost-rollup `jq` ONLY after `wait` returns.** On empty files it yields `null` - if you see `null`, you ran it too early; the runs aren't done.
 - **`otelHeadersHelper failed … Permission denied` in `run-$i.err` is a BENIGN telemetry warning, not a failure.** It appears even in successful runs. Diagnose failure from the JSON (`.is_error==true`, missing `.result`, or empty json *after* the PID exited) - never from stderr noise.
@@ -66,22 +66,22 @@ jq -s '{total_cost_usd:(map(.total_cost_usd)|add), input_tokens:(map(.usage.inpu
 Report the totals in the Step 6 overview. (Subagent mode can't roll this up reliably - sub-agent billing may be separate and unreported; that's a reason headless gives you cost visibility the default doesn't.)
 
 Notes:
-- If the target creates **git worktrees** (e.g. `/aristarchus` reviews every PR in one), it must name them uniquely or parallel runs collide; also watch for shared-`.git` lock contention under concurrency - if runs fail with git-lock errors, drop `--headless` and fan out in the lighter mode.
+- If the target creates **git worktrees** (e.g. `/aristarchus` reviews every PR in one), it must name them uniquely or parallel runs collide; also watch for shared-`.git` lock contention under concurrency - if runs fail with git-lock errors, re-run headless with a lower N first; if you fall back to subagents, mark every run `⚠ degraded (nested)` in the overview.
 - If some agents fail, proceed with the survivors; record `launched N, M succeeded`.
 
 ## Step 4 - Save raw outputs (persistent)
 
-Capture each run's output from its **completion notification** (the returned agent result) - don't rely on `Task Output` by ID for background agents; it may not resolve. Write each run verbatim to `<run dir>/run-<i>.md`, creating the run dir once with `mkdir -p ~/.claude/jury-runs && mktemp -d ~/.claude/jury-runs/"$(date +%Y%m%d-%H%M%S)"-XXXX` (the random suffix keeps two juries started in the same second apart; use the printed path literally afterwards). This is the **audit trail + re-merge cache** - re-run the merge later with `/jury --merge <dir>`. Print the directory path in the output.
+Capture each run's output from its **completion notification** (the returned agent result) - don't rely on fetching a background agent's output by ID; it may not resolve. Write each run verbatim to `<run dir>/run-<i>.md`, creating the run dir once with `mkdir -p ~/.claude/jury-runs && mktemp -d ~/.claude/jury-runs/"$(date +%Y%m%d-%H%M%S)"-XXXX` (the random suffix keeps two juries started in the same second apart; use the printed path literally afterwards). This is the **audit trail + re-merge cache** - re-run the merge later with `/jury --merge <dir>`. Print the directory path in the output.
 
 ## Step 5 - Merge into a ledger
 
 **Fidelity gate (first).** Each run must look like a *complete* output before it earns full trust. Detect shallow runs by **structural comparison across runs** (no target-specific knowledge): a run missing sections/markers that the *majority* of runs share ran shallow - it skipped steps. (For aristarchus those happen to be the `Conventions:` + `Existing comments:` header fields, but derive the markers from what the runs themselves share - don't hardcode per target.) Mark a shallow run `⚠ low-fidelity`: list its findings in a separate flagged block, exclude it from the frequency/unanimous counts, and note it in the overview. If most runs are low-fidelity, **stop and report** - the fan-out isn't faithful. If the runs are structurally uniform, the gate passes (note "fidelity: uniform").
 
-1. **Extract** from each run: the discrete findings (however the target formats them - for `/aristarchus`: severity-tagged findings, lens findings included, each keeping its location + severity) **and the run's overall verdict/recommendation** (needed for the distribution in Step 6). Skip the rest of the prose/praise unless asked.
+1. **Extract** from each run (its `run-<i>.full.md` when present, else `run-<i>.md`): the discrete findings (however the target formats them - for `/aristarchus`: severity-tagged findings, lens findings included, each keeping its location + severity) **and the run's overall verdict/recommendation** (needed for the distribution in Step 6). Skip the rest of the prose/praise unless asked.
 2. **Cluster** equivalent findings into rows. Use `file:line` as a **fuzzy** signal (same file, lines within a few of each other) + semantic equivalence - NOT an exact key (the same finding lands at slightly different lines across runs). **When unsure, keep rows separate** - over-splitting only adds rows a human can eyeball; wrong-merging hides a distinct finding.
 3. **Normalize** each cell to a canonical vocabulary: `critical` / `warning` / `nit` / `absent`, each tagged `· Confirmed` or `· Inferred`. Map every run's wording onto this scale so cells are comparable. If a run *raised then withdrew/refuted* a finding, mark its cell `withdrawn` (not a severity) - don't show it as a live `warning`.
 4. **Frequency**: count how many runs raised each row, **out of the full-fidelity count M** (low-fidelity runs excluded by the gate), shown as `X/M`. The denominator M is the same for every row, so sorting by count = sorting by ratio.
-5. **Completeness check (do NOT skip - this is the merge's completion criterion).** Re-scan every `run-<i>.md`: **each finding in each raw must map to a ledger row.** If any is unaccounted for, add it (as a singleton row, flagged for scrutiny). A finding present in a raw but absent from the table is a merge failure - and a dropped finding defeats the entire point of the tool. The merge is done only when zero raw findings are unrepresented.
+5. **Completeness check (do NOT skip - this is the merge's completion criterion).** Re-scan every raw (`run-<i>.full.md` when present, else `run-<i>.md`): **each finding in each raw must map to a ledger row.** If any is unaccounted for, add it (as a singleton row, flagged for scrutiny). A finding present in a raw but absent from the table is a merge failure - and a dropped finding defeats the entire point of the tool. The merge is done only when zero raw findings are unrepresented.
 
 ## Step 6 - Output
 
