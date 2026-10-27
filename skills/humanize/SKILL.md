@@ -89,7 +89,7 @@ For the complete list, read `references/banned-list.md`.
 - **Copula avoidance.** "serves as," "stands as," "functions as" - just use "is." "boasts," "features," "offers" - just use "has."
 - **-ing phrase padding.** Cut "highlighting the importance of," "underscoring the need for," "reflecting a broader trend toward." Words without meaning.
 - **Synonym cycling.** Don't call the same thing "the platform," "the system," "the solution," "the tool" in consecutive sentences. Pick one.
-- **Boldface abuse.** Don't bold random words mid-sentence. Bold headers only.
+- **Boldface abuse.** Don't bold random words mid-sentence (full rule and the PR exceptions in `references/banned-list.md`).
 - **Filler:** "in order to" - "to"; "due to the fact that" - "because"; "has the ability to" - "can"; "in the event that" - "if". Delete "it is important to note that" entirely.
 - **Hedging.** One qualifier per claim. "It could potentially possibly be argued that the policy might have some effect" becomes "The policy may affect outcomes."
 
@@ -100,9 +100,9 @@ For the complete list, read `references/banned-list.md`.
 After stripping patterns, apply these for technical/PR/doc contexts:
 
 - **Be direct.** State what changed and why. Not "This PR introduces comprehensive improvements to the upload flow by ensuring that file storage is properly delegated" but "Delegate file storage to the archive service instead of writing to S3 directly."
-- **Specifics over adjectives.** Not "significant performance improvement" but "8x speedup (40 min - 5 min)."
+- **Specifics over adjectives.** Not "significant performance improvement" but "8x speedup (40 min to 5 min)."
 - **Cut throat-clearing.** If the first sentence of a section doesn't add information, delete it.
-- **Split any sentence with two or more dependent clauses.** Long compound sentences with semicolons are the other AI tell - not every sentence needs to be a complex construction.
+- **Split any sentence with two or more dependent clauses.** Long compound sentences with semicolons are the other AI tell. If splitting leaves three short sentences in a row, Hard rule 4 wins: merge two back.
 
 ---
 
@@ -139,11 +139,13 @@ What changed: "comprehensive improvements" gone, "additionally" gone, "robust" g
 
 The output is NOT done until:
 1. Zero em dashes remain
-2. Zero rule-of-three groupings
+2. Zero rhetorical rule-of-three groupings (factual lists exempt, Hard rule 2)
 3. Zero "This PR introduces/ensures/implements" openers
 4. Zero self-narration ("this highlights," "here's why")
 5. Zero copula avoidance ("serves as" instead of "is")
 6. No surviving banned phrases from the reference list
+7. The required structure from Step 1 is intact: headings and their fixed emoji, `**Lead-in:**` labels, Title Case PR titles, checkboxes, code blocks
+8. No three short sentences in a row (Hard rule 4)
 
 ## Reference files
 
