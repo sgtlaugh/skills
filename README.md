@@ -135,7 +135,7 @@ Skills that need no config work right after install.
 | [pandoc](https://pandoc.org/) | document conversion in jira, gadfly, forge, dialectic |
 | python + [pytest](https://pytest.org/) | bonfire, and duck's `--quack` repro |
 
-Written for Linux and macOS (bash 3.2+, GNU or BSD find); CI runs on Linux.
+Linux and macOS (bash 3.2+, GNU or BSD tools). CI runs the tests on both, with macOS on its stock /bin/bash.
 
 ## Tests
 

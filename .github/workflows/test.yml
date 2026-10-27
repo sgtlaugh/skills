@@ -24,8 +24,21 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      # The runner image ships a newer Homebrew bash; macOS users run /bin/bash 3.2 with BSD tools
+      - name: Use the system bash on macOS
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p "$RUNNER_TEMP/sysbash"
+          ln -s /bin/bash "$RUNNER_TEMP/sysbash/bash"
+          echo "$RUNNER_TEMP/sysbash" >> "$GITHUB_PATH"
+      - name: Tool versions
+        run: bash --version | head -1 && jq --version
       - name: Run tests
         run: bash tests/run.sh
