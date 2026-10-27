@@ -146,6 +146,8 @@ Covers the shell parts: darkmoon's transcript extractor and read-only hook, velk
 
 Skills themselves are prompts, so they are tested by running them on real inputs. `/kiln` checks structure, `/jury` checks consistency.
 
+darkmoon's skeptic has a regression eval: [`evals/darkmoon/run.sh`](evals/darkmoon/run.sh) runs claims with known answers against a small fixture repo full of traps (legacy layers, aliases, dynamic dispatch) and scores each verdict PASS, SOFT or FAIL. It calls headless Claude, so it's manual, not CI: about $2 a pass. Run it before and after changing the skeptic, and compare the SOFT count too - a rule that softens real evidence into "argument, not proof" shows up there first.
+
 ---
 
 MIT licensed. Praise the Sun \[T]/

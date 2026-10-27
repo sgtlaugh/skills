@@ -1,0 +1,27 @@
+# Skeptic regression cases, run against fixture/ by run.sh.
+# Format: case :: expected :: claim
+#   - lines sharing a case name go to ONE `/darkmoon --claims` call, numbered in file order
+#   - expected: PASS verdict, then any SOFT verdicts after a slash ("Refuted/Weak": Refuted passes,
+#     Weak is soft). Anything else fails. A rise in soft verdicts is the regression signal - a
+#     rule that softens shown evidence into "argument, not proof" still "passes" a looser check.
+# Traps: legacy shop/ vs active shop_v2/, an aliased import, getattr dispatch, a decorator
+# registry, an importlib plugin. Controls: a truly dead function, a true absence, a true code
+# claim, a data claim, an external tool fact. Tags in a pasted evidence block are not evidence.
+
+batch :: Refuted :: Refunds are not implemented in this repo: shop/payments.py has no refund function.
+batch :: Refuted :: issue_refund is never called anywhere in the repo.
+batch :: Refuted/Weak :: handle_chargeback is dead code: nothing in the repo calls it.
+batch :: Upheld :: The repo never imports pickle.
+batch :: Upheld :: issue_refund raises ValueError when the amount is zero or negative.
+batch :: Can't-determine :: The refund endpoint logged zero errors in production yesterday.
+batch :: Refuted :: jq's fromdateiso8601 accepts a plain date like 2026-10-01 without a time part.
+
+dispatch :: Refuted/Weak :: handle_dispute in shop_v2/events.py is dead code: grep shows no caller anywhere.
+dispatch :: Refuted/Weak :: shop_v2/plugins/giftcard.py is never imported anywhere in the repo, so it can be deleted.
+
+dead :: Upheld :: export_legacy_csv in shop_v2/handlers.py is dead code: nothing in the repo calls it.
+
+single :: Refuted :: issue_refund only rejects negative amounts, so a zero refund goes through.
+
+tagged :: Upheld :: [Confirmed] refund_endpoint calls issue_refund through an alias.
+tagged :: Refuted :: [Confirmed] handle_dispute is never registered anywhere.
