@@ -8,7 +8,7 @@ description: >
   items. Read-only; does NOT run the skill. Use after writing/editing a skill,
   or before adopting someone else's.
 trigger: /kiln
-allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(rg:*), Bash(find:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(ls:*)
 argument-hint: "<skill name or path> [--fire], e.g. 'occam' or 'occam --fire'"
 ---
 
@@ -23,7 +23,7 @@ Points at an existing skill and reports structural flaws + concrete fixes. It **
 ## Step 1 - Locate & read
 - **No target given -> ask which skill to lint; don't guess.**
 - **`--fire` flag -> after the static checks, also run the adversarial test-generation pass (`--fire` section below). Generation only: kiln NEVER executes the skill.**
-- Resolve target, in order: a **bare skill name** (`occam`) -> `~/.claude/skills/<name>/SKILL.md` (the installed path; resolves symlinked skills too) - this is the normal case; else a **dir** -> its `SKILL.md`; else a **`SKILL.md` path** directly. If a name doesn't resolve there, `find ~ -maxdepth 5 -path "*/<name>/SKILL.md"`; a plugin skill (`plugin:name`) lives under `~/.claude/plugins/`, so strip the prefix and `find ~/.claude/plugins -path "*/<name>/SKILL.md"`. `ls` the resolved dir for referenced files (reference docs, configs, sub-skills). Read `SKILL.md` in full + skim referenced files.
+- Resolve target, in order: a **bare skill name** (`occam`) -> `~/.claude/skills/<name>/SKILL.md` (the installed path; resolves symlinked skills too) - this is the normal case; else a **dir** -> its `SKILL.md`; else a **`SKILL.md` path** directly. If a name doesn't resolve there, Glob `**/<name>/SKILL.md` under `~/.claude` and `~/Github`; for a plugin skill (`plugin:name`), strip the prefix - plugins live under `~/.claude/plugins/`. `ls` the resolved dir for referenced files (reference docs, configs, sub-skills). Read `SKILL.md` in full + skim referenced files.
 - Note the skill's own shape: frontmatter, command/step structure, whether it has an output contract.
 
 ## Step 2 - Run the checks
