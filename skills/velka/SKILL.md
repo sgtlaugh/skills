@@ -90,7 +90,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   ```
   **Before calling any skill dead, cross-check typed history** - old transcripts get pruned, so digests undercount (this detector once reported a skill at 0 that history showed at 5 runs). For each ≤2x skill, count its typed invocations **inside the same window** (`.timestamp` is epoch milliseconds; use `0` for `--all`) and report the larger number:
   ```
-  jq -s --arg s "/<skill>" --argjson since "$(jq -rn '"<window start as YYYY-MM-DDTHH:MM:SSZ>" | fromdateiso8601')000" '[.[] | objects | select(((.display // "") | startswith($s)) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
+  jq -s --arg s "/<skill>" --arg d '<window start: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ>' '($d | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . + "T00:00:00Z" else . end | fromdateiso8601 * 1000) as $since | [.[] | objects | select(((.display // "") | startswith($s)) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
   ```
 - **Cross-session file hotspots** (a file edited across MANY sessions = a churn magnet / refactor candidate - higher-value than within-session thrash):
   ```
