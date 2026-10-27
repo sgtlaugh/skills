@@ -2,7 +2,7 @@
 name: forge
 description: Turn a PRD into a grounded tech-spec draft - ingest the WHY, ground in the code it lands in, surface the design forks for you to decide, then draft a spec structured to survive review. Pairs with gadfly (the critic) - forge authors, gadfly tempers. A grounded draft, not a finished spec.
 trigger: /forge
-allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, Agent, AskUserQuestion, Skill
+allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(printf:*), Bash(echo:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, Agent, AskUserQuestion, Skill
 ---
 
 # /forge - author a spec from a PRD, then temper it
@@ -39,7 +39,7 @@ The judgment-heavy phase. Goal: a grounded picture of where the feature lands + 
 Pull every requirement, **classify each** `[Stated]`/`[Inferred]`/`[Missing]` (EARS-light where falsifiable), and include **NFRs** (scale / latency / consistency / availability) - a PRD that omits them yields an open question, not a guessed number. (Same discipline as gadfly Phase 1.)
 
 ### Step 1b - Hunt the PRD's load-bearing semantic fork (don't adopt its phrasing as settled)
-A PRD's wording often **implies** a heavyweight design choice without naming it as a decision - and the costliest mistake is **silently adopting that implied branch.** Scan the PRD - especially **permission / visibility / access** language - for the **load-bearing either/or the whole design turns on.** Classic example: *"members see a song only in playlists they can open"* reads as either **navigation** (organize-only; you see it if you already have access to the song) **OR grant** (playlist access *confers* song visibility) - two radically different builds, and the grant branch is usually **far** more expensive (per-entity permission replication, graph fan-out). **Name that fork explicitly and make it Fork #1 in Step 4.** Never treat the PRD's phrasing as the decision already made - if the PRD leans one way, that's a *default to confirm*, not a settled fact. (This is gadfly's Phase-1b "name the core semantic fork" discipline; skipping it is how forge ends up building the heavy model the PRD's words implied, without ever offering you the cheap branch.)
+A PRD's wording often **implies** a heavyweight design choice without naming it as a decision - and the costliest mistake is **silently adopting that implied branch.** Scan the PRD - especially **permission / visibility / access** language - for the **load-bearing either/or the whole design turns on.** Classic example: *"members see a song only in playlists they can open"* reads as either **navigation** (organize-only; you see it if you already have access to the song) **OR grant** (playlist access *confers* song visibility) - two radically different builds, and the grant branch is usually **far** more expensive (per-entity permission replication, graph fan-out). **Name that fork explicitly and make it Fork #1 in Step 4.** Never treat the PRD's phrasing as the decision already made - if the PRD leans one way, that's a *default to confirm*, not a settled fact. (This is gadfly's Phase 1 Step 1b "name the core semantic fork" discipline; skipping it is how forge ends up building the heavy model the PRD's words implied, without ever offering you the cheap branch.)
 
 ### Step 2 - Ground in the code (lightweight - gadfly re-grounds rigorously later)
 Find + **confirm** the repo(s) the feature touches (`--repo` hint, else `find` over `$PWD`/`$WORKSPACE` (your clones dir, if exported)/`$HOME/Github`; confirm before deep-reading; stamp `cd <path> && git rev-parse --short HEAD`). Read each repo's `CLAUDE.md` + the **hotspots** the feature lands in (the table/model it writes, the query/API it changes) in full. Note the **cross-service** dependencies (an external permissions/auth service, a queue consumer, a search indexer) - per gadfly Step 2b, never conclude on another service from your side alone; if a design choice hinges on it and its repo isn't readable, mark it **Can't-determine (cross-service)**.
@@ -73,6 +73,7 @@ List the **genuine decisions** the PRD + code under-determine - the per-store mo
 ## forge - Plan (<PRD title> @ <stamp>)
 Goal: <one line> | Repos: <repo @ sha> | Vantage: <this repo owns the model, or owned by <repo>> | Not analyzed: <unread, or none>
 Comparable feature: <name + repo, or "none found"> | What to match: <key patterns> | Where to diverge: <key differences>
+UI surface (UI work only): <repo/framework @ sha> | migration: <none, or legacy → new>
 Requirements: <count Stated/Inferred/Missing; NFR gaps as open questions>
 Core model: <central entity> | per-store: DB <…> · ES <…> · <other> <…> | alternative(s): <structurally-different option(s)>
 Forks (you decide): <each fork + options + trade-off> → asked via AskUserQuestion (or [assumed] if non-interactive)
@@ -125,7 +126,7 @@ Repos (confirmed): <name> at <abs path> @ <sha>, one per repo you grounded in St
 Run it fully - every phase. Return its complete output verbatim (the ranked findings + open questions)."
 ```
 - **It must be the actual gadfly skill** (harness-loaded), not a re-described critique - a pasted imitation runs shallower. The subagent invokes gadfly via its own Skill tool.
-- gadfly self-fans for grounding. Nested under this Agent, its own subagents work but report back asynchronously; on a host that disallows nesting it grounds inline instead (its SKILL handles both). Pass the confirmed repos so it never needs to search or ask, which it can't do from inside an Agent.
+- gadfly self-fans for grounding. Nested under this Agent, its own subagents work but report back asynchronously; on a host that disallows nesting it grounds inline instead (its SKILL handles both). Pass the confirmed repos so it never needs to ask you to confirm them, which it can't do from inside an Agent.
 - gadfly re-grounds from scratch (it caps delegated citations at `med` and re-verifies) - that's the point: an *independent* opinion, not forge's grounding rubber-stamped. The re-ground cost is the price of a real critic.
 - **Want jury-grade (union of N)?** Don't nest it here - run `/jury gadfly <forge-output> --prd <prd> --n 3 --headless` yourself on the finished draft (the pass-check recommends exactly this). A fresh, user-launched jury is cleaner and more trustworthy than one buried inside forge's own run.
 
@@ -133,10 +134,12 @@ Capture gadfly's findings (Sinks / Blocker / Handle, each with its `[SPEC]`/`[PR
 
 ## Phase 4 - Revise ONCE (bounded - no second loop)
 
+Start only after the gadfly Agent's result has arrived (it reports back asynchronously). If it errors or returns no findings structure (Sinks / Blocker / Handle), write `Temper: failed - <reason>` in the Temper report and stop here. Never substitute a self-critique.
+
 Walk each gadfly finding and act by **kind**, not severity:
 - **Mechanical / grounding / coverage flaw** (a missing failure mode, an uncovered PRD requirement, a wrong/uncited grounding claim, an unhandled lifecycle edge, a scale gap) → **auto-fix in the draft.** Re-ground any code claim you change (`path:line`).
 - **A genuine product/architecture FORK** gadfly surfaces (it found a decision you didn't ask, or your fork answer has a consequence the human must weigh) → **do NOT auto-resolve. HALT → `AskUserQuestion`** (recommended-first), then apply the answer.
-- **Ambiguous kind - could be a mechanical fix OR a design call → ASK, don't auto-categorize.** The trap is forge *deciding the category itself* and auto-fixing something that was actually a judgment call (or deferring something fixable). When you're not sure whether a finding is "just patch it" or "a decision the human owns," **err toward `AskUserQuestion`** - one short question settles it, and a wrong auto-categorization silently bakes forge's guess into the spec. (Don't ask on the *clearly* mechanical ones - that's fatigue; ask only when the kind is genuinely unclear.)
+- **Ambiguous kind - could be a mechanical fix OR a design call → ASK, don't auto-categorize.** The trap is forge *deciding the category itself* and auto-fixing something that was actually a judgment call (or deferring something fixable). The test: a fix that changes an option already chosen in the spec (model, store, schema, semantics) is a fork, so ask. A fix that only adds missing coverage without changing a chosen option is mechanical, so apply it. A finding that fits neither: ask - a wrong auto-categorization silently bakes forge's guess into the spec.
 - **A finding you cannot resolve in one pass** (needs data you don't have, a cross-service unknown, a `[PRD]` contradiction only product can settle) → **leave it as an explicit residual** (next phase). Do not fake a fix.
 
 **One pass only.** Do not re-temper in a loop - a second author-fix-author cycle just polishes forge's own assumptions and runs cost away. The remaining findings are residuals, reported honestly - they are the agenda, not a failure.
@@ -167,7 +170,7 @@ Never `cat`/re-print the file (same reason as gadfly: it re-injects ~hundreds of
 ## Completion contract
 A run is complete only when the saved file contains **all** of these - missing any = incomplete:
 1. **Plan** - requirements (tagged), grounded repos+SHAs, comparable feature analysis (match + diverge, or "none found" with evidence of search), core model per-store + alternative, the forks (asked or `[assumed]`).
-2. **Spec** - the 10 sections, every design claim tagged `[grounded: path:line]` or `[assumed]`. YAGNI pass applied (no phantom schemas, no unused columns, no premature infrastructure).
+2. **Spec** - the 10 sections, every design claim tagged `[grounded: path:line]` or `[assumed]`. A `YAGNI:` line records what was cut, or `YAGNI: nothing cut`.
 3. **Temper report** (unless `--no-temper`) - fixed / forks-resolved / **unresolved residuals** / open questions.
 4. **Pass-check line** recommending a fresh independent gadfly/jury run.
 5. **Saved file** - `<slug>.forge.<ts>.md`, fresh (never an overwrite).
@@ -179,5 +182,5 @@ A run is complete only when the saved file contains **all** of these - missing a
 - **One temper pass.** Auto-fix mechanical findings, halt on forks, leave the rest as honest residuals. Never loop author↔fix - it polishes assumptions and runs cost away.
 - **Ground or flag every design claim.** `[grounded: path:line]` or `[assumed]`; ungroundable → open question. A tag certifies the premise, not the design.
 - **Report residuals honestly.** An unfixed gadfly Sinks/Blocker stays visible - it is the agenda, not a failure to bury.
-- **Read-only on inputs.** forge reads the PRD + the code; never edits them, never posts back to Confluence. It writes exactly one thing per run: the spec artifact (`<slug>.forge.<ts>.md`).
+- **Read-only on inputs.** forge reads the PRD + the code; never edits them, never posts back to Confluence. It writes exactly one thing per run: the spec artifact (`<slug>.forge.<ts>.md`). This is an instruction, not a grant boundary: `curl`, `Write` and `find` are granted for fetch, draft and repo lookup, and could write.
 - **Don't out-scope the PRD.** Draft what the PRD asks (+ the forks it forces); flag gold-plating as a non-goal, don't invent features.
