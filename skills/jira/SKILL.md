@@ -2,7 +2,7 @@
 name: jira
 description: Create, search, and manage JIRA tickets and fetch/edit Confluence pages via REST API
 trigger: /jira
-allowed-tools: Read, Bash(curl:*), Bash(jq:*), Bash(grep:*), Bash(pandoc:*), Bash(printf:*), Bash(head:*), Bash(cat:*), Bash(date:*), Bash(git branch:*), Bash(cp:*), Bash(python3:*), Bash(echo:*), Bash(command:*)
+allowed-tools: Read, Bash(curl:*), Bash(jq:*), Bash(grep:*), Bash(pandoc:*), Bash(printf:*), Bash(head:*), Bash(git branch:*), Bash(cp:*), Bash(python3:*), Bash(echo:*), Bash(command:*)
 ---
 
 # JIRA Ticket Management
@@ -34,7 +34,7 @@ Every call uses `-sS --fail-with-body`: an HTTP error prints `curl: (22)` on std
 /jira confluence <url|id>         # fetch Confluence page (see Confluence section)
 ```
 
-**Every write needs a yes.** Create, update, assign, transition, comment and Confluence PUT all show the user a readable preview first (summary, fields, rendered text; for a page, the checklist counts) and wait for an explicit yes in their reply. A write without a shown preview and a yes is WRONG, including when another skill asked for it.
+**Every write needs a yes.** Create, update, assign, transition, comment and Confluence PUT all show the user a readable preview first (summary, fields, and descriptions or comments rendered as markdown - ADF JSON is unreadable; for a page, the checklist counts) and wait for an explicit yes in their reply. A write without a shown preview and a yes is WRONG, including when another skill asked for it.
 
 ## Operations
 
@@ -267,7 +267,6 @@ EOF
 
 - Infer project key from git branch (e.g. a `PROJ-123-fix-login` branch = `PROJ` project)
 - When creating: ask for summary, type (Task/Bug/Story), priority, and description
-- **Before creating/updating tickets: render description and comments as formatted plain text (markdown) and show to user for confirmation before making the API call.** ADF JSON is unreadable - always preview content first.
 - Show ticket URL after creation
 - `Bash(python3:*)` is granted for Confluence HTML edits and can run anything, so the yes-before-write rule above is the real boundary, not the grant list
 - Display responses in readable format, not raw JSON
