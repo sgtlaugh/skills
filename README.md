@@ -1,11 +1,17 @@
 [![Tests](https://github.com/sgtlaugh/skills/actions/workflows/test.yml/badge.svg)](https://github.com/sgtlaugh/skills/actions/workflows/test.yml)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-# skills
+# 🌑 skills
 
-> *Liar ahead. Therefore, try grep.*
+```
+     ░▒▓ skills ▓▒░
+  liar ahead. try grep.
+```
 
-Claude Code skills that make the agent prove it. Every verdict ships with its evidence (a grep, a query, a `file:line`) or says `Can't-determine`. Reviews run in a fresh context so the author's reasoning can't wave its own work through. Review and investigation skills are read-only; the ones that build (bonfire, forge, nicepr `--create`, jira create) write only what you asked for.
+Claude Code skills that make the agent prove it.
+
+- **Evidence or nothing:** every verdict cites a grep, a query or a `file:line`, or says `Can't-determine`.
+- **Fresh eyes:** reviews run in a separate context, so the author's reasoning can't wave its own work through.
 
 ## Contents
 
@@ -20,68 +26,69 @@ Claude Code skills that make the agent prove it. Every verdict ships with its ev
 
 ```bash
 git clone https://github.com/sgtlaugh/skills.git ~/Github/skills
-cd ~/Github/skills
-./install.sh
+~/Github/skills/install.sh
 ```
 
-`install.sh` symlinks every skill, agent and hook into `~/.claude/`, then seeds `~/.config/claude-skills/` with the two config templates. Re-run it after a pull. It never overwrites your config, and a real file in the way is backed up to `.bak` first.
+Restart Claude Code, then type `/` to see the skills. Every flag and example is in [`CHEATSHEET.md`](CHEATSHEET.md).
 
-Restart Claude Code, then type `/` to see the skills. Usage patterns for each are in [`CHEATSHEET.md`](CHEATSHEET.md).
+`install.sh` links the skills, the agent and the hook into `~/.claude/`. It also creates the two config files in `~/.config/claude-skills/`. Re-run it after a pull. It never overwrites your config, and backs up anything in the way to `.bak`.
 
 ## The skills
 
-**Before you push**
+### 🛡️ Before you push
 
 | Skill | What it does |
 |---|---|
-| [`/occam`](skills/occam/SKILL.md) | Reviews your own change in a fresh context: bugs, drift (leftover old logic, stale docs and callers), simplifications, and whether the diff is the minimal one |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review: ticket context, stack-aware traps, five independent lenses, then darkmoon checks the findings |
-| [`/nicepr`](skills/nicepr/SKILL.md) | Short, human PR titles and descriptions from the branch diff and the ticket |
+| [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and a bigger diff than needed |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then darkmoon checks the findings |
+| [`/nicepr`](skills/nicepr/SKILL.md) | Writes short, human PR titles and descriptions from the diff and the ticket |
 
-**Checking claims**
-
-| Skill | What it does |
-|---|---|
-| [`/darkmoon`](skills/darkmoon/SKILL.md) | Summons an independent skeptic to challenge the last answer, or to settle specific claims you hand it (`--claims`). Each claim is upheld, refuted with evidence, or marked can't-determine. It never invents a counter-argument |
-| [`/solaire`](skills/solaire/SKILL.md) | Run it *before* a research or feasibility question. Seven fixed checks keep the answer grounded the first time. Jolly cooperation \[T]/ |
-
-**Building and debugging**
+### 🌑 Checking claims
 
 | Skill | What it does |
 |---|---|
-| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: a failing test you watch fail for the right reason, minimal code to pass, refactor only when green (pytest) |
-| [`/duck`](skills/duck/SKILL.md) | A sarcastic Socratic rubber duck. Asks code-grounded questions until you find the bug yourself. `--quack` drops the act and proves the cause with a repro |
-| [`/fathom`](skills/fathom/SKILL.md) | Deep-module design lens: is this module deep or shallow, and how to deepen it. `--twice` designs an interface several ways and compares them |
+| [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims you give it, against the code |
+| [`/solaire`](skills/solaire/SKILL.md) | Run it before a research question. Seven fixed checks keep the answer grounded \[T]/ |
 
-**Specs and decisions**
-
-| Skill | What it does |
-|---|---|
-| [`/gadfly`](skills/gadfly/SKILL.md) | Interrogates a tech spec before it gets built: requirement gaps, grounding in the real code, four adversarial lenses. `--prd` checks the HOW against the WHY |
-| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded tech-spec draft, stops to let you decide the design forks, then has an independent gadfly pass critique it |
-| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, cross-examines them, then a judge names the real trade-off and the condition that would flip the call |
-
-**Production**
+### 🔥 Building and debugging
 
 | Skill | What it does |
 |---|---|
-| [`/firewatch`](skills/firewatch/SKILL.md) | Alert investigation: severity first, known patterns, logs, Sentry, Datadog APM, Jenkins and Opsgenie history, then a report with every claim tagged |
-| [`/sentry`](skills/sentry/SKILL.md) | Issue deep-dive (stack trace at the deployed release, breadcrumbs, who is affected), top and new issues, search, and `fixed` to check whether a deploy stopped an issue |
-| [`/triage`](skills/triage/SKILL.md) | Takes a ticket to a proven root cause: evidence ledger, competing causes decided by running their checks, darkmoon verification, and a note ready to post |
-| [`/jira`](skills/jira/SKILL.md) | Create, search and update Jira tickets; fetch Confluence pages as readable text |
+| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: watch the test fail, write the least code to pass, refactor when green |
+| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks questions until you find the bug yourself |
+| [`/fathom`](skills/fathom/SKILL.md) | Judges whether a module is deep or shallow, and how to deepen it |
 
-**About skills themselves**
+### 📜 Specs and decisions
 
 | Skill | What it does |
 |---|---|
-| [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for the flaws that quietly weaken it: rules that won't bind, contradictions, stale references, no output contract |
-| [`/jury`](skills/jury/SKILL.md) | Runs any skill N times in parallel and merges the results into a frequency table, so you can see what was consistent and what was luck |
-| [`/velka`](skills/velka/SKILL.md) | Reads your past session transcripts (mechanically, no LLM) and reports recurring habits worth fixing or turning into a skill |
-| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text. `--concise` also cuts it roughly in half |
+| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built: gaps, grounding in real code, four adversarial lenses |
+| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft. You decide the forks, then gadfly critiques it |
+| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then a judge names the trade-off and what would flip it |
+
+### 🚨 Production
+
+| Skill | What it does |
+|---|---|
+| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM and alert history |
+| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release, and checks whether a deploy fixed it |
+| [`/triage`](skills/triage/SKILL.md) | Takes a ticket to a proven root cause, with a note ready to post |
+| [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets, and reads Confluence pages |
+
+### 🧰 About skills themselves
+
+| Skill | What it does |
+|---|---|
+| [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
+| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and shows which findings were consistent and which were luck |
+| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions (no LLM) and reports habits worth fixing or automating |
+| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text |
+
+Review skills are read-only. bonfire, forge and `nicepr --create` write only what you ask for.
 
 ## How they connect
 
-Several skills hand off to others instead of re-implementing them. darkmoon is the shared verifier.
+Skills hand off to each other instead of repeating work. darkmoon is the shared verifier.
 
 ```mermaid
 flowchart LR
@@ -102,51 +109,62 @@ flowchart LR
     class darkmoon,skeptic verifier
 ```
 
-darkmoon spawns the `darkmoon-skeptic` agent in a fresh context. The agent runs behind a `PreToolUse` hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) that blocks anything outside a read-command allowlist, so a skeptic can look but not touch. It is a tripwire, not a sandbox.
+darkmoon runs its skeptic agent in a fresh context. A hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) blocks any command outside a read-only allowlist. It's a tripwire, not a sandbox.
 
 ## Configuration
 
-Two files live in `~/.config/claude-skills/`. `install.sh` creates both from the templates if they don't exist.
+Two files live in `~/.config/claude-skills/`. Skills that need neither work right after install.
 
-**`credentials.json`** (mode 600) holds tokens for the skills that call an API. Set `CLAUDE_SKILLS_CREDENTIALS` to keep it elsewhere.
+**`credentials.json`** holds API tokens, mode 600. Set `CLAUDE_SKILLS_CREDENTIALS` to keep it elsewhere.
 
 | Key | Used by | Where to get it |
 |---|---|---|
-| `datadogPAT`, `datadogSite` | `/firewatch` | Datadog → Personal Access Tokens (read scopes); site such as `datadoghq.com` or `datadoghq.eu` |
+| `datadogPAT`, `datadogSite` | `/firewatch` | Datadog → Personal Access Tokens (read scopes); your site, e.g. `datadoghq.com` |
 | `jenkinsUser`, `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
-| `jiraApiToken`, `jiraBaseUrl`, `jiraEmail` | `/jira`, `/gadfly`, `/duck`; others through `/jira` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens); your site URL and email |
-| `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management (read access) |
-| `sentryAuthToken`, `sentryOrg` | `/sentry`; triage and firewatch through it | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`); your org slug |
-| `opsgenieApiBase`, `sentryApiBase` | optional | Only for an EU Opsgenie account or a self-hosted Sentry. Defaults: `https://api.opsgenie.com`, `https://sentry.io/api/0` |
+| `jiraApiToken`, `jiraBaseUrl`, `jiraEmail` | `/jira`, `/gadfly`, `/duck`; others via `/jira` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management (read) |
+| `sentryAuthToken`, `sentryOrg` | `/sentry`; triage and firewatch via it | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
 
-**`services.md`** is the service catalog, the facts about *your* systems that sentry, triage and firewatch need: which repo a Sentry project lives in, your log search skill, alert patterns, Jenkins and Datadog naming, health-check queries. Fill in what applies and leave the rest. A skill that needs a missing value asks instead of guessing. See [`services.example.md`](services.example.md).
+Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
 
-Skills that need no config work right after install.
+**`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. sentry, triage and firewatch read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
 
 ## Requirements
 
 | Tool | Needed for |
 |---|---|
-| [Claude Code](https://docs.claude.com/en/docs/claude-code) | everything |
-| [jq](https://jqlang.github.io/jq/) | install, darkmoon, velka, and every skill that calls an API |
-| [gh](https://cli.github.com/) | PR and code-history work: aristarchus, nicepr, triage, sentry, firewatch, darkmoon |
-| curl | the API skills |
-| [pandoc](https://pandoc.org/) | document conversion in jira, gadfly, forge, dialectic |
+| [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
+| [jq](https://jqlang.github.io/jq/) | install, darkmoon, velka and the API skills |
+| [gh](https://cli.github.com/) | aristarchus, nicepr, triage, sentry, firewatch, darkmoon |
+| curl | The API skills |
+| [pandoc](https://pandoc.org/) | Document conversion in jira, gadfly, forge, dialectic |
 | python + [pytest](https://pytest.org/) | bonfire, and duck's `--quack` repro |
 
-Linux and macOS (bash 3.2+, GNU or BSD tools). CI runs the tests on both, with macOS on its stock /bin/bash.
+Linux and macOS, bash 3.2 or newer.
 
 ## Tests
+
+### Shell tests
 
 ```bash
 bash tests/run.sh
 ```
 
-Covers the shell parts: darkmoon's transcript extractor and read-only hook, velka's digest and collector, `install.sh`, and the agent-to-hook wiring. CI runs the same suite on every push that touches them, and scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks) on every push.
+Covers darkmoon's extractor and hook, velka's scripts, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
 
-Skills themselves are prompts, so they are tested by running them on real inputs. `/kiln` checks structure, `/jury` checks consistency.
+### darkmoon eval
 
-darkmoon's skeptic has a regression eval: [`evals/darkmoon/run.sh`](evals/darkmoon/run.sh) runs claims with known answers against a small fixture repo full of traps (legacy layers, aliases, dynamic dispatch) and scores each verdict PASS, SOFT or FAIL. It calls headless Claude, so it's manual, not CI: about $2 a pass. Run it before and after changing the skeptic, and compare the SOFT count too - a rule that softens real evidence into "argument, not proof" shows up there first.
+```bash
+evals/darkmoon/run.sh -n 2
+```
+
+Runs claims with known answers against a fixture repo full of traps, and scores each verdict PASS, SOFT or FAIL.
+
+- **Manual, not CI:** it calls headless Claude, about $2 a pass.
+- **When:** before and after any change to the skeptic.
+- **Watch SOFT, not just FAIL:** a rule that softens real evidence into "argument, not proof" shows up there first.
+
+The skills themselves are prompts. `/kiln` checks their structure; `/jury` checks their consistency.
 
 ---
 
