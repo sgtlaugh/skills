@@ -34,22 +34,25 @@ Every call uses `-sS --fail-with-body`: an HTTP error prints `curl: (22)` on std
 /jira confluence <url|id>         # fetch Confluence page (see Confluence section)
 ```
 
+**Every write needs a yes.** Create, update, assign, transition, comment and Confluence PUT all show the user a readable preview first (summary, fields, rendered text; for a page, the checklist counts) and wait for an explicit yes in their reply. A write without a shown preview and a yes is WRONG, including when another skill asked for it.
+
 ## Operations
 
 ### Search Tickets (JQL)
 ```bash
-curl -sS --fail-with-body -X POST "$JIRA_URL/rest/api/3/search/jql" -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" \
-  -d '{"jql": "project = PROJ AND assignee = currentUser() ORDER BY updated DESC", "maxResults": 10, "fields": ["summary", "status", "assignee", "issuetype", "priority", "updated"]}'
+jq -n --arg jql 'project = PROJ AND assignee = currentUser() ORDER BY updated DESC' \
+  '{jql: $jql, maxResults: 10, fields: ["summary", "status", "assignee", "issuetype", "priority", "updated"]}' \
+| curl -sS --fail-with-body -X POST "$JIRA_URL/rest/api/3/search/jql" -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" -d @-
 ```
 
 **Natural language → JQL translation:**
 
 | User says | JQL |
 |-----------|-----|
-| "my open bugs" | `assignee = currentUser() AND issuetype = Bug AND status != Done` |
-| "unassigned PROJ tickets" | `project = PROJ AND assignee is EMPTY AND status != Done` |
+| "my open bugs" | `assignee = currentUser() AND issuetype = Bug AND statusCategory != Done` |
+| "unassigned PROJ tickets" | `project = PROJ AND assignee is EMPTY AND statusCategory != Done` |
 | "what I worked on this week" | `assignee = currentUser() AND updated >= startOfWeek()` |
-| "blockers in current sprint" | `project = PROJ AND sprint in openSprints() AND priority = Highest` |
+| "blockers in current sprint" | `project = PROJ AND sprint in openSprints() AND priority = "<the scheme's top level>"` (look it up - see Gotchas: names like "Highest" don't exist everywhere) |
 
 ### Get Ticket
 ```bash
@@ -131,7 +134,7 @@ curl -sS --fail-with-body -X POST "$JIRA_URL/rest/api/3/issue/PROJ-123/comment" 
 
 ### List Projects
 ```bash
-curl -sS --fail-with-body "$JIRA_URL/rest/api/3/project?maxResults=50" -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" | jq -r '.[] | "\(.key): \(.name)"'
+curl -sS --fail-with-body "$JIRA_URL/rest/api/3/project/search?maxResults=50" -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" | jq -r '.values[] | "\(.key): \(.name)"'
 ```
 
 ## Confluence
@@ -215,20 +218,26 @@ The edit and backup files carry the page id: with a shared name, two sessions ed
 
 **Edit the HTML** using Python (not sed - HTML on one line, position-based edits corrupt). Use unique text anchors for replacements, never byte positions (earlier edits shift positions).
 
-**Push the update:**
+**Push the update** - the body is read from the file (a shell argument caps at 128 KiB, and long specs exceed it), and the title and next version come from the fetched page, so a forgotten placeholder can't rename the page:
 ```bash
-BODY=$(cat /tmp/conf_${PAGE_ID}_edit.html)
-curl -sS --fail-with-body -X PUT "$JIRA_URL/wiki/rest/api/content/$PAGE_ID" \
-  -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg body "$BODY" '{
-    "version": {"number": NEXT_VERSION, "message": "description of changes"},
-    "title": "Page Title",
-    "type": "page",
-    "body": {"storage": {"value": $body, "representation": "storage"}}
-  }')" | jq '{id: .id, version: .version.number}'
+jq -n --rawfile body /tmp/conf_${PAGE_ID}_edit.html --slurpfile p /tmp/conf_$PAGE_ID.json --arg msg "<what changed>" \
+  '{version: {number: ($p[0].version.number + 1), message: $msg}, title: $p[0].title, type: "page",
+    body: {storage: {value: $body, representation: "storage"}}}' \
+| curl -sS --fail-with-body -X PUT "$JIRA_URL/wiki/rest/api/content/$PAGE_ID" \
+    -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" -d @- \
+| jq '{id: .id, version: .version.number}'
 ```
 
-**Verification checklist (run before every push):**
+**Verification checklist (run before every push).** Counts for the backup and the edit, side by side:
+```bash
+python3 - "$PAGE_ID" <<'EOF'
+import re, sys
+for side in ("backup", "edit"):
+    s = open(f"/tmp/conf_{sys.argv[1]}_{side}.html").read()
+    tags = {t: len(re.findall(rf"<{t}[ >]", s)) for t in ("table", "tbody", "tr", "td", "th", "div", "ul", "li")}
+    print(side, tags, "cdata", s.count("<![CDATA["), "comment-markers", s.count("ac:inline-comment-marker"))
+EOF
+```
 - TOC macro (`<ac:structured-macro ac:name="toc">`) byte-identical to original
 - Tag balance preserved vs original for: table, tbody, tr, td, th, div, ul, li
 - CDATA block count balanced (opens = closes)
@@ -256,11 +265,11 @@ curl -sS --fail-with-body -X PUT "$JIRA_URL/wiki/rest/api/content/$PAGE_ID" \
 
 ## Guidelines
 
-- Confirm with user before creating or modifying tickets
 - Infer project key from git branch (e.g. a `PROJ-123-fix-login` branch = `PROJ` project)
 - When creating: ask for summary, type (Task/Bug/Story), priority, and description
 - **Before creating/updating tickets: render description and comments as formatted plain text (markdown) and show to user for confirmation before making the API call.** ADF JSON is unreadable - always preview content first.
 - Show ticket URL after creation
+- `Bash(python3:*)` is granted for Confluence HTML edits and can run anything, so the yes-before-write rule above is the real boundary, not the grant list
 - Display responses in readable format, not raw JSON
 
 ## Gotchas
