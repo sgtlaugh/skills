@@ -34,7 +34,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 
 ## The skills
 
-### 🛡️ Before you push
+### Before you push
 
 | Skill | What it does |
 |---|---|
@@ -42,14 +42,14 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then `/darkmoon` checks the findings |
 | [`/nicepr`](skills/nicepr/SKILL.md) | Writes short, human PR titles and descriptions from the diff and the ticket |
 
-### 🌑 Checking claims
+### Checking claims
 
 | Skill | What it does |
 |---|---|
 | [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims you give it, against the code |
 | [`/solaire`](skills/solaire/SKILL.md) | Run it before a research question. Seven fixed checks keep the answer grounded \\[T]/ |
 
-### 🔥 Building and debugging
+### Building and debugging
 
 | Skill | What it does |
 |---|---|
@@ -57,7 +57,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks questions until you find the bug yourself |
 | [`/fathom`](skills/fathom/SKILL.md) | Judges whether a module is deep or shallow, and how to deepen it |
 
-### 📜 Specs and decisions
+### Specs and decisions
 
 | Skill | What it does |
 |---|---|
@@ -65,7 +65,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft. You decide the forks, then `/gadfly` critiques it |
 | [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then a judge names the trade-off and what would flip it |
 
-### 🕵️ Production
+### Production
 
 | Skill | What it does |
 |---|---|
@@ -74,7 +74,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/triage`](skills/triage/SKILL.md) | Takes a ticket to a proven root cause, with a note ready to post |
 | [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets, and reads Confluence pages |
 
-### 🪞 About skills themselves
+### About skills themselves
 
 | Skill | What it does |
 |---|---|
