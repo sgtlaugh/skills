@@ -8,7 +8,7 @@ description: >
   items. Read-only; does NOT run the skill. Use after writing/editing a skill,
   or before adopting someone else's.
 trigger: /kiln
-allowed-tools: Read, Bash(grep:*), Bash(rg:*), Bash(find:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(rg:*), Bash(find:*), Bash(ls:*)
 argument-hint: "<skill name or path> [--fire], e.g. 'occam' or 'occam --fire'"
 ---
 
@@ -18,12 +18,12 @@ Points at an existing skill and reports structural flaws + concrete fixes. It **
 
 **Scope (state this in the output): kiln checks STRUCTURE, not CORRECTNESS.** A clean pass means the skill is well-*built*, NOT that its output is *right* - only running it on real inputs proves that (firing != correct). Say so; don't let a clean lint read as "verified."
 
-**Authoring reference** (how to write skills well - NOT re-taught here): mattpocock `writing-great-skills` (https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-great-skills). kiln *checks for* the failure modes that guide names; for "how should I write this," point the user there.
+**Authoring reference** (how to write skills well - NOT re-taught here): mattpocock `writing-for-agents` (https://github.com/mattpocock/skills/tree/main/skills/productivity/writing-for-agents). kiln *checks for* the failure modes that guide names; for "how should I write this," point the user there.
 
 ## Step 1 - Locate & read
 - **No target given -> ask which skill to lint; don't guess.**
 - **`--fire` flag -> after the static checks, also run the adversarial test-generation pass (`--fire` section below). Generation only: kiln NEVER executes the skill.**
-- Resolve target, in order: a **bare skill name** (`occam`) -> `~/.claude/skills/<name>/SKILL.md` (the installed path; resolves symlinked skills too) - this is the normal case; else a **dir** -> its `SKILL.md`; else a **`SKILL.md` path** directly. If a name doesn't resolve there, `find ~ -maxdepth 5 -path "*/<name>/SKILL.md"`. `ls` the resolved dir for referenced files (reference docs, configs, sub-skills). Read `SKILL.md` in full + skim referenced files.
+- Resolve target, in order: a **bare skill name** (`occam`) -> `~/.claude/skills/<name>/SKILL.md` (the installed path; resolves symlinked skills too) - this is the normal case; else a **dir** -> its `SKILL.md`; else a **`SKILL.md` path** directly. If a name doesn't resolve there, `find ~ -maxdepth 5 -path "*/<name>/SKILL.md"`; a plugin skill (`plugin:name`) lives under `~/.claude/plugins/`, so strip the prefix and `find ~/.claude/plugins -path "*/<name>/SKILL.md"`. `ls` the resolved dir for referenced files (reference docs, configs, sub-skills). Read `SKILL.md` in full + skim referenced files.
 - Note the skill's own shape: frontmatter, command/step structure, whether it has an output contract.
 
 ## Step 2 - Run the checks
@@ -32,7 +32,7 @@ Grep where a pattern decides it; reason for the rest. Each finding needs a `line
 ### A. Binding - vague rules don't change behavior (the #1 check)
 The hardest-won truth: **advisory prose doesn't bind; concrete fixed-outcome rules do.** Find the weak ones:
 ```
-grep -niE "try to|consider|if unclear|should( probably)?|when possible|ideally|aim to|attempt to|make sure( to)?|be careful" SKILL.md
+grep -niE "try to|consider|if unclear|should( probably)?|when possible|ideally|aim to|attempt to|make sure( to)?|be careful" "<resolved SKILL.md>"
 ```
 **Discard false positives first:** a hit inside a ``` ``` code fence (query DSL - OpenSearch bool `should`/`must`; example commands) or inside a regex/grep pattern string is **syntax/example, not an advisory rule** - skip it. (kiln's own check pattern + bool-query `should` trip this; don't self-flag.)
 
@@ -44,7 +44,8 @@ For each surviving hit: does it give the model a **fixed outcome**, or just nudg
 
 ### C. Contradictions & stale references
 ```
-grep -niE "above|below|step [0-9]|see (the )?[A-Z]|section" SKILL.md
+grep -niE "above|below|step [0-9]|section" "<resolved SKILL.md>"
+grep -nE "[Ss]ee (the )?[A-Z]" "<resolved SKILL.md>"   # case-sensitive: a capitalized name like "see Step 3", not "see the code"
 ```
 - Each directional ref ("above"/"below"/"Step N"/"see X") must resolve to a section that still exists *in that direction*. Flag stale ones (common after a restructure - e.g. "Step 7" when sections were renamed).
 - Cross-read the `MUST`/`ALWAYS`/`NEVER` rules for mutual conflict (real example: *"MUST use the excludes block"* vs *"overview uses an include-list"*). **Fix:** repoint refs to named sections; reconcile conflicts by scoping one or stating precedence.
@@ -91,11 +92,11 @@ Candidates (verify, don't blind-cut):
 
 Solid: <what's already well-built> ✓
 ```
-- Severity by **impact**: binding / missing-contract / contradiction = **Must-fix** (these change whether the skill works). Premature-completion / sediment / frontmatter = Should-fix. Wording / sprawl = Nit. Suspected no-ops = Candidate (never auto-cut).
+- Severity by **impact**: binding / missing-contract / contradiction, including a claim-vs-grant contradiction (F) = **Must-fix** (these change whether the skill works). Premature-completion / sediment / frontmatter = Should-fix. Wording / sprawl = Nit. Suspected no-ops = Candidate (never auto-cut).
 - **No findings -> say "Solid ✓" and stop. Do NOT manufacture nits** - a well-built skill is the success case.
 
 ## `--fire` - adversarial test generation (the grill; GENERATES, never runs)
-A second pass after the static lint: **imagine the inputs that would break this skill**, so a test-runner can verify them later. `--fire` does NOT execute the skill - it emits a list of candidate test cases. Cheap (one reasoning pass).
+A second pass after the static lint: **imagine the inputs that would break this skill**, so you can run them later. `--fire` does NOT execute the skill - it emits a list of candidate test cases. Cheap (one reasoning pass).
 
 Method - generate the probes most likely to expose a REAL failure, **NOT one-per-discipline regression coverage.** Spend most of the budget on the dangerous frontier, few on regression. Ask *"what input makes this produce WRONG / INCOMPLETE / UNANCHORED / EMPTY output?"* - in priority order:
 1. **"Looks fine, isn't" (MOST probes here)** - inputs where the skill emits *plausible-but-wrong* output, not an obvious failure: the answers a human would trust. The highest-value, hardest-to-catch probes.
@@ -113,11 +114,11 @@ Emit each case as **plain markdown - NOT a fenced code block** (a fenced YAML bl
 - **tricky:** <why this input stresses it>
 - **expect:** <the correct behavior - the ASSERTION a runner checks>
 
-**These are HYPOTHESES, not findings.** A probe that *should* break the skill usually doesn't until you RUN it - counter-examples are wrong more often than right (every "obvious" weakness I predicted this class of skill had needed a live run to confirm; most missed). So `--fire` says *"verify these"*; it NEVER claims the skill fails. Generation stops here - hand the list to a **test-runner** (separate skill) to execute + assert. kiln does not run them.
+**These are HYPOTHESES, not findings.** A probe that *should* break the skill usually doesn't until you RUN it - counter-examples are wrong more often than right. So `--fire` says *"verify these"*; it NEVER claims the skill fails. Generation stops here: run each probe by hand, or with `/jury <skill> <args>` for the non-deterministic ones. kiln does not run them.
 
 ## Guard rails
 - **Read-only.** kiln reports; it never edits, deletes, or runs the target skill.
-- **`--fire` generates test cases, it does NOT run them.** Execution is the test-runner's job (separate skill). The boundary is hard: kiln analyzes (lint + generate), never executes.
+- **`--fire` generates test cases, it does NOT run them.** Running them is yours (by hand, or `/jury`). The boundary is hard: kiln analyzes (lint + generate), never executes.
 - **One skill per run.** kiln lints a single target. To audit a whole collection, loop it in the shell - "all" is orchestration, not lint, and a per-skill tool composes cleanly with a future empirical (`--fire`) tier.
 - **Mass-flag = convention, not defect.** If you're linting several skills and a finding repeats across most of them (e.g. they all omit `allowed-tools`), that's a **convention** - raise it once as a collection decision, don't ding each skill. (If you'd flag it everywhere, it's a preference, not a bug.)
 - **Structure, not correctness.** Always scope the verdict this way - a clean lint is not a behavior guarantee. Verifying behavior is a separate, expensive step (run the skill on real inputs).
