@@ -65,7 +65,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft. You decide the forks, then `/gadfly` critiques it |
 | [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then a judge names the trade-off and what would flip it |
 
-### 🚨 Production
+### 🕵️ Production
 
 | Skill | What it does |
 |---|---|
@@ -74,7 +74,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/triage`](skills/triage/SKILL.md) | Takes a ticket to a proven root cause, with a note ready to post |
 | [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets, and reads Confluence pages |
 
-### 🧰 About skills themselves
+### 🪞 About skills themselves
 
 | Skill | What it does |
 |---|---|
