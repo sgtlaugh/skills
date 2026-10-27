@@ -2,7 +2,7 @@
 name: dialectic
 description: Decide between options - argue each side to win (independent + grounded), cross-examine, then synthesize a recommendation with the condition that flips it. For real design/architecture decisions. Structured opposition, not both-sides slop. Output is the axis + the deciding question, not a flat verdict.
 trigger: /dialectic
-allowed-tools: Read, Write, Grep, Glob, Bash(git rev-parse:*), Bash(git log:*), Bash(git show:*), Bash(grep:*), Bash(find:*), Bash(pandoc:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
+allowed-tools: Read, Write, Grep, Glob, Bash(git rev-parse:*), Bash(cd:*), Bash(grep:*), Bash(find:*), Bash(pandoc:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
 ---
 
 # /dialectic - argue both sides, then decide
@@ -29,20 +29,21 @@ It grounds in the repo like gadfly - a decision about real code must **cite** re
 - **Pin the decision criteria.** From `--criteria`, else infer and **state them** (cost · long-run maintenance · risk · time-to-ship · reversibility · the stated goal). Echo: `Deciding: A | B | … on: <criteria>`. The judge scores against these, so they must be explicit.
 - **Surface the frame - what's already decided (the dependency web).** A decision rarely stands alone: it sits under **settled upstream choices that bound it.** A decision is *downstream* when its best answer **flips depending on an as-yet-unsettled one** (e.g. picking a cache strategy before the consistency requirement is fixed). State the upstream constraints you're assuming, drawn from the input/doc/grounding, and echo `Frame (assumed settled): <constraints>`. **If a load-bearing upstream choice is unstated AND unclear, ask** (`AskUserQuestion`) before debating - arguing downstream of an unresolved fork yields a confident-wrong answer (each side silently assumes a different upstream and talks past the other). Non-interactive → state the assumed frame explicitly and proceed. (The advocate-declares + judge frame-check below are the backstop if this guess is wrong - including for a dependency you didn't know existed.)
 - **Ingest a doc if given** (`Read`; `.docx` → `pandoc -f docx -t gfm`) as shared context for all advocates.
-- **Ground the terrain** (like gadfly Phase 2, lightweight): find + confirm the repo(s) the decision touches (`find` over `$PWD`/`$WORKSPACE` (your clones dir, if exported)/`$HOME/Github`; stamp `git rev-parse --short HEAD`), read the hotspots the decision hinges on, note cross-service deps. The advocates need real facts to cite, not vibes. Greenfield → state "no code to ground against."
+- **Ground the terrain** (like gadfly Phase 2, lightweight): find + confirm the repo(s) the decision touches (`find` over `$PWD`/`$WORKSPACE` (your clones dir, if exported)/`$HOME/Github`; stamp `cd <path> && git rev-parse --short HEAD`), read the hotspots the decision hinges on, note cross-service deps. The advocates need real facts to cite, not vibes. Greenfield → state "no code to ground against."
 
 ## Phase 1 - Advocates (independent, parallel, win-don't-hedge)
 
 Spawn **one `Agent` per option, fresh context, in parallel.** Each agent's brief:
-> *"Build the STRONGEST possible case FOR `<option>`. You are an advocate, not a judge - your job is to WIN. Hedging ('it depends', 'both are fine') = failing. **Ground every claim** - cite `path:line`, a cost number, or an authoritative doc; mark anything you can't ground as `[assumed]`. An ungrounded case is forfeit. Return: the case, the criteria it's strongest on, the cost it's willing to pay, **and the upstream assumptions your case rests on** (e.g. 'assumes single-region', 'assumes the upstream fork resolved as X') - so a hidden frame-mismatch between the sides surfaces."*
+> *"Read-only: never edit or write any file. Build the STRONGEST possible case FOR `<option>`. You are an advocate, not a judge - your job is to WIN. Hedging ('it depends', 'both are fine') = failing. **Ground every claim** - cite `path:line`, a cost number, or an authoritative doc; mark anything you can't ground as `[assumed]`. An ungrounded case is forfeit. Return: the case, the criteria it's strongest on, the cost it's willing to pay, **and the upstream assumptions your case rests on** (e.g. 'assumes single-region', 'assumes the upstream fork resolved as X') - so a hidden frame-mismatch between the sides surfaces."*
 
 - **Independent = each advocate writes WITHOUT seeing the others** (no anchoring - that's the whole point of separate contexts).
+- **Can't spawn agents** (an error, or a host that blocks nesting) → say independence is compromised, write the cases inline one at a time without revising earlier ones, and label the recommendation lower-confidence.
 - Give each the **same** grounded terrain + criteria from Phase 0.
-- An advocate that returns a balanced "here are the trade-offs" has **failed** - send it back or note it; you need the *partisan* best case, because the judge supplies the balance later.
+- An advocate that returns a balanced "here are the trade-offs" has **failed**: re-spawn it once with its hedge quoted back, and if it's still balanced, mark that case forfeit in the report; you need the *partisan* best case, because the judge supplies the balance later.
 
 ## Phase 2 - Cross-examination
 
-Now each case meets its opponents. Either spawn a rebuttal agent per option (sees the *other* cases) or run one cross-exam pass over all. For **each** option, attack the opposing cases:
+Now each case meets its opponents, in one cross-exam pass you run yourself (you have the Read and grep tools to check each case's pivotal claim). For **each** option, attack the opposing cases:
 - **Verify the load-bearing claim (check the pivot - don't just argue).** Identify the ONE claim each verdict hangs on, and **check it against the grounded evidence** (grep / read / cite), confirm or **refute** it - never merely counter-assert. **A decisive claim that fails verification collapses that case.** (The miss this prevents: a case wins on a pivot like *"X is impossible / can't do Y"* while evidence **already in scope** shows X exists - the cross-exam must catch when a verdict's own grounding undercuts its load-bearing claim, not just trade rhetoric.)
 - Where does it **break**? Which claim is **ungrounded or overstated**? What **cost did it hide**? What does its strongest argument *assume* that may not hold?
 - **Attack the grounded case as written, not a strawman.** A rebuttal with no concrete break is dropped (no manufactured attacks - same bar as the advocates).
@@ -51,7 +52,7 @@ Output per option: what **survived** cross-exam, and what **broke** under it. Th
 
 ## Phase 3 - Judge (independent synthesis)
 
-A **fresh `Agent` that did NOT advocate** reads both cases + the cross-exam and produces the synthesis. **Required outputs (all of them):**
+A **fresh, read-only `Agent` that did NOT advocate** reads all the cases + the cross-exam and produces the synthesis. **Required outputs (all of them):**
 - **Frame-dependency check (FIRST - it gates whether a winner can even be named).** Do the cases rest on **different upstream assumptions** (from each advocate's declared assumptions), or does the recommendation **flip under a plausible upstream choice**? If yes, the decision is **conditional on that upstream fork** - the verdict is *"resolve `<upstream fork>` first - under `<X>` → A, under `<Y>` → C,"* **NOT** a forced winner. (This is the strongest flip-condition: the whole debate hinges on a prior, unsettled decision. Surfacing it - even one the user didn't know bound them - is the most valuable output, not a failure to decide.) Only when the frame is settled do you proceed to a winner.
 - **Axis** - the single real disagreement underneath (the fork). One line.
 - **Per option:** *wins on `<criteria>` · breaks on `<criteria>`* - judged **after** cross-exam (a point that broke doesn't count as a win).
@@ -61,7 +62,7 @@ A **fresh `Agent` that did NOT advocate** reads both cases + the cross-exam and 
 
 ## Output
 
-Save a fresh report to `~/.claude/reports/dialectic/<slug>.dialectic.<ts>.md` (expanded to an **absolute** path; `<ts>=$(date +%Y%m%d-%H%M%S)`; the Write tool creates the directory) - never inside a repo, where it would sit as an untracked file. Print the absolute path, never a bare filename. Always a new file.
+Save a fresh report to `~/.claude/reports/dialectic/<slug>.dialectic.<ts>.md` (expanded to an **absolute** path; `<slug>` = the options in kebab-case, at most 40 characters; `<ts>` = the literal output of running `date +%Y%m%d-%H%M%S` in Bash now, never a typed-in guess; the Write tool creates the directory) - never inside a repo, where it would sit as an untracked file. Print the absolute path, never a bare filename. Always a new file.
 
 The file holds: criteria · each grounded case · the cross-exam (survived/broke) · the synthesis. **Chat echo is compact:**
 - `Deciding: A | B on: <criteria>` + `Frame: <assumed settled upstream>`
@@ -69,7 +70,7 @@ The file holds: criteria · each grounded case · the cross-exam (survived/broke
 - a one-line `wins/breaks` per option
 - **Recommendation:** `<X> UNLESS <flip-condition>` - **or, if frame-dependent:** `Resolve <upstream fork> first - under X→A, under Y→C` (this replaces the winner)
 - **Deciding question:** `<the one that settles it>`
-- `Full report → <absolute path>` + `(adds: each grounded case · cross-exam breaks · per-criterion scoring - not in this summary)`
+- `Full report → <absolute path>` + `(adds: each grounded case · cross-exam breaks - not in this summary)`
 
 **Never `cat`/re-print the report** - the file is written, the echo has the signal; re-printing re-pollutes context and double-renders. The pointer ends the run.
 
