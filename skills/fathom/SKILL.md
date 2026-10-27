@@ -9,7 +9,7 @@ allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(git log:*), Bash(git show:*)
 
 A **deep module** = a lot of behavior behind a **small interface**, at a clean **seam**, testable **through** that interface. Use this language and these principles wherever code is designed, reviewed, or restructured. Aim: leverage for callers, locality for maintainers, testability for everyone. (Ousterhout, *A Philosophy of Software Design*; seams from Michael Feathers.)
 
-**What this is.** Two things: (1) a **shared vocabulary** other skills cite for consistent design language, and (2) an **actionable lens** - point it at code and it returns a deep/shallow verdict + deepening suggestions, or `--twice` to generate and compare interface designs. It judges *design shape*, not correctness or diff minimality (those are `occam` for local work, `aristarchus` for a PR, `litmus` for one claim).
+**What this is.** Two things: (1) a **shared vocabulary** other skills cite for consistent design language, and (2) an **actionable lens** - point it at code and it returns a deep/shallow verdict + deepening suggestions, or `--twice` to generate and compare interface designs. It judges *design shape*, not correctness or diff minimality (those are `occam` for local work, `aristarchus` for a PR, `darkmoon --claims` for one claim).
 
 ## Usage
 ```
@@ -56,7 +56,7 @@ For a *design question* ("how should the notification service's interface look?"
 - Use the **glossary terms exactly**; that consistency is what lets other skills build on this.
 
 ## Guard rails
-- **A lens, not a law.** Deep/shallow is a design heuristic - judgment, not mechanical proof. State it as such; don't dress an opinion as a verdict (that's the `darkmoon`/`litmus` line).
+- **A lens, not a law.** Deep/shallow is a design heuristic - judgment, not mechanical proof. State it as such; don't dress an opinion as a verdict (that's the `darkmoon` line).
 - **Don't over-abstract.** "One adapter = hypothetical seam" + the deletion test exist to STOP speculative interfaces. Deepening a shallow module is good; adding a seam nothing varies across is the mirror-image mistake. When unsure, fewer seams.
-- **Not correctness, not minimality.** Shape only. Bugs and diff minimality → `occam` (local work) / `aristarchus` (a PR) / `litmus` (one claim).
+- **Not correctness, not minimality.** Shape only. Bugs and diff minimality → `occam` (local work) / `aristarchus` (a PR) / `darkmoon --claims` (one claim).
 - **Read-only.** Reads and judges; never edits, commits, or restructures the code itself. It proposes; the human applies.

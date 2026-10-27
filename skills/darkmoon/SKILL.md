@@ -19,7 +19,7 @@ Blade of the Darkmoon: an invader summoned to **judge a transgression.** Here th
 /darkmoon              # challenge the author's whole last response
 /darkmoon <claim>      # challenge one specific claim/topic from it (cheaper, sharper)
 /darkmoon --context N  # also include the N prior exchanges (for a long multi-turn thread the answer rests on)
-/darkmoon --claims <claims>  # verify a caller's pre-formatted claims, no transcript (for skills like aristarchus)
+/darkmoon --claims <claims>  # verify one claim or a numbered list against the code, no transcript (also how skills like aristarchus call it)
 ```
 Plain text after `/darkmoon` is ALWAYS a focus topic inside the last response - never treated as standalone claims. Only `--claims` skips the transcript; everything after `--claims` is the claims, so it ignores `--context` and focus text.
 
@@ -48,7 +48,7 @@ darkmoon is invoked *by* the author, in the author's session - so its independen
 
 The skeptic's method, verdict rules and output format live in **one** place: the `darkmoon-skeptic` agent (`~/.claude/agents/darkmoon-skeptic.md`, its system prompt). The orchestrator never restates, summarizes or edits the method - it passes only the input below.
 
-**`--claims` mode** (another skill verifying its own output before it reaches the transcript, e.g. aristarchus mid-review): **skip transcript extraction entirely.** The prompt is `Claims mode:` + the claims verbatim, numbered. The ledger returns to the calling skill; there is no `## Author's reply to darkmoon` block - the caller integrates the verdicts.
+**`--claims` mode** (you hand it specific claims to settle, or another skill verifies its own output before it reaches the transcript, e.g. aristarchus mid-review): **skip transcript extraction entirely.** Split the input into separate claims and number them - one sentence, a numbered list, or a pasted evidence block (its `[Confirmed]`/`[Inferred]` tags are the author's assertion, not evidence). The prompt is `Claims mode:` + those claims verbatim. The ledger goes to whoever invoked it - the user, or the calling skill, which integrates the verdicts; there is no `## Author's reply to darkmoon` block.
 
 **`/darkmoon <claim>`** (focus): extract as below; the prompt is `Focus: <claim>` + the script output.
 

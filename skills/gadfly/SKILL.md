@@ -178,9 +178,9 @@ A finding often hinges on what **another service** does with the data this desig
 - **Locate that service's repo** (same `find` over the workspace roots) and **ground a hotspot there** - read the function that consumes/computes the thing.
 - If its repo isn't available → mark the dependency **Can't-determine (cross-service)** and hand to the human; do **not** assume.
 
-This is the recall fix: handing *every* cross-service question to litmus/human misses what only reading the **other** service reveals (e.g. that its inheritance graph can't take the design's new shape). Ground it yourself when a top finding rests on it.
+This is the recall fix: handing *every* cross-service question to darkmoon or a human misses what only reading the **other** service reveals (e.g. that its inheritance graph can't take the design's new shape). Ground it yourself when a top finding rests on it.
 
-### Step 3 - Cite or drop (litmus reflex)
+### Step 3 - Cite or drop
 Every claim about how the current code works ships its evidence:
 - **Run grep/read and cite `path:line`.** Never eyeball-trace.
 - Can't ground it → write **Can't-determine** (not found in scope, or behavioral/runtime - a static read can't decide a race or deadlock). Don't bluff.
@@ -262,7 +262,7 @@ A top-severity finding earns its rank only if its evidence **reproduces.** Befor
 - Citation doesn't resolve → **before you drop it, clear the absence bar (Phase 2 Step 3)** - whole repo, every layer, aliases. **A careless drop turns a REAL finding into a false negative** - the costlier error (a true Sink, silently discarded). Only after a rigorous search is empty: re-ground, downgrade to `Can't-determine`, or drop. Never escalate on a citation you couldn't reproduce; never drop on a grep you didn't scope.
 - **Re-grep the EXACT symbol the claim names** - the thing that allegedly does the harm, not a supporting one. *"destructive because `replace_order_items` calls `delete_line_items`"* → grep `def replace_order_items`; if **that** is absent the finding is dead, even though `delete_line_items` exists. Confirming a related symbol is a false pass.
 
-This is the litmus reflex with teeth - it catches the dangerous case (a confident, well-formatted, *wrong* citation) that plain "cite or drop" misses when the citation merely *looks* present.
+This is cite-or-drop with teeth - it catches the dangerous case (a confident, well-formatted, *wrong* citation) that plain "cite or drop" misses when the citation merely *looks* present.
 
 ### Output
 ```
@@ -300,7 +300,7 @@ Open questions: <the few the author must answer before building>
   ```
 - **Never `cat` / re-print the report after saving.** The file is written; the chat already has the compact echo. `cat`-ing the saved file re-injects all ~250 lines back into the conversation - it re-pollutes context, costs tokens twice, and triggers a redundant re-summary (the report ends up printed 2-3×). The pointer line is the end of the run: print it and **stop**. The user opens the file in their own editor/pager, outside the agent loop. Do not offer to open it inline.
 - **With `--prd`:** tag each finding `[SPEC]` (fix the design) or `[PRD]` (revisit the product ask), include the PRD Coverage table, and stamp the PRD version next to the spec. `[PRD]` findings cap at `med`.
-- **litmus handoff:** for any `Sinks`/`Blocker` resting on a contestable code claim, recommend `/litmus <claim>` to settle it before the team acts on it. (manual)
+- **darkmoon handoff:** for any `Sinks`/`Blocker` resting on a contestable code claim, recommend `/darkmoon --claims <claim>` to settle it before the team acts on it. (manual)
 
 ## Completion contract
 A run is complete only when the saved report contains **all** of these - missing any = incomplete, not done:

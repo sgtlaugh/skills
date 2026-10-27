@@ -9,11 +9,11 @@ allowed-tools: Read, Bash(bash ~/.claude/skills/velka/collect.sh:*), Bash(jq:*),
 
 Velka, Goddess of Sin: she *observes and records transgressions* across the whole cycle. Sibling to `darkmoon` (which judges **one** answer) - velka watches **many sessions** and names the habit you keep repeating. The "sin" here is a workflow inefficiency: a file you thrash, a tool you keep skipping, a 3-step dance you redo by hand every time.
 
-**Why it exists.** Inside a single session you already lived it - telling you "you edited `auth.ts` 12 times today" is no news. What you *cannot* see is the pattern **across** sessions: that you thrash frontend files every time, that you've run `litmus` in 8 of 441 sessions, that the same grep→read→edit dance recurs and should be a skill. velka aggregates the mechanical footprints your transcripts leave and surfaces the cross-session habit.
+**Why it exists.** Inside a single session you already lived it - telling you "you edited `auth.ts` 12 times today" is no news. What you *cannot* see is the pattern **across** sessions: that you thrash frontend files every time, that you've run `occam` in 8 of 441 sessions, that the same grep→read→edit dance recurs and should be a skill. velka aggregates the mechanical footprints your transcripts leave and surfaces the cross-session habit.
 
 **Honest ceiling - read this.**
 - **velka sees ONLY what ran through Claude Code's tools.** Tests in your IDE/terminal/CI, edits in vim, commits from another shell - **invisible.** A "you never test" finding means "no test command ran *through Claude*," NOT "you don't test." This caveat is **mandatory** on any testing/coverage finding (see Guard rails) - omitting it is a false accusation.
-- **Mechanical footprints only.** velka proves *what happened* (counts, files, tools). It does **not** prove *what you should have done* - "you should've used litmus" is an inference the transcript can't ground. Those are **low-confidence flags for your review**, never asserted findings.
+- **Mechanical footprints only.** velka proves *what happened* (counts, files, tools). It does **not** prove *what you should have done* - "you should've used darkmoon" is an inference the transcript can't ground. Those are **low-confidence flags for your review**, never asserted findings.
 - **The value is cross-session.** A single-session run is low-value (you lived it). Default to the full window; warn if the window is one session.
 
 ## Usage
@@ -62,10 +62,10 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
     | map(select(.worst.value>=10))|sort_by(-.worst.value)|.[0:10][]
     | "\(.worst.value)x  \(.worst.key|split("/")|last)\t(\(.proj), \(.id))"' "$D"/*.json
   ```
-- **Skipped-fleet-tool** (LOW-CONFIDENCE flag, not a finding - the footprint is real, the "should have" is not). Two groundable ones (litmus, occam); **aristarchus is NOT groundable** (no gh-subcommand count in the digest - do not emit it until the digester captures gh subcommands):
+- **Skipped-fleet-tool** (LOW-CONFIDENCE flag, not a finding - the footprint is real, the "should have" is not). Two groundable ones (darkmoon, occam); **aristarchus is NOT groundable** (no gh-subcommand count in the digest - do not emit it until the digester captures gh subcommands):
   ```
-  jq -rs '[ (map(select(.bash.grep>=15 and ((.skill_tooluse+.slash)|index("litmus")|not)))|length),
-            (map(select(.bash.grep>=15))|length) ] | "litmus: \(.[0])/\(.[1]) heavy-grep sessions used none"' "$D"/*.json
+  jq -rs '[ (map(select(.bash.grep>=15 and ((.skill_tooluse+.slash)|index("darkmoon")|not)))|length),
+            (map(select(.bash.grep>=15))|length) ] | "darkmoon: \(.[0])/\(.[1]) heavy-grep sessions used none"' "$D"/*.json
   jq -rs '[ (map(select(.bash.git_commit>0 and ((.skill_tooluse+.slash)|index("occam")|not)))|length),
             (map(select(.bash.git_commit>0))|length) ] | "occam: \(.[0])/\(.[1]) commit sessions used none"' "$D"/*.json
   ```
@@ -143,7 +143,7 @@ Window: <N sessions · <date range> · project=<all|path>>
 | habit | evidence (counts · sessions/files) | confidence | suggested fix |
 |-------|-----------------------------------|-----------|---------------|
 | edit-thrash | page.tsx 123x (storefront, 3f9c2e1a) | high | plan/dialectic the design before editing |
-| skipped litmus | 34/36 heavy-grep sessions, 0 litmus | low (candidate) | consider /litmus for claim-checks |
+| skipped darkmoon | 34/36 heavy-grep sessions, 0 darkmoon | low (candidate) | consider /darkmoon --claims for claim-checks |
 | testing | 3/441 sessions ran a test cmd | see caveat | (may run outside Claude) |
 
 Coverage: analyzed <N> sessions (<range>). velka sees ONLY tools run through Claude Code - tests/edits/commits outside it are invisible. Mechanical footprints only; low-confidence rows are candidates for your review, not verdicts.

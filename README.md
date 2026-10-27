@@ -42,8 +42,7 @@ Restart Claude Code, then type `/` to see the skills. Usage patterns for each ar
 
 | Skill | What it does |
 |---|---|
-| [`/darkmoon`](skills/darkmoon/SKILL.md) | Summons an independent skeptic to challenge the last answer. Each claim is upheld, refuted with evidence, or marked can't-determine. It never invents a counter-argument |
-| [`/litmus`](skills/litmus/SKILL.md) | Settles one specific claim against the code: Confirmed, Refuted or Can't-determine, with the deterministic evidence shown |
+| [`/darkmoon`](skills/darkmoon/SKILL.md) | Summons an independent skeptic to challenge the last answer, or to settle specific claims you hand it (`--claims`). Each claim is upheld, refuted with evidence, or marked can't-determine. It never invents a counter-argument |
 | [`/solaire`](skills/solaire/SKILL.md) | Run it *before* a research or feasibility question. Seven fixed checks keep the answer grounded the first time. Jolly cooperation \[T]/ |
 
 **Building and debugging**
@@ -130,7 +129,7 @@ Skills that need no config work right after install.
 |---|---|
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | everything |
 | [jq](https://jqlang.github.io/jq/) | install, darkmoon, velka, and every skill that calls an API |
-| [gh](https://cli.github.com/) | PR and code-history work: aristarchus, nicepr, triage, sentry, firewatch, litmus |
+| [gh](https://cli.github.com/) | PR and code-history work: aristarchus, nicepr, triage, sentry, firewatch, darkmoon |
 | curl | the API skills |
 | [pandoc](https://pandoc.org/) | document conversion in jira, gadfly, forge, dialectic |
 | python + [pytest](https://pytest.org/) | bonfire, and duck's `--quack` repro |

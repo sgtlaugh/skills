@@ -11,7 +11,7 @@ The TDD loop *is* the Dark Souls loop: **red** (the flame's out - your test fail
 
 **Why it exists.** "Write me some tests" gives you tests that pass *now* - but you never saw them **fail**, so you don't know they catch anything (a test with a broken fixture passes green and guards nothing). bonfire's whole value is the **red step**: a test proven to fail on the real behavior *before* the code exists is a test you can trust. Plus it stops the two classic failures - writing all tests up front against an imagined shape (crap tests), and gold-plating past what the current test needs.
 
-**Honest ceiling - read this.** Red→green proves each test **catches its behavior** and the code is **minimal** - NOT that *untested* behaviors work, nor that the **design** is right (that's `/fathom`), nor that it's bug-free (that's `/aristarchus`/`/litmus`). You can't test everything; test the critical paths and **name what you skipped**. A lit bonfire means *this* test passes - not that the dark is gone.
+**Honest ceiling - read this.** Red→green proves each test **catches its behavior** and the code is **minimal** - NOT that *untested* behaviors work, nor that the **design** is right (that's `/fathom`), nor that it's bug-free (that's `/aristarchus`/`/darkmoon`). You can't test everything; test the critical paths and **name what you skipped**. A lit bonfire means *this* test passes - not that the dark is gone.
 
 ## Usage
 ```

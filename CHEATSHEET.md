@@ -40,12 +40,8 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
     /darkmoon                     # every load-bearing claim in it
     /darkmoon <topic>             # only claims about that topic
     /darkmoon --context 3         # include 3 earlier exchanges
-    /darkmoon --claims <claims>   # verify a list of claims, no transcript
-
-**`/litmus`** - settle one claim against the code
-
-    /litmus <claim>               # one claim, cited evidence
-    /litmus <evidence block>      # batch: one verdict per claim
+    /darkmoon --claims <claim>    # settle one claim against the code, no transcript
+    /darkmoon --claims <list>     # numbered list or a pasted evidence block: one verdict each
 
 **`/solaire`** - grounded research, before answering
 

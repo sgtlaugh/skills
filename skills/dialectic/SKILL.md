@@ -43,7 +43,7 @@ Spawn **one `Agent` per option, fresh context, in parallel.** Each agent's brief
 ## Phase 2 - Cross-examination
 
 Now each case meets its opponents. Either spawn a rebuttal agent per option (sees the *other* cases) or run one cross-exam pass over all. For **each** option, attack the opposing cases:
-- **Verify the load-bearing claim (litmus the pivot - don't just argue).** Identify the ONE claim each verdict hangs on, and **check it against the grounded evidence** (grep / read / cite), confirm or **refute** it - never merely counter-assert. **A decisive claim that fails verification collapses that case.** (The miss this prevents: a case wins on a pivot like *"X is impossible / can't do Y"* while evidence **already in scope** shows X exists - the cross-exam must catch when a verdict's own grounding undercuts its load-bearing claim, not just trade rhetoric.)
+- **Verify the load-bearing claim (check the pivot - don't just argue).** Identify the ONE claim each verdict hangs on, and **check it against the grounded evidence** (grep / read / cite), confirm or **refute** it - never merely counter-assert. **A decisive claim that fails verification collapses that case.** (The miss this prevents: a case wins on a pivot like *"X is impossible / can't do Y"* while evidence **already in scope** shows X exists - the cross-exam must catch when a verdict's own grounding undercuts its load-bearing claim, not just trade rhetoric.)
 - Where does it **break**? Which claim is **ungrounded or overstated**? What **cost did it hide**? What does its strongest argument *assume* that may not hold?
 - **Attack the grounded case as written, not a strawman.** A rebuttal with no concrete break is dropped (no manufactured attacks - same bar as the advocates).
 
