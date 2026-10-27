@@ -2,13 +2,35 @@
 
 Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 
+- [Which skill?](#which-skill)
 - [Before you push](#before-you-push)
 - [Checking claims](#checking-claims)
 - [Building and debugging](#building-and-debugging)
 - [Specs and decisions](#specs-and-decisions)
 - [Production](#production)
 - [About skills themselves](#about-skills-themselves)
+- [Cost and time](#cost-and-time)
 - [Habits that work](#habits-that-work)
+
+## Which skill?
+
+| I want to... | Use |
+|---|---|
+| Check my change before I commit | `/occam` |
+| Review someone's PR | `/aristarchus <PR-URL>` |
+| Write the PR description | `/nicepr` |
+| Know if that last answer is actually right | `/darkmoon` |
+| Settle one claim against the code | `/darkmoon --claims <claim>` |
+| Research something without bluffing | `/solaire <question>` |
+| Build a feature test-first | `/bonfire <feature>` |
+| Get unstuck on a bug, and learn why | `/duck <bug>` |
+| Find holes in a spec before it's built | `/gadfly <spec>` |
+| Turn a PRD into a spec | `/forge <prd>` |
+| Pick between two designs | `/dialectic <question>` |
+| Handle an alert that just fired | `/firewatch <alert>` |
+| Find why a ticket's bug happens | `/triage <TICKET-ID>` |
+| Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
+| See if a skill's output is stable | `/jury <skill> <args>` |
 
 ## Before you push
 
@@ -74,7 +96,8 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 
 **`/forge`** - PRD to a grounded spec draft
 
-    /forge <prd>                  # draft, you decide the forks, gadfly critiques
+    /forge <prd-file>             # local PRD (md, txt, pdf, docx)
+    /forge <confluence-url|id>    # Confluence PRD, by URL or page ID
     /forge <prd> --repo <hint>    # point it at the repo(s) the feature lands in
     /forge <prd> --no-temper      # draft only, skip the gadfly pass
 
@@ -103,7 +126,8 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 **`/triage`** - ticket to a proven root cause
 
     /triage <TICKET-ID>           # evidence ledger, darkmoon check, ticket note
-    /triage <TICKET-ID> --fast    # same, skip the darkmoon pass
+    /triage <jira-url>            # same, by URL
+    /triage <TICKET-ID> --fast    # skip the darkmoon pass
 
 **`/jira`** - tickets and Confluence
 
@@ -122,26 +146,43 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 
 **`/jury`** - run a skill N times, merge the results
 
-    /jury <skill> <args> --n 3              # 3 runs, frequency table
-    /jury <skill> <args> --n 3 --headless   # separate processes, for skills that spawn agents
+    /jury <skill> <args>                    # 3 runs (the default), frequency table
+    /jury <skill> <args> --n 5              # more runs
+    /jury <skill> <args> --headless         # separate processes, for skills that spawn agents
 
 **`/velka`** - habits across your sessions
 
     /velka                        # since the last run
     /velka --all                  # full history
     /velka --since 2026-08-20     # from a date
+    /velka --project <path>       # only sessions in that directory
     /velka --candidates           # what you keep asking for vs the skills you have
     /velka --explain              # add what each habit means and what to do
+    /velka --advice               # also show speculative suggestions
 
 **`/humanize`** - strip AI patterns from text
 
     /humanize                     # rewrite for a human voice
     /humanize --concise           # rewrite + cut about half
 
+## Cost and time
+
+Take these with a grain of salt: a few runs each, and they swing with repo size and how deep the skill digs.
+
+| Run | Model | Cost | Time |
+|---|---|---|---|
+| `/darkmoon --claims` (a few claims) | Opus 5.5 | $0.20-0.40 | under 1 min |
+| `/firewatch check all services` | Opus 5.5 (1M) | ~$0.30 | ~1 min |
+| `/firewatch <alert>` | Opus 5.5 (1M) | $0.70-0.90 | ~3 min |
+| `/triage <TICKET-ID>` | Opus 5.5 (1M) | $2.20-2.50 | ~8 min |
+| `/gadfly <spec>` | not recorded (June 2026) | $1.30-4.80 | not recorded |
+| `/forge <prd>` | not recorded (June 2026) | ~$5-15 | ~14 min |
+| `/jury <skill>` | the target's | N × the target | about one run (parallel) |
+
 ## Habits that work
 
 - **Review, then describe.** `/occam` before committing, `/nicepr --create` to open the PR.
 - **Doubt the confident answer.** When a response sounds too sure, `/darkmoon` it.
 - **Spec loop.** `/forge` drafts, `/gadfly` attacks, you decide, repeat until no blockers remain.
-- **High stakes, more runs.** `/jury aristarchus <PR> --n 3 --headless` shows which findings were consistent and which were luck.
+- **High stakes, more runs.** `/jury aristarchus <PR> --headless` shows which findings were consistent and which were luck.
 - **After editing a skill,** `/kiln` it before you commit. Don't you dare go hollow.
