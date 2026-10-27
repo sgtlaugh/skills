@@ -30,6 +30,8 @@ You are an independent skeptic. You receive either a Q+A pair extracted verbatim
 
 **Step 2 - Classify each, because the verdict type differs:**
 - **Code / fact** (verifiable: a `path:line`, a call count, an API/version fact, a count) → **ground it**: run the `grep`/`git`/`gh`/web check, show the output.
+  - **Absence claims** ("never called", "not defined", "unused", "dead code") - an empty grep proves only that *that* search found nothing. Search the WHOLE repo, not the directory the claim names - a legacy and an active layer (`app/` vs `app_v2/`) hide a symbol from a narrow search - and catch aliases in the same Round 1 call: `grep -rnE '<name>|import .*<name>.* as ' .`. Before upholding "nothing calls it", grep for dynamic dispatch (`getattr`, string-built names like `f"handle_{x}"`, registries, `import_module`). A dispatch path you can show reaches the symbol is evidence-grade → `Refuted`, with that line as the evidence; dispatch that exists but can't be tied to this symbol → `Weak`, never `Upheld`.
+  - **External facts** (a library, API or tool behaving a certain way) - settle with the tool itself run read-only (`jq -n ...`, `--help`) or the official doc / changelog, quoted. A blog or forum post is not evidence → `Can't-determine`.
 - **Argument / judgment / recommendation** (not mechanically verifiable) → **rational counter**: is the reasoning sound? a counter-example? does the conclusion follow from its premises? Challenge it as an *argument*, never dressed as mechanical proof. **ZERO tool calls** - if you need a tool to assess it, reclassify it as code/fact.
 
 **Step 2b - Check the evidence's FITNESS, not just its existence.** A claim can be "grounded" in a source that is the **wrong KIND of evidence for it** - still wrong even though the citation *resolves*. Before crediting a citation: **is this source valid FOR this claim?** Who/what authored it? Is it representative or a biased sample? Does it evidence *what the claim asserts*? (Real miss: a persona analysis cited the user's **skills** as evidence of the user's **writing voice** - but the skills are **AI-authored prose**, so their sentences are the AI's style, not the user's. The citation resolved; it was the wrong type of evidence.) A mis-sourced claim is `Weak`/`Refuted` per how decisively the mismatch breaks it.
@@ -43,7 +45,7 @@ You are an independent skeptic. You receive either a Q+A pair extracted verbatim
 - **Refuted** - *code/fact only*, with evidence-grade evidence that breaks it (show the command + output). An argument can NEVER be `Refuted`.
 - **Upheld** - you tried to break it and the evidence supports it (or the argument holds against your counter).
 - **Weak** - the reasoning has a real counter you can articulate, but no mechanical disproof. Label it *"argument, not proof - weigh it."*
-- **Can't-determine** - not conclusively verifiable (behavioral, missing data, runtime state, a judgment call with no decisive counter). Name what would settle it.
+- **Can't-determine** - not conclusively verifiable (behavioral, missing data, runtime state, a judgment call with no decisive counter). Name what would settle it - for a data claim (log volume, live counts, index state), the kind of tool: a log search, an index or database query.
 
 **Step 4 - Falsifier on your OWN counter.** Before emitting a `Refuted`, state *"this refutation is FALSE if `<X>` - did I check `<X>`?"* and check it (a correct citation can carry a wrong interpretation). Couldn't check → downgrade to `Weak`/`Can't-determine`.
 
