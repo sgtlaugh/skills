@@ -22,6 +22,7 @@ Claude Code skills that make the agent prove it.
 - [Configuration](#configuration)
 - [Requirements](#requirements)
 - [Tests](#tests)
+- [Uninstall](#uninstall)
 
 ## Quick start
 
@@ -32,13 +33,9 @@ git clone https://github.com/sgtlaugh/skills.git ~/Github/skills
 
 Restart Claude Code, then type `/` to see the skills. Every flag and example is in [`CHEATSHEET.md`](CHEATSHEET.md).
 
-`install.sh` links the skills, the agent and the hook into `~/.claude/`. It also creates the two config files in `~/.config/claude-skills/`. Re-run it after a pull. It never overwrites your config, and backs up anything in the way to `.bak`.
+`install.sh` links the skills, the agent and the hook into `~/.claude/`. It also creates the two config files in `~/.config/claude-skills/`. Re-run it after a pull.
 
-To uninstall, delete the links that point into the repo. Your config stays.
-
-```bash
-cd ~/Github/skills && find ~/.claude -lname "$PWD/*" -delete && find ~/.claude/skills -type d -empty -delete
-```
+It never overwrites your config, and backs up anything in the way to `.bak`.
 
 ## What it looks like
 
@@ -62,8 +59,8 @@ Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 
 | Skill | What it does |
 |---|---|
-| [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and a bigger diff than needed |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then darkmoon checks the findings |
+| [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and simplicity |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then `/darkmoon` checks the findings |
 | [`/nicepr`](skills/nicepr/SKILL.md) | Writes short, human PR titles and descriptions from the diff and the ticket |
 
 ### 🌑 Checking claims
@@ -86,7 +83,7 @@ Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 | Skill | What it does |
 |---|---|
 | [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built: gaps, grounding in real code, four adversarial lenses |
-| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft. You decide the forks, then gadfly critiques it |
+| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft. You decide the forks, then `/gadfly` critiques it |
 | [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then a judge names the trade-off and what would flip it |
 
 ### 🚨 Production
@@ -104,35 +101,35 @@ Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 |---|---|
 | [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
 | [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and shows which findings were consistent and which were luck |
-| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions (no LLM) and reports habits worth fixing or automating |
+| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (no LLM) |
 | [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text |
 
-Review skills are read-only. bonfire, forge and `nicepr --create` write only what you ask for.
+Review skills are read-only. `/bonfire`, `/forge` and `/nicepr --create` write only what you ask for.
 
 ## How they connect
 
-Skills hand off to each other instead of repeating work. darkmoon is the shared verifier.
+Skills hand off to each other instead of repeating work. `/darkmoon` is the shared verifier.
 
 ```mermaid
 flowchart LR
-    triage --> sentry
-    triage --> jira
-    triage --> darkmoon
-    firewatch --> sentry
+    triage["/triage"] --> sentry["/sentry"]
+    triage --> jira["/jira"]
+    triage --> darkmoon["/darkmoon"]
+    firewatch["/firewatch"] --> sentry
     firewatch --> jira
-    aristarchus --> darkmoon
-    aristarchus --> fathom
+    aristarchus["/aristarchus"] --> darkmoon
+    aristarchus --> fathom["/fathom"]
     aristarchus --> jira
-    forge --> gadfly
-    nicepr --> jira
-    nicepr -. optional .-> humanize
+    forge["/forge"] --> gadfly["/gadfly"]
+    nicepr["/nicepr"] --> jira
+    nicepr -. optional .-> humanize["/humanize"]
     darkmoon --> skeptic([darkmoon-skeptic agent])
 
     classDef verifier fill:#4c3a72,stroke:#2e2347,color:#fff
     class darkmoon,skeptic verifier
 ```
 
-darkmoon runs its skeptic agent in a fresh context. A hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) blocks any command outside a read-only allowlist. It's a tripwire, not a sandbox.
+`/darkmoon` runs its skeptic agent in a fresh context. A hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) blocks any command outside a read-only allowlist. It's a tripwire, not a sandbox.
 
 ## Configuration
 
@@ -153,20 +150,20 @@ Two files live in `~/.config/claude-skills/`. Skills that need neither work righ
 | `sentryAuthToken` | `/sentry` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
 | `sentryOrg` | `/sentry` | Your Sentry org slug |
 
-Skills that call `/jira` or `/sentry` (triage, firewatch, nicepr and others) use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
+Skills that call `/jira` or `/sentry` use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
 
-**`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. sentry, triage and firewatch read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
+**`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. `/sentry`, `/triage` and `/firewatch` read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
 
 ## Requirements
 
 | Tool | Needed for |
 |---|---|
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
-| [jq](https://jqlang.github.io/jq/) | install, darkmoon, velka and the API skills |
-| [gh](https://cli.github.com/) | aristarchus, nicepr, triage, sentry, firewatch, darkmoon |
+| [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills |
+| [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/sentry`, `/firewatch`, `/darkmoon` |
 | curl | The API skills |
-| [pandoc](https://pandoc.org/) | Document conversion in jira, gadfly, forge, dialectic |
-| python + [pytest](https://pytest.org/) | bonfire, and duck's `--quack` repro |
+| [pandoc](https://pandoc.org/) | Document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` |
+| python + [pytest](https://pytest.org/) | `/bonfire` and `/duck --quack` |
 
 Linux and macOS, bash 3.2 or newer.
 
@@ -178,9 +175,9 @@ Linux and macOS, bash 3.2 or newer.
 bash tests/run.sh
 ```
 
-Covers darkmoon's extractor and hook, velka's scripts, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
+Covers `/darkmoon`'s extractor and hook, `/velka`'s scripts, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
 
-### darkmoon eval
+### `/darkmoon` eval
 
 ```bash
 evals/darkmoon/run.sh -n 2
@@ -193,6 +190,14 @@ Runs claims with known answers against a fixture repo full of traps, and scores 
 - **Watch SOFT, not just FAIL:** a rule that softens real evidence into "argument, not proof" shows up there first.
 
 The skills themselves are prompts. `/kiln` checks their structure; `/jury` checks their consistency.
+
+## Uninstall
+
+Delete the links that point into the repo. Your config in `~/.config/claude-skills/` stays.
+
+```bash
+cd ~/Github/skills && find ~/.claude -lname "$PWD/*" -delete && find ~/.claude/skills -type d -empty -delete
+```
 
 ---
 
