@@ -2,7 +2,7 @@
 name: forge
 description: Turn a PRD into a grounded tech-spec draft - ingest the WHY, ground in the code it lands in, surface the design forks for you to decide, then draft a spec structured to survive review. Pairs with gadfly (the critic) - forge authors, gadfly tempers. A grounded draft, not a finished spec.
 trigger: /forge
-allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(git log:*), Bash(git show:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
+allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, Agent, AskUserQuestion, Skill
 ---
 
 # /forge - author a spec from a PRD, then temper it
@@ -27,7 +27,7 @@ Cost: a full run is ingest + ground + draft + a gadfly pass + revise ≈ **2-3x 
 
 ## Phase 0 - Ingest the PRD
 
-Resolve the input to **PRD text + a version stamp**, recording what you could not read. This is **identical to gadfly's Phase 0** - Confluence (jira skill's Atlassian auth, fetch `body.export_view` + version + attachments) or local file (`.md/.txt/.pdf` Read directly; `.docx` via `pandoc -f docx -t gfm`), stamp = version or file mtime. **Read diagrams with vision** (download image attachments + Read) - a PRD's mockups/flows are prime spec material. Flag only the genuinely-unreadable as `Not analyzed`. (See the gadfly skill's Phase 0 for the exact curl/pandoc/diagram steps.)
+Resolve the input to **PRD text + a version stamp**, recording what you could not read. This is **identical to gadfly's Phase 0** - Confluence (jira skill's Atlassian auth, fetch `body.export_view` + version + attachments) or local file (`.md/.txt/.pdf` Read directly; `.docx` via `pandoc -f docx -t gfm`), stamp = version or file mtime. **Read diagrams with vision** (download image attachments + Read) - a PRD's mockups/flows are prime spec material. Flag only the genuinely-unreadable as `Not analyzed`. (Read `~/.claude/skills/gadfly/SKILL.md` Phase 0 and follow its curl/pandoc/diagram steps verbatim, including the credentials preamble on every call.)
 
 The PRD is the **WHY**. forge's job is to author the **HOW** that satisfies it.
 
@@ -42,7 +42,7 @@ Pull every requirement, **classify each** `[Stated]`/`[Inferred]`/`[Missing]` (E
 A PRD's wording often **implies** a heavyweight design choice without naming it as a decision - and the costliest mistake is **silently adopting that implied branch.** Scan the PRD - especially **permission / visibility / access** language - for the **load-bearing either/or the whole design turns on.** Classic example: *"members see a song only in playlists they can open"* reads as either **navigation** (organize-only; you see it if you already have access to the song) **OR grant** (playlist access *confers* song visibility) - two radically different builds, and the grant branch is usually **far** more expensive (per-entity permission replication, graph fan-out). **Name that fork explicitly and make it Fork #1 in Step 4.** Never treat the PRD's phrasing as the decision already made - if the PRD leans one way, that's a *default to confirm*, not a settled fact. (This is gadfly's Phase-1b "name the core semantic fork" discipline; skipping it is how forge ends up building the heavy model the PRD's words implied, without ever offering you the cheap branch.)
 
 ### Step 2 - Ground in the code (lightweight - gadfly re-grounds rigorously later)
-Find + **confirm** the repo(s) the feature touches (`--repo` hint, else `find` over `$PWD`/`$WORKSPACE` (your clones dir, if exported)/`$HOME/Github`; confirm before deep-reading; stamp `git rev-parse --short HEAD`). Read each repo's `CLAUDE.md` + the **hotspots** the feature lands in (the table/model it writes, the query/API it changes) in full. Note the **cross-service** dependencies (an external permissions/auth service, a queue consumer, a search indexer) - per gadfly Step 2b, never conclude on another service from your side alone; if a design choice hinges on it and its repo isn't readable, mark it **Can't-determine (cross-service)**.
+Find + **confirm** the repo(s) the feature touches (`--repo` hint, else `find` over `$PWD`/`$WORKSPACE` (your clones dir, if exported)/`$HOME/Github`; confirm before deep-reading; stamp `cd <path> && git rev-parse --short HEAD`). Read each repo's `CLAUDE.md` + the **hotspots** the feature lands in (the table/model it writes, the query/API it changes) in full. Note the **cross-service** dependencies (an external permissions/auth service, a queue consumer, a search indexer) - per gadfly Step 2b, never conclude on another service from your side alone; if a design choice hinges on it and its repo isn't readable, mark it **Can't-determine (cross-service)**.
 - **Vantage check (state it up front).** Do this PRD's **core decisions** (data model, permissions, storage) live in the repo you're in, or somewhere else? If you're in a repo that only **mirrors** the real model (e.g. a frontend repo whose data model is owned server-side), **say so immediately** and name the owning repo. Then either **discover + ground that repo** (`find` the workspace - it's usually local) when it's central to the decisions, or tell the user *"the data-model decisions live in `<repo>` - re-run with `--repo <repo>`, or I'll draft `<this-layer>`-only."* **Don't draft a confident data-model design from a repo that can't see the stores that decide it.**
 - **Comparable feature discovery.** Before deep-reading the hotspots, search the same product for features that solve a similar problem (an existing audit log, activity feed, change history, versioning system, notification log). Most features aren't novel within their own platform. If a comparable feature exists, study its data model, UI patterns, pagination strategy, retention policy, transaction model, and the decisions it already made. Document what the new feature should match and where it should diverge. This grounds design choices in proven patterns rather than first-principles invention, and pre-answers the "why didn't you do it like X?" reviewer question.
 - **Frontend surface check.** When the spec includes UI work, verify which frontend codebase owns the target surface. Check for active migrations between frontend frameworks (e.g. a legacy SPA vs a newer micro-frontend). Look for existing components in the newer codebase that solve adjacent problems - the UI patterns may already be ported. An assumption about where the UI lives is often stale in products with multiple frontend layers.
@@ -71,7 +71,7 @@ List the **genuine decisions** the PRD + code under-determine - the per-store mo
 ### Step 1-4 output (before drafting)
 ```
 ## forge - Plan (<PRD title> @ <stamp>)
-Goal: <one line> | Repos: <repo @ sha> | Not analyzed: <unread, or none>
+Goal: <one line> | Repos: <repo @ sha> | Vantage: <this repo owns the model, or owned by <repo>> | Not analyzed: <unread, or none>
 Comparable feature: <name + repo, or "none found"> | What to match: <key patterns> | Where to diverge: <key differences>
 Requirements: <count Stated/Inferred/Missing; NFR gaps as open questions>
 Core model: <central entity> | per-store: DB <…> · ES <…> · <other> <…> | alternative(s): <structurally-different option(s)>
@@ -92,7 +92,7 @@ Spec sections (omit one only with a stated reason):
 7. **Failure modes** - what breaks in prod, blast radius, per seam.
 8. **Scale** - arithmetic against the PRD's NFR numbers; numbers missing → flag, don't invent.
 9. **Cross-service impact** - what other services this design's data/edges touch, grounded or `Can't-determine`.
-10. **Open questions** - the forks left to the human + every `[assumed]` + every unresolved edge. **Resolve before deferring:** a question listed as "open" that is answerable by a grep, schema read, or UI inspection is a DEFECT. Before listing any question, run the investigation: grep the code, check the schema, read the existing UI components, query production data. Only "needs human decision" is valid when the answer genuinely requires product or organizational input that code inspection cannot provide. An uninvestigated unknown in the open-questions section wastes reviewer cycles and signals shallow grounding.
+10. **Open questions** - the forks left to the human + every `[assumed]` + every unresolved edge. **Resolve before deferring:** a question listed as "open" that is answerable by a grep, schema read, or UI inspection is a DEFECT. Before listing any question, run the investigation: grep the code, check the schema, read the existing UI components, query production data (no data tool available: tag the number `[assumed]`, as in Step 2). Only "needs human decision" is valid when the answer genuinely requires product or organizational input that code inspection cannot provide. An uninvestigated unknown in the open-questions section wastes reviewer cycles and signals shallow grounding.
 
 ### YAGNI pass (after drafting, before save)
 Walk every element in the draft and challenge it: **"Does the system/feature/infra this depends on exist today? Is there a V1 consumer?"** Cut anything whose justification starts with "when X ships," "for future flexibility," or "in case we need." Specific targets:
@@ -103,7 +103,7 @@ Walk every element in the draft and challenge it: **"Does the system/feature/inf
 
 The YAGNI pass is a self-check, not a quality gate. Record what was cut in the draft (e.g. `YAGNI: removed 3 speculative webhook event types and an unused audit column`) so reviewers see the pass ran.
 
-**Save** a fresh, self-contained draft to `~/.claude/reports/forge/<slug>.forge.<ts>.md` (expanded to an **absolute** path; `<ts>=$(date +%Y%m%d-%H%M%S)`; the Write tool creates the directory) - never inside a repo, where it would sit as an untracked file. Always print the absolute path so it's clickable/locatable, never a bare relative filename. Always a new file, never overwrite a prior run.
+**Save** a fresh, self-contained draft to `~/.claude/reports/forge/<slug>.forge.<ts>.md` (starts with the Plan block above, then the 10 sections; expanded to an **absolute** path; `<ts>` = the literal output of running `date +%Y%m%d-%H%M%S` in Bash now, never a typed-in guess; the Write tool creates the directory) - never inside a repo, where it would sit as an untracked file. Always print the absolute path so it's clickable/locatable, never a bare relative filename. Always a new file, never overwrite a prior run.
 
 ### After drafting
 - **`--no-temper`** → stop here: emit the compact echo (below) + the file pointer. The draft is unhardened - say so, and recommend a `/gadfly` pass before anyone builds it.
@@ -121,10 +121,11 @@ The draft's author cannot honestly critique it (a self-judge rationalizes its ow
 
 ```
 Agent task: "Use the gadfly skill on `<the .forge.<ts>.md draft path>` with `--prd <original PRD path/url>`.
+Repos (confirmed): <name> at <abs path> @ <sha>, one per repo you grounded in Step 2.
 Run it fully - every phase. Return its complete output verbatim (the ranked findings + open questions)."
 ```
 - **It must be the actual gadfly skill** (harness-loaded), not a re-described critique - a pasted imitation runs shallower. The subagent invokes gadfly via its own Skill tool.
-- gadfly self-fans for grounding; **nested under this Agent it can't spawn its own subagents and will ground inline/serially** (its SKILL handles this) - slower, still full-fidelity. Accept it.
+- gadfly self-fans for grounding. Nested under this Agent, its own subagents work but report back asynchronously; on a host that disallows nesting it grounds inline instead (its SKILL handles both). Pass the confirmed repos so it never needs to search or ask, which it can't do from inside an Agent.
 - gadfly re-grounds from scratch (it caps delegated citations at `med` and re-verifies) - that's the point: an *independent* opinion, not forge's grounding rubber-stamped. The re-ground cost is the price of a real critic.
 - **Want jury-grade (union of N)?** Don't nest it here - run `/jury gadfly <forge-output> --prd <prd> --n 3 --headless` yourself on the finished draft (the pass-check recommends exactly this). A fresh, user-launched jury is cleaner and more trustworthy than one buried inside forge's own run.
 

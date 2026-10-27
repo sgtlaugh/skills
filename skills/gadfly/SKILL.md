@@ -150,7 +150,7 @@ Runs only when the gate is `READY`. Purpose: understand the **terrain the design
 **Greenfield** (from the Phase 1 type) → no existing seams. State *"net-new - no code to ground against"* and go straight to the Step 4 output with `Seams: net-new`.
 
 ### Step 1 - Discover & confirm the repos (mini-gate)
-List the repos/services the design touches, each `[Stated]`/`[Inferred]`. Locate each locally:
+A caller (forge) may pass `Repos (confirmed): <name> at <abs path> @ <sha>`: treat those as confirmed matches and skip this search for them. Otherwise: List the repos/services the design touches, each `[Stated]`/`[Inferred]`. Locate each locally:
 ```bash
 # $WORKSPACE = the directory holding your clones, when exported
 for root in "$PWD" ${WORKSPACE:+"$WORKSPACE"} "$HOME/Github"; do
