@@ -71,7 +71,7 @@ Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 | Skill | What it does |
 |---|---|
 | [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims you give it, against the code |
-| [`/solaire`](skills/solaire/SKILL.md) | Run it before a research question. Seven fixed checks keep the answer grounded \[T]/ |
+| [`/solaire`](skills/solaire/SKILL.md) | Run it before a research question. Seven fixed checks keep the answer grounded \\[T]/ |
 
 ### 🔥 Building and debugging
 
@@ -196,4 +196,4 @@ The skills themselves are prompts. `/kiln` checks their structure; `/jury` check
 
 ---
 
-MIT licensed. Praise the Sun \[T]/
+MIT licensed. Praise the Sun \\[T]/

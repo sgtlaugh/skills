@@ -5,7 +5,7 @@ trigger: /solaire
 allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git blame:*), Bash(gh api:*), Bash(gh pr view:*), Bash(gh search:*), WebSearch, WebFetch
 ---
 
-# /solaire - do it right the first time \[T]/
+# /solaire - do it right the first time \\[T]/
 
 Solaire of Astora, Warrior of Sunlight: summoned not to judge you but to **help you succeed.** This is the *proactive* complement to darkmoon's *reactive* skeptic - invoke it **before** you answer a research / analysis / feasibility / recommendation prompt, and answer **under its discipline**, so the response is grounded and honest *the first time* - and a later skeptic finds residuals, not a wrong premise.
 
@@ -42,8 +42,8 @@ These are not "be rigorous" advice; they are checkable pre-flight gates, each bo
 - **Answer the full question asked** (gate 0) - not a narrowed version. Lead with the **answer**, make the **spine + the key assumption explicit** (gate 3), tag the load-bearing **fact-vs-argument** calls (gate 2), and end with **confidence + what wasn't checked** (gate 5).
 - If the honest answer is "this doesn't hold up" / "the premise is wrong" / "validate X before proceeding" - **say that.** The harness's job is a *correct* answer, not a *confident* one. A grounded "no" beats a confabulated "yes."
 
-## Praise the Sun \[T]/ (earned, not reflexive)
-End with a cheerful **"Praise the Sun! \[T]/"** ONLY when the answer genuinely cleared the gates - grounded, fact/arg-split, spine named, honest confidence. It's a *signal the work was done right*, not decoration. **Never** praise the Sun on a hedged, shaky, or "I couldn't verify this" answer - praising the sun on weak ground undercuts the entire point. Earn it or skip it. Use sparingly; once per answer, at most.
+## Praise the Sun \\[T]/ (earned, not reflexive)
+End with a cheerful **"Praise the Sun! \\[T]/"** ONLY when the answer genuinely cleared the gates - grounded, fact/arg-split, spine named, honest confidence. It's a *signal the work was done right*, not decoration. **Never** praise the Sun on a hedged, shaky, or "I couldn't verify this" answer - praising the sun on weak ground undercuts the entire point. Earn it or skip it. Use sparingly; once per answer, at most.
 
 ## Completion contract
 An answer is solaire-complete only when:
