@@ -26,7 +26,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 | Get unstuck on a bug, and learn why | `/duck <bug>` |
 | Find holes in a spec before it's built | `/gadfly <spec>` |
 | Turn a PRD into a spec | `/forge <prd>` |
-| Pick between two designs | `/dialectic <question>` |
+| Pick between designs | `/dialectic <question>` |
 | Handle an alert that just fired | `/firewatch <alert>` |
 | Find why a ticket's bug happens | `/triage <TICKET-ID>` |
 | Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
@@ -149,6 +149,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
     /jury <skill> <args>                    # 3 runs (the default), frequency table
     /jury <skill> <args> --n 5              # more runs
     /jury <skill> <args> --headless         # separate processes, for skills that spawn agents
+    /jury --merge <runs-dir>                # re-merge saved runs, no re-run
 
 **`/velka`** - habits across your sessions
 
@@ -175,7 +176,7 @@ Take these with a grain of salt: a few runs each, and they swing with repo size 
 | `/firewatch check all services` | Opus 5.5 (1M) | ~$0.30 | ~1 min |
 | `/firewatch <alert>` | Opus 5.5 (1M) | $0.70-0.90 | ~3 min |
 | `/triage <TICKET-ID>` | Opus 5.5 (1M) | $2.20-2.50 | ~8 min |
-| `/gadfly <spec>` | not recorded (June 2026) | $1.30-4.80 | not recorded |
+| `/gadfly <spec>` | Opus 4.6 (1M), June 2026 | $1.30-5.60 | 5-10 min |
 | `/forge <prd>` | not recorded (June 2026) | ~$5-15 | ~14 min |
 | `/jury <skill>` | the target's | N × the target | about one run (parallel) |
 

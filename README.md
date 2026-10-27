@@ -83,7 +83,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (digested mechanically, no LLM) |
 | [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text |
 
-Review skills are read-only. `/bonfire`, `/forge` and `/nicepr --create` write only what you ask for.
+Review skills never touch your code. `/bonfire`, `/duck --quack` and `/nicepr --create` write only what you ask for. `/gadfly`, `/forge`, `/dialectic` and `/jury` save their reports under `~/.claude/`.
 
 ## Example verdict
 
@@ -138,9 +138,9 @@ Two files live in `~/.config/claude-skills/`. `install.sh` creates both if they'
 | `datadogSite` | `/firewatch` | Your Datadog site, e.g. `datadoghq.com` |
 | `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
 | `jenkinsUser` | `/firewatch` | Your Jenkins username |
-| `jiraApiToken` | `/jira`, `/gadfly`, `/duck` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `jiraBaseUrl` | `/jira`, `/gadfly`, `/duck` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
-| `jiraEmail` | `/jira`, `/gadfly`, `/duck` | Your Atlassian email |
+| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
+| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck` | Your Atlassian email |
 | `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
 | `sentryAuthToken` | `/sentry` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
 | `sentryOrg` | `/sentry` | Your Sentry org slug |
@@ -156,7 +156,7 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
 | [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills |
 | [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/sentry`, `/firewatch`, `/darkmoon` |
-| curl | The API skills |
+| curl 7.76+ | The API skills (they use `--fail-with-body`) |
 | [pandoc](https://pandoc.org/) | Document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` |
 | python + [pytest](https://pytest.org/) | `/bonfire` and `/duck --quack` |
 
@@ -188,7 +188,7 @@ The skills themselves are prompts. `/kiln` checks their structure; `/jury` check
 
 ## Uninstall
 
-`install.sh` links everything into `~/.claude/`. To uninstall, delete those links. Your config in `~/.config/claude-skills/` stays.
+`install.sh` links everything into `~/.claude/`. To uninstall, delete those links. Your config in `~/.config/claude-skills/` stays. Reports and caches stay too, for you to delete if you want: `~/.claude/reports/`, `~/.claude/jury-runs/` and `~/.claude/velka/`.
 
 ```bash
 cd ~/Github/skills && find ~/.claude -lname "$PWD/*" -delete && find ~/.claude/skills -type d -empty -delete
