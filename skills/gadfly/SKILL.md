@@ -2,7 +2,7 @@
 name: gadfly
 description: Interrogate a tech spec or architecture doc before it gets built - extract requirements, gate the blocking gaps, ground the design in the code it touches, stress-test through four adversarial lenses. `--prd` checks whether the HOW satisfies the WHY. Hypotheses to check, not verdicts.
 trigger: /gadfly
-allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
+allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(printf:*), Bash(echo:*), Bash(command:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
 ---
 
 # /gadfly - sting the design awake
@@ -188,6 +188,7 @@ Every claim about how the current code works ships its evidence:
 - **Absence claims need the same rigor** - "X doesn't exist / no such method / unused / missing" is a claim, and **one negative grep is not proof.** Confirm the exact name, the **whole repo across every layer** (e.g. a legacy layer vs an active rewrite like `v1/` vs `v2/` - a symbol absent from one lives in the other), aliases, and re-exports before asserting absent; an unconfirmed absence caps at `med`, never `high`. (A confident-wrong "it's missing" sends the author to fix a non-problem.)
 
 ### Step 4 - Output
+Start this step only after every spawned grounding subagent has reported. A repo whose subagent hasn't returned yet is pending, never `Not grounded`: wait for its result.
 ```
 ## gadfly - Grounding (<spec> @ <stamp>)
 Repos: <repo> (<path> @ <short-sha>) [Stated|Inferred]
@@ -313,7 +314,7 @@ A run is complete only when the saved report contains **all** of these - missing
 This is one checklist to self-verify against, not three scattered templates. If any item is absent, the run isn't finished - produce it or state why it can't exist (e.g. *"no `--prd` given"*).
 
 ## Guard rails
-- **Read-only on inputs.** gadfly reads the spec and the code; it never edits them and never posts back to Confluence. It writes exactly one thing: a fresh report artifact (`<slug>.gadfly.<ts>.md`) per run.
+- **Read-only on inputs.** gadfly reads the spec and the code; it never edits them and never posts back to Confluence. It writes exactly one thing: a fresh report artifact (`<slug>.gadfly.<ts>.md`) per run. This is an instruction, not a grant boundary: `curl`, `Write` and `find` are granted for fetch, report and repo lookup, and could write.
 - **Hypotheses, not verdicts.** Design review has no mechanical oracle - a wrong criticism is expensive. Every finding ships confidence + how-to-verify; steelman before you sting; never manufacture findings.
 - **Explore before asking.** A question the spec already answers is a wasted turn.
 - **Gaps are findings, not always blockers.** Block only when the review is impossible without the answer.
