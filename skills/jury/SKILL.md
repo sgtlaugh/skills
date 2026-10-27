@@ -2,7 +2,7 @@
 name: jury
 description: Run another skill N times in parallel and merge the outputs into a frequency ledger - surfaces non-determinism and unions findings across runs. For high-stakes reviews and experiments.
 trigger: /jury
-allowed-tools: Agent, Skill, Read, Write, Glob, Bash(mkdir:*), Bash(mktemp:*), Bash(date:*), Bash(seq:*), Bash(claude -p:*), Bash(jq:*), Bash(ps:*), Bash(ls:*)
+allowed-tools: Agent, Read, Write, Grep, Glob, Bash(mkdir:*), Bash(mktemp:*), Bash(date:*), Bash(seq:*), Bash(claude -p:*), Bash(jq:*), Bash(ps:*), Bash(ls:*)
 ---
 
 # /jury - Repeat a skill N times, merge into a ledger
@@ -24,8 +24,8 @@ Runs a target skill N times concurrently in **independent** contexts, then merge
 - `--merge <dir>` → skip Steps 2-4; go straight to Step 5 reading the raws in `<dir>`.
 - Otherwise: **the target name is the first non-flag token after `/jury`, copied verbatim from the input.** Do NOT replace it with any skill named elsewhere in this document - copy exactly what was typed (`code-review` stays `code-review`, `triage` stays `triage`). Everything after the name is its args, except `--n N` (default 3, min 2, cap 6) and `--headless` (jury's own flags, not the target's). **Echo `target=<the verbatim token> | args=<…> | N=<n>`; if it doesn't match the input, re-read the input** - a wrong target wastes the whole fan-out.
 - **Strip write/mutating flags from the target's args** (any `--submit`/`--post`-style flag). Fan-out is **read-only**: running a mutating skill N times would multiply side effects (N duplicate PR comments, N tickets). The human acts once, on the merged result.
-- Identify the target skill name (strip a leading slash if present) and confirm it exists - check `~/.claude/skills/<name>/SKILL.md`, and if that dir isn't found, match it against an **available skill's registered name** (the dir can differ from the name, e.g. `code-review` lives in `team-code-review/`). Each fan-out agent will **invoke** this skill itself - **do not invoke it in this (orchestrator) session**, and do NOT paste its file content into the agents (pasted-as-text runs shallower than the harness-loaded skill - agents skip steps and reason less deeply).
-- **`--headless`** (default off): run jurors as independent **root processes** instead of Task subagents (Step 3). **Self-fanning targets need it.** Grep the target's `SKILL.md` for `subagent` / `Agent` / `fan out` / `parallel` - if it spawns its own subagents, a Task subagent **can't nest** and the target degrades (grounds shallower or serially). Flag this and **suggest `--headless`** before fanning out; don't silently run a degraded sample.
+- Identify the target skill name (strip a leading slash if present) and confirm it exists - check `~/.claude/skills/<name>/SKILL.md`, and if that dir isn't found, match it against an **available skill's registered name** (the dir can differ from the name, e.g. a plugin skill registered as `caveman:caveman` lives under `~/.claude/plugins/`). Each fan-out agent will **invoke** this skill itself - **do not invoke it in this (orchestrator) session**, and do NOT paste its file content into the agents (pasted-as-text runs shallower than the harness-loaded skill - agents skip steps and reason less deeply).
+- **`--headless`** (default off): run jurors as independent **root processes** instead of Task subagents (Step 3). **Self-fanning targets need it.** Grep the target's `SKILL.md` for `subagent` / `Agent` / `fan out` / `parallel` - if it spawns its own subagents, run it headless: under a Task subagent its own subagents report back asynchronously, and some hosts disallow nesting outright, so the target can degrade (grounds shallower or serially). Flag this and **suggest `--headless`** before fanning out; don't silently run a degraded sample.
 
 ## Step 2 - Cost gate (confirm before fan-out)
 
@@ -41,13 +41,15 @@ Spawn N subagents in parallel. Each agent's task is to **invoke the `<target>` s
 - Independent context = independent sample.
 - If the subagent reports it cannot invoke the skill, that's a finding - stop and report it (the fan-out mechanism depends on it).
 
-**`--headless` mode (self-fanning targets).** The default (subagents) is lighter, cached, and MCP-present - right for the common target that does *not* spawn its own subagents. A target that **itself** fans out degrades as a subagent (no nesting). For those, run each juror as a **root process** instead:
+**`--headless` mode (self-fanning targets).** The default (subagents) is lighter, cached, and MCP-present - right for the common target that does *not* spawn its own subagents. A target that **itself** fans out can degrade as a subagent (its subagents report back asynchronously, or nesting is blocked). For those, run each juror as a **root process** instead:
 ```bash
 mkdir -p ~/.claude/jury-runs; D=$(mktemp -d ~/.claude/jury-runs/"$(date +%Y%m%d-%H%M%S)"-XXXX); echo "$D"
 for i in $(seq 1 N); do
-  claude -p "/<target> <args>" --dangerously-skip-permissions --output-format json > "$D/run-$i.json" 2>"$D/run-$i.err" &
+  claude -p "/<target> <args>" --dangerously-skip-permissions --max-budget-usd <2x the per-run estimate from Step 2> --output-format json > "$D/run-$i.json" 2>"$D/run-$i.err" &
 done
 wait
+# The merge reads run-N.md; a target that saves a full report prints a "Full report → <path>" line - Read that file instead of the summary
+for f in "$D"/run-*.json; do jq -r '.result // empty' "$f" > "${f%.json}.md"; done
 ```
 Each root process loads the target via the harness (full fidelity) and **can fan out fully**. Pull `.result` from each `run-$i.json` for the merge - these ARE the saved raws (Step 4 already satisfied). Heavier than subagents (N cold starts, no shared cache, and headless may lack interactively-authenticated MCP servers), so use it **only** when the target self-fans.
 
@@ -59,12 +61,12 @@ Each root process loads the target via the harness (full fidelity) and **can fan
 
 **Cost rollup (headless only).** These jurors are separate processes - their spend is **not** in this session's meter, so surface it explicitly from the JSON. This is a new Bash call, so `$D` from the launch is gone - use the directory the launch printed:
 ```bash
-jq -s '{total_cost_usd:(map(.total_cost_usd)|add), input_tokens:(map(.usage.input_tokens)|add), output_tokens:(map(.usage.output_tokens)|add), turns:(map(.num_turns)|add), runs:length}' <dir printed at launch>/run-*.json
+jq -s '{total_cost_usd:(map(.total_cost_usd)|add), input_tokens:(map(.usage.input_tokens)|add), cache_read_tokens:(map(.usage.cache_read_input_tokens)|add), cache_write_tokens:(map(.usage.cache_creation_input_tokens)|add), output_tokens:(map(.usage.output_tokens)|add), turns:(map(.num_turns)|add), runs:length}' <dir printed at launch>/run-*.json
 ```
 Report the totals in the Step 6 overview. (Subagent mode can't roll this up reliably - sub-agent billing may be separate and unreported; that's a reason headless gives you cost visibility the default doesn't.)
 
 Notes:
-- If the target creates **git worktrees** (e.g. `/aristarchus` reviews every PR in one), it must name them uniquely or parallel runs collide; also watch for shared-`.git` lock contention under concurrency - if runs fail with git-lock errors, drop that flag and fan out in the lighter mode.
+- If the target creates **git worktrees** (e.g. `/aristarchus` reviews every PR in one), it must name them uniquely or parallel runs collide; also watch for shared-`.git` lock contention under concurrency - if runs fail with git-lock errors, drop `--headless` and fan out in the lighter mode.
 - If some agents fail, proceed with the survivors; record `launched N, M succeeded`.
 
 ## Step 4 - Save raw outputs (persistent)
