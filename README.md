@@ -16,6 +16,7 @@ Claude Code skills that make the agent prove it.
 ## Contents
 
 - [Quick start](#quick-start)
+- [What it looks like](#what-it-looks-like)
 - [The skills](#the-skills)
 - [How they connect](#how-they-connect)
 - [Configuration](#configuration)
@@ -32,6 +33,28 @@ git clone https://github.com/sgtlaugh/skills.git ~/Github/skills
 Restart Claude Code, then type `/` to see the skills. Every flag and example is in [`CHEATSHEET.md`](CHEATSHEET.md).
 
 `install.sh` links the skills, the agent and the hook into `~/.claude/`. It also creates the two config files in `~/.config/claude-skills/`. Re-run it after a pull. It never overwrites your config, and backs up anything in the way to `.bak`.
+
+To uninstall, delete the links that point into the repo. Your config stays.
+
+```bash
+cd ~/Github/skills && find ~/.claude -lname "$PWD/*" -delete && find ~/.claude/skills -type d -empty -delete
+```
+
+## What it looks like
+
+`/darkmoon --claims` on a repo built to fool a grep (trimmed):
+
+```
+## 🌑 darkmoon - judgment on 7 claims
+
+| # | Claim                                 | Verdict   | Evidence                                                     |
+|---|---------------------------------------|-----------|--------------------------------------------------------------|
+| 2 | issue_refund is never called          | Refuted ✗ | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
+| 3 | handle_chargeback is dead code        | Refuted ✗ | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
+| 4 | The repo never imports pickle         | Upheld ✓  | grep -rniE 'pickle|__import__' → no output                   |
+
+Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
+```
 
 ## The skills
 
@@ -119,13 +142,18 @@ Two files live in `~/.config/claude-skills/`. Skills that need neither work righ
 
 | Key | Used by | Where to get it |
 |---|---|---|
-| `datadogPAT`, `datadogSite` | `/firewatch` | Datadog → Personal Access Tokens (read scopes); your site, e.g. `datadoghq.com` |
-| `jenkinsUser`, `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
-| `jiraApiToken`, `jiraBaseUrl`, `jiraEmail` | `/jira`, `/gadfly`, `/duck`; others via `/jira` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management (read) |
-| `sentryAuthToken`, `sentryOrg` | `/sentry`; triage and firewatch via it | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
+| `datadogPAT` | `/firewatch` | Datadog → Personal Access Tokens |
+| `datadogSite` | `/firewatch` | Your Datadog site, e.g. `datadoghq.com` |
+| `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
+| `jenkinsUser` | `/firewatch` | Your Jenkins username |
+| `jiraApiToken` | `/jira`, `/gadfly`, `/duck` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `jiraBaseUrl` | `/jira`, `/gadfly`, `/duck` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
+| `jiraEmail` | `/jira`, `/gadfly`, `/duck` | Your Atlassian email |
+| `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
+| `sentryAuthToken` | `/sentry` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
+| `sentryOrg` | `/sentry` | Your Sentry org slug |
 
-Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
+Skills that call `/jira` or `/sentry` (triage, firewatch, nicepr and others) use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
 
 **`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. sentry, triage and firewatch read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
 

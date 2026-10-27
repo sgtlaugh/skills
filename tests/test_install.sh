@@ -55,6 +55,14 @@ rm "$H2/.config/claude-skills/credentials.json" && echo "{not json" > "$H2/.conf
 out=$(HOME="$H2" bash "$REPO/install.sh" 2>&1); rc=$?
 check "invalid credentials JSON warns instead of aborting" '[ $rc -eq 0 ] && [[ "$out" == *"not valid JSON"* ]]'
 
+# The README's uninstall command, taken from the README itself so the two can't drift
+uninstall=$(grep -m1 'find ~/.claude -lname' "$REPO/README.md" | sed 's/^cd [^&]*&& //')
+check "README has an uninstall command" '[ -n "$uninstall" ]'
+( cd "$REPO" && HOME="$H" bash -c "$uninstall" ); rc=$?
+check "uninstall exits 0" '[ $rc -eq 0 ]'
+check "uninstall removes every link into the repo" '[ -z "$(find "$H/.claude" -lname "$REPO/*")" ]'
+check "uninstall leaves other repos' links and the config" '[ -L "$S/other-repo-skill/SKILL.md" ] && [ -e "$H/.config/claude-skills/credentials.json" ]'
+
 echo ""
 echo "  --- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]

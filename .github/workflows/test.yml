@@ -9,6 +9,7 @@ on:
       - 'install.sh'
       - 'credentials.example.json'
       - 'services.example.md'
+      - 'README.md'
       - '.github/workflows/test.yml'
       - 'tests/**'
   pull_request:
@@ -19,6 +20,7 @@ on:
       - 'install.sh'
       - 'credentials.example.json'
       - 'services.example.md'
+      - 'README.md'
       - '.github/workflows/test.yml'
       - 'tests/**'
 
