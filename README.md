@@ -27,15 +27,10 @@ Claude Code skills that make the agent prove it.
 ## Quick start
 
 ```bash
-git clone https://github.com/sgtlaugh/skills.git ~/Github/skills
-~/Github/skills/install.sh
+git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/skills/install.sh
 ```
 
-Restart Claude Code, then type `/` to see the skills. Every flag and example is in [`CHEATSHEET.md`](CHEATSHEET.md).
-
-`install.sh` links the skills, the agent and the hook into `~/.claude/`. It also creates the two config files in `~/.config/claude-skills/`. Re-run it after a pull.
-
-It never overwrites your config, and backs up anything in the way to `.bak`.
+Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every flag is in [`CHEATSHEET.md`](CHEATSHEET.md).
 
 ## The skills
 
@@ -133,7 +128,7 @@ flowchart LR
 
 ## Configuration
 
-Two files live in `~/.config/claude-skills/`. Skills that need neither work right after install.
+Two files live in `~/.config/claude-skills/`. `install.sh` creates both if they're missing. It never overwrites them, and backs up anything in its way to `.bak`. Skills that need neither work right after install.
 
 **`credentials.json`** holds API tokens, mode 600. Set `CLAUDE_SKILLS_CREDENTIALS` to keep it elsewhere.
 
@@ -193,7 +188,7 @@ The skills themselves are prompts. `/kiln` checks their structure; `/jury` check
 
 ## Uninstall
 
-Delete the links that point into the repo. Your config in `~/.config/claude-skills/` stays.
+`install.sh` links everything into `~/.claude/`. To uninstall, delete those links. Your config in `~/.config/claude-skills/` stays.
 
 ```bash
 cd ~/Github/skills && find ~/.claude -lname "$PWD/*" -delete && find ~/.claude/skills -type d -empty -delete
