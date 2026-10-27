@@ -1,6 +1,6 @@
 ---
 name: dialectic
-description: Decide between options - argue each side to win (independent + grounded), cross-examine, then synthesize a recommendation with the condition that flips it. For real design/architecture decisions. Structured opposition, not both-sides slop. Output is the axis + the deciding question, not a flat verdict.
+description: Decide between options - argue each side to win (independent + grounded), cross-examine, then synthesize a recommendation with the condition that flips it. For real design/architecture decisions.
 trigger: /dialectic
 allowed-tools: Read, Write, Grep, Glob, Bash(git rev-parse:*), Bash(cd:*), Bash(grep:*), Bash(find:*), Bash(pandoc:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
 ---
@@ -33,11 +33,12 @@ It grounds in the repo like gadfly - a decision about real code must **cite** re
 
 ## Phase 1 - Advocates (independent, parallel, win-don't-hedge)
 
-Spawn **one `Agent` per option, fresh context, in parallel.** Each agent's brief:
+Spawn **one `Agent` per option (`subagent_type: Plan`, which has no Edit or Write tools), fresh context, in parallel.** Plan agents still have Bash, so read-only stays an instruction. Each agent's brief:
 > *"Read-only: never edit or write any file. Build the STRONGEST possible case FOR `<option>`. You are an advocate, not a judge - your job is to WIN. Hedging ('it depends', 'both are fine') = failing. **Ground every claim** - cite `path:line`, a cost number, or an authoritative doc; mark anything you can't ground as `[assumed]`. An ungrounded case is forfeit. Return: the case, the criteria it's strongest on, the cost it's willing to pay, **and the upstream assumptions your case rests on** (e.g. 'assumes single-region', 'assumes the upstream fork resolved as X') - so a hidden frame-mismatch between the sides surfaces."*
 
 - **Independent = each advocate writes WITHOUT seeing the others** (no anchoring - that's the whole point of separate contexts).
 - **Can't spawn agents** (an error, or a host that blocks nesting) → say independence is compromised, write the cases inline one at a time without revising earlier ones, and label the recommendation lower-confidence.
+- **Wait for every advocate.** Phase 2 starts only when each advocate's result has arrived or its case is forfeit. A pending agent is not a spawn failure: wait for its notification.
 - Give each the **same** grounded terrain + criteria from Phase 0.
 - An advocate that returns a balanced "here are the trade-offs" has **failed**: re-spawn it once with its hedge quoted back, and if it's still balanced, mark that case forfeit in the report; you need the *partisan* best case, because the judge supplies the balance later.
 
@@ -52,7 +53,7 @@ Output per option: what **survived** cross-exam, and what **broke** under it. Th
 
 ## Phase 3 - Judge (independent synthesis)
 
-A **fresh, read-only `Agent` that did NOT advocate** reads all the cases + the cross-exam and produces the synthesis. **Required outputs (all of them):**
+A **fresh `Agent` (`subagent_type: Plan`) that did NOT advocate** reads all the cases + the cross-exam and produces the synthesis. Write the report only after its result arrives. **Required outputs (all of them):**
 - **Frame-dependency check (FIRST - it gates whether a winner can even be named).** Do the cases rest on **different upstream assumptions** (from each advocate's declared assumptions), or does the recommendation **flip under a plausible upstream choice**? If yes, the decision is **conditional on that upstream fork** - the verdict is *"resolve `<upstream fork>` first - under `<X>` → A, under `<Y>` → C,"* **NOT** a forced winner. (This is the strongest flip-condition: the whole debate hinges on a prior, unsettled decision. Surfacing it - even one the user didn't know bound them - is the most valuable output, not a failure to decide.) Only when the frame is settled do you proceed to a winner.
 - **Axis** - the single real disagreement underneath (the fork). One line.
 - **Per option:** *wins on `<criteria>` · breaks on `<criteria>`* - judged **after** cross-exam (a point that broke doesn't count as a win).
