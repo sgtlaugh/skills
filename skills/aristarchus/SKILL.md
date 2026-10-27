@@ -1,8 +1,8 @@
 ---
 name: aristarchus
-description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, verification).
+description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos:*), Bash(gh auth status:*), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos:*), Bash(gh auth status:*), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -65,7 +65,7 @@ Detect whether the diff touches configuration or infrastructure settings. Do not
 - Diff lines changing values in dict/object literals with keys like `dynamic`, `replication`, `timeout`, `cache`, `ttl`, `retry`, `batch_size`, `max_`, `min_`, `policy`, `strategy`, `threshold`
 - Any value changed from one named option to another (e.g., `true` → `strict`, `warn` → `error`, `async` → `sync`)
 
-**If detected:** spawn one `Agent` (foreground, NOT background - results needed before lens launch) to research the setting. The agent's prompt:
+**If detected:** spawn one `Agent` and wait for its result before launching the lenses (they need its output) to research the setting. The agent's prompt:
 
 > *"Search the web for the tradeoffs of [specific setting/value]. Use these exact queries:*
 > 1. *`[technology] [setting] vs alternatives tradeoffs comparison`*
@@ -133,7 +133,7 @@ For each file (or batch):
 
 **Tag every finding** `[Bug|Security|Perf|Design|Simplicity|Necessity|Refactor|Tests|Naming|Cross-service · Confirmed|Inferred]` at an exact `file:line`.
 
-**Confirmed vs Inferred:** `Confirmed` means you verified *every link* in the chain in the code/docs AND showed the evidence (the grep output, the line read, the doc cited). **A finding without its shown evidence caps at Inferred, never Confirmed** - if you didn't show the verification, it's not verified regardless of how obvious it seems. If the finding rests on *assumed* behavior of a library, OS, runtime, or tool (pipe buffers, subprocess/threading semantics, framework internals) that you have **not** verified, it's `Inferred` - say what you'd need to check to confirm it. **Exception:** if Step 6b (library source tracing) ran and the agent traced the execution path through the installed library source with cited `file:line` evidence, the finding may be `Confirmed` - the library source IS the verification.
+**Confirmed vs Inferred:** `Confirmed` means you verified *every link* in the chain in the code/docs AND showed the evidence (the grep output, the line read, the doc cited). **A finding without its shown evidence caps at Inferred, never Confirmed** - if you didn't show the verification, it's not verified regardless of how obvious it seems. If the finding rests on *assumed* behavior of a library, OS, runtime, or tool (pipe buffers, subprocess/threading semantics, framework internals) that you have **not** verified, it's `Inferred` - say what you'd need to check to confirm it. **Exception:** if Step 6b (library source tracing) ran and the agent traced the execution path through the unpacked library source with cited `file:line` evidence, the finding may be `Confirmed` - the library source IS the verification.
 
 **Stack-trap confirmation rule:** A stack-trap pattern match is `Inferred` until you read ±10 lines around the match and verify the consequence is real. Pattern-match alone is NOT `Confirmed` - the pattern may be guarded on the next line. When the finding depends on library/framework behavior (e.g., "health_check_interval doesn't cover BRPOP", "control.ping uses pub/sub not the task queue"), it stays `Inferred` unless Step 6b traced the library source and confirmed the mechanism. Stating what the library does without reading its source is an assumption, not evidence.
 
@@ -143,9 +143,9 @@ For each file (or batch):
 
 Five independent review perspectives the main review may miss. **This is discovery, not verification** - verification happens in Step 8.
 
-**Timing:** Step 3b (config research) runs first if applicable - it's foreground because lens agents need its output. Then lens agents are launched in background. They run in parallel with the main analysis. After Step 6 completes, wait for all agent notifications - do NOT poll, sleep, read task output files, or use TaskOutput. These calls will fail because background agents use the Agent notification system, not the Task system. The system delivers notifications automatically as `task-notification` messages. **Do NOT emit the final review until ALL lens agent notifications have arrived.** If you write output before lens results arrive, you cannot integrate them - this defeats the purpose of running lenses. Wait.
+**Timing:** Step 3b (config research) runs first if applicable - launch it and wait for its result, because the lens agents need its output. Then lens agents are launched in background. They run in parallel with the main analysis. After Step 6 completes, wait for all agent notifications - do NOT poll, sleep, read task output files, or use TaskOutput. These calls will fail because background agents use the Agent notification system, not the Task system. The system delivers notifications automatically as `task-notification` messages. **Do NOT emit the final review until ALL lens agent notifications have arrived.** If you write output before lens results arrive, you cannot integrate them - this defeats the purpose of running lenses. Wait.
 
-**Independence is structural.** Spawn one `Agent` instance per lens (using the `Agent` tool with `run_in_background: true`, NOT Explore - Explore is read-only search, not analysis) - each runs in a fresh context with NO access to the main review's findings or each other's. A single model wearing multiple hats in the same context shares confirmation bias; separate agents don't.
+**Independence is structural.** Spawn one `Agent` instance per lens (using the `Agent` tool, NOT Explore - Explore is read-only search, not analysis) - each runs in a fresh context with NO access to the main review's findings or each other's. A single model wearing multiple hats in the same context shares confirmation bias; separate agents don't.
 
 **Context bifurcation - not all lenses get the same context.** PR descriptions anchor LLM reviewers, reducing issue detection by 16-93% ([research](https://arxiv.org/abs/2603.18740)). Prompt-based debiasing ("verify these claims", "don't accept at face value") does not work - the anchor is in the context. The fix is structural: withhold the anchor from lenses that must reason about consequences from code, not from the author's story.
 
@@ -189,7 +189,7 @@ Output as **Independent Review Lenses** section after findings.
 
 ## Step 6b - Library Source Tracing (skipped with --fast)
 
-When the diff changes how a framework or library is used - not just business logic - the review's findings often rest on *assumed* library behavior that no one verified. This step installs the library at the exact pinned version and traces the actual execution path through its source.
+When the diff changes how a framework or library is used - not just business logic - the review's findings often rest on *assumed* library behavior that no one verified. This step downloads and unpacks the library at the exact pinned version and traces the actual execution path through its source.
 
 **Timing:** Launch as a background `Agent` alongside the Step 6a lenses (from Step 3, once the diff is loaded). Wait for its notification before writing the final review, same as lenses.
 
@@ -215,7 +215,7 @@ If no lockfile or no pin found, note `library tracing: version unknown, skipped`
 
 > *"You are a library source tracer. Your job is to verify what a library ACTUALLY does, not what the code comments or PR description CLAIM it does.*
 >
-> *Setup - install the library at the exact pinned version. Shell variables do not survive between Bash calls: run `mktemp` once, note the printed path, and write that literal path into every later command (install, grep, cleanup) in place of `$tmpdir`:*
+> *Setup - download and unpack the library source at the exact pinned version. Shell variables do not survive between Bash calls: run `mktemp` once, note the printed path, and write that literal path into every later command (download, grep, cleanup) in place of `$tmpdir`:*
 > ```bash
 > tmpdir=$(mktemp -d /tmp/aristarchus-lib-trace-XXXXXX) && echo "$tmpdir"
 > # Python - download and unpack only; never pip install (installing a source package runs its build code, and the PR picks the version)
@@ -225,13 +225,13 @@ If no lockfile or no pin found, note `library tracing: version unknown, skipped`
 > npm pack "<package>@<version>" --pack-destination "$tmpdir" && tar -xzf "$tmpdir"/*.tgz -C "$tmpdir"
 > ```
 >
-> *For each claim or config change in the diff, trace the execution path through the installed source:*
-> 1. *Grep the installed source for the config key, method name, or class referenced in the diff*
+> *For each claim or config change in the diff, trace the execution path through the unpacked source:*
+> 1. *Grep the unpacked source for the config key, method name, or class referenced in the diff*
 > 2. *Follow function calls UP TO 2 hops deep. If the chain is deeper, report what you found and what the next hop would need to check*
 >
 > *For each claim, report:*
 > - *What the diff/comment CLAIMS the library does*
-> - *What the library source ACTUALLY does (cite installed-source `file:line`)*
+> - *What the library source ACTUALLY does (cite unpacked-source `file:line`)*
 > - *Whether they match, and if not, what the consequence is*
 >
 > *After tracing, clean up (literal path from setup - an empty `$tmpdir` here deletes nothing):*
@@ -239,7 +239,7 @@ If no lockfile or no pin found, note `library tracing: version unknown, skipped`
 > rm -rf /tmp/aristarchus-lib-trace-<suffix from setup>
 > ```
 >
-> *If the install fails (private package, network error), report `library tracing: <package> unavailable` and stop - do not guess.*
+> *If the download fails (private package, network error), report `library tracing: <package> unavailable` and stop - do not guess.*
 
 Pass the agent: the diff, the changed file paths, and the specific claims/config keys to trace. Include the worktree path so it can read the changed files.
 
@@ -247,7 +247,7 @@ Pass the agent: the diff, the changed file paths, and the specific claims/config
 - Merge findings into the main review. Tag each as `[Tag · Confirmed · source:library]` - these are evidence-grade because the agent read the actual source.
 - Library-traced findings that contradict a diff comment are `warning` minimum (a comment lying about library behavior misleads future maintainers).
 - If the agent found no contradictions, note in the output: *"Library source tracing: no contradictions found in `<packages>`."*
-- If the agent failed (install error, network), note: *"Library source tracing: skipped (`<reason>`)."*
+- If the agent failed (download error, network), note: *"Library source tracing: skipped (`<reason>`)."*
 
 ## Step 6c - Cross-Repo Check (skipped with --fast)
 
@@ -282,7 +282,7 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Why this exists.** A reviewer cannot honestly grade its own findings - the same reasoning that produced the finding will rationalize it when asked to self-check. Verification runs in a **fresh, independent context** (darkmoon) that sees the findings + code but not the reviewer's reasoning chain.
 
-**Before writing output, use the `Skill` tool to invoke `/darkmoon --claims`** (NOT an Explore agent - Explore is for search, not verification) with the findings formatted as verifiable claims. Each finding becomes a claim:
+**Before writing output, use the `Skill` tool to invoke `/darkmoon --claims`** (NOT an Explore agent - Explore is for search, not verification; its skeptic reports back asynchronously, so wait for that result before integrating any verdict) with the findings formatted as verifiable claims. Each finding becomes a claim:
 > "In `file.py:42`, [what's wrong]. Consequence: [what breaks]."
 
 **Always pass findings after the `--claims` flag** - without it darkmoon treats the text as a focus topic and extracts from the transcript (the review answer isn't in the transcript yet when darkmoon runs). Darkmoon runs in the worktree so it can verify against the actual source.
