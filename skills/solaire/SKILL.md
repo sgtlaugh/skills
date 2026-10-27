@@ -2,7 +2,7 @@
 name: solaire
 description: A pre-flight rigor harness - invoke it BEFORE answering a research / analysis / feasibility / recommendation prompt, and it forces the answer to be grounded, fact-vs-argument honest, and free of confabulated "gaps" - so the response survives scrutiny the first time. Jolly cooperation; praise the Sun.
 trigger: /solaire
-allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git blame:*), Bash(gh api:*), Bash(gh pr view:*), Bash(gh search:*), WebSearch, WebFetch
+allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git blame:*), Bash(gh pr view:*), Bash(gh search:*), WebSearch, WebFetch
 ---
 
 # /solaire - do it right the first time \\[T]/
@@ -26,7 +26,7 @@ These are not "be rigorous" advice; they are checkable pre-flight gates, each bo
 
 0. **Frame the REAL question first - answer what's asked, FULLY, don't narrow it.** Before researching or answering, restate *what is actually being asked* (its full scope + the real intent) and decide *what answering it well requires* (which sub-questions, what to research/verify) - then answer THAT. The silent failure the other gates miss: a response can clear every claim-gate and still answer a **narrower or different** question (asked for the whole workflow, answered only the easy part; asked for X's data, used Y's). **Rigor on the wrong question is still wrong.** Before emitting, re-read the prompt: did you address all of it, at the depth asked? (This gate also calibrates full-vs-light below: a restated feasibility question reveals itself as claims-heavy → full harness.)
 
-1. **No "white space / unserved / novel / nobody does X / first to..." without searching the ADJACENT CATEGORIES first and naming what you found.** The #1 confabulation: verifying the one incumbent you happened to think of, then declaring the rest open. Before any "gap" claim, ask *"what adjacent categories would a competitor live in?"* and **search each** (`WebSearch`). State the named players you found - or, if truly none after a real search, say so. (Real failure this prevents: calling an occupied market "white space" twice, after searching only the obvious incumbent.)
+1. **No "white space / unserved / novel / nobody does X / first to..." without searching the ADJACENT CATEGORIES first and naming what you found.** The #1 confabulation: verifying the one incumbent you happened to think of, then declaring the rest open. Before any "gap" claim, ask *"what adjacent categories would a competitor live in?"* and **search each** (`WebSearch`). State the named players you found - or, if truly none after a real search, say so. No WebSearch available: every gap claim is `Can't-determine`, said plainly. (Real failure this prevents: calling an occupied market "white space" twice, after searching only the obvious incumbent.)
 
 2. **Split FACT from ARGUMENT - and never dress an argument as a verified fact.** Tag each load-bearing statement: *fact* (checkable - then check it) vs *argument/judgment* (reasoned - then it stays "I'd argue", never "it's proven"). Overstating a judgment as a fact is the core bluff.
 
