@@ -2,7 +2,7 @@
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr checkout:*), Bash(gh api repos:*), Bash(gh auth:*), Bash(git fetch:*), Bash(git checkout:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv:*), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos:*), Bash(gh auth status:*), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -87,10 +87,14 @@ The target repo's own `CLAUDE.md` is **authoritative** - it documents the team's
 
 ## Step 5 - Diff and File List
 
+Read the diff from the worktree, not from `gh`: `gh pr view --json files` silently stops at 100 files and `gh pr diff` fails above 300. Get the base once, then write its SHA literally into each command (shell variables don't survive between Bash calls):
 ```bash
-gh pr view <url> --json files --jq '.files[].path'
-gh pr diff <url>
+gh pr view <url> --json baseRefOid,baseRefName --jq '"\(.baseRefOid) \(.baseRefName)"'
+git cat-file -e <baseRefOid>^{commit} 2>/dev/null || git fetch "$(git remote -v | awk '/<owner>\/<repo>/{print $1; exit}')" <baseRefName>
+git diff --name-only <baseRefOid>...HEAD
+git diff <baseRefOid>...HEAD
 ```
+The three-dot diff is what GitHub shows: the PR's changes since it branched, not unrelated commits on the base.
 
 Filter out lock files, compiled (`*.min.js`, `dist/**`, `build/**`), generated (`__generated__/**`); report the count. **Do NOT filter migrations** (irreversible, bug-prone). Review **highest-risk files first** (auth, migrations, payments, core models).
 
@@ -101,7 +105,7 @@ Filter out lock files, compiled (`*.min.js`, `dist/**`, `build/**`), generated (
 
 ## Step 6 - Analyze Changes
 
-**Stack traps** - codebase-specific gotchas a capable model won't infer from the diff. A finding's **location** must be a `file:line` in this diff - findings about pre-existing code are tagged `pre-existing:nit`. Files outside the diff (scripts, callers, configs) are valid **evidence** for a finding but not its location. Skip anything `CLAUDE.md` (Step 4) or the linter already owns.
+**Stack traps** - codebase-specific gotchas a capable model won't infer from the diff. Apply only the traps whose language or framework appears in the diff; the list below comes from Python and TypeScript stacks, so a repo on another stack adds its own in its `CLAUDE.md`. A finding's **location** must be a `file:line` in this diff - findings about pre-existing code are tagged `pre-existing:nit`. Files outside the diff (scripts, callers, configs) are valid **evidence** for a finding but not its location. Skip anything `CLAUDE.md` (Step 4) or the linter already owns.
 
 - **Concurrency**: read-modify-write on shared state without a lock/OCC - TOCTOU. Retried/redelivered work that isn't idempotent - Celery `acks_late`, a queue consumer with no dedup or exactly-once guard.
 - **Multi-tenancy**: cross-org leaks where route auth middleware doesn't run - Celery jobs, queue consumers, admin/open-api routes. Confirm org filtering.
@@ -205,7 +209,7 @@ jq -r --arg p "<package>" '(.packages["node_modules/" + $p].version) // (.depend
 ```
 If no lockfile or no pin found, note `library tracing: version unknown, skipped` and proceed without.
 
-**Installation:** Use `pip install --no-deps --target` (Python) or `npm pack` (Node) to get clean source files at the exact version. The agent handles this internally - aristarchus's own `allowed-tools` does not need expanding because `Agent` subagents have full tool access.
+**Getting the source:** download and unpack, never install. Python: the wheel (or source tarball) from PyPI's JSON API. Node: `npm pack`, which runs no scripts for a registry package. Installing a source package executes its build code, and the version comes from the PR under review. The agent handles this internally - aristarchus's own `allowed-tools` does not need expanding because `Agent` subagents have full tool access.
 
 **Agent prompt (spawn one background `Agent`, NOT Explore):**
 
@@ -214,8 +218,9 @@ If no lockfile or no pin found, note `library tracing: version unknown, skipped`
 > *Setup - install the library at the exact pinned version. Shell variables do not survive between Bash calls: run `mktemp` once, note the printed path, and write that literal path into every later command (install, grep, cleanup) in place of `$tmpdir`:*
 > ```bash
 > tmpdir=$(mktemp -d /tmp/aristarchus-lib-trace-XXXXXX) && echo "$tmpdir"
-> # Python
-> pip install --no-deps --target="$tmpdir" "<package>==<version>"
+> # Python - download and unpack only; never pip install (installing a source package runs its build code, and the PR picks the version)
+> url=$(curl -sS --fail-with-body "https://pypi.org/pypi/<package>/<version>/json" | jq -r '([.urls[] | select(.packagetype=="bdist_wheel")][0].url) // ([.urls[] | select(.packagetype=="sdist")][0].url)')
+> curl -sSL --fail-with-body "$url" -o "$tmpdir/pkg" && { python3 -m zipfile -e "$tmpdir/pkg" "$tmpdir/src" 2>/dev/null || tar -xzf "$tmpdir/pkg" -C "$tmpdir"; }
 > # Node - source lands in $tmpdir/package
 > npm pack "<package>@<version>" --pack-destination "$tmpdir" && tar -xzf "$tmpdir"/*.tgz -C "$tmpdir"
 > ```
@@ -265,11 +270,11 @@ Tag findings as `[Tag · Confirmed · source:cross-repo]`. Deployment mismatches
 
 ## Step 7 - Existing Comments
 
-Fetch existing feedback so you don't repeat it - inline comments, review bodies, and conversation comments (bots often post summaries in the latter two):
+Fetch existing feedback so you don't repeat it - inline comments, review bodies, and conversation comments (bots often post summaries in the latter two). Write the owner and repo from the PR URL literally: `gh` fills `{owner}/{repo}` from the current directory's remote, which in a fork clone is the fork, not the PR's repo.
 ```bash
-gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate --jq '.[] | {path, line, body}'
-gh api repos/{owner}/{repo}/pulls/{number}/reviews --paginate --jq '.[] | select(.body != "") | {user: .user.login, body}'
-gh api repos/{owner}/{repo}/issues/{number}/comments --paginate --jq '.[] | {user: .user.login, body}'
+gh api repos/<owner>/<repo>/pulls/{number}/comments --paginate --jq '.[] | {path, line, body}'
+gh api repos/<owner>/<repo>/pulls/{number}/reviews --paginate --jq '.[] | select(.body != "") | {user: .user.login, body}'
+gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {user: .user.login, body}'
 ```
 `--paginate` is required - without it GitHub returns only the first 30. Each command prints one JSON object per line; the fetched count is the total line count across all three, not an eyeballed estimate. Drop any finding already raised by a human or bot; note the count skipped. **Done when the header's `Existing comments` field is filled** (count fetched + how many of your findings it deduped) - that field is this step's proof-of-execution, so it can't be silently skipped.
 
