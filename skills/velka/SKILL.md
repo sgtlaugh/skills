@@ -50,7 +50,7 @@ The Phase 2 detector blocks below use `"$D"/*.json` directly (works on current C
 ## Phase 2 - The mechanical detectors (groundable; each ships its number)
 Run these over the windowed digests. **Every row carries its evidence (counts + the sessions/files behind it) or it is not emitted.**
 
-**Apply the window - the blocks below read ALL digests as written.** Unless the window is `--all`, feed each detector the windowed stream instead of `"$D"/*.json` (keep the detector's own jq program unchanged): `find "$D" -name '*.json' -exec cat {} + | jq -c --arg m "<window start, ISO>" --arg p "<--project path, or empty>" 'select((.start // "") >= $m and ((.project // "") | startswith($p)))' | jq -rs '<detector program>'`. A report whose stated window or project filter disagrees with the digests it counted is WRONG.
+**Apply the window - the blocks below read ALL digests as written.** Unless the window is `--all`, replace each detector's input stage - `"$D"/*.json`, or `find "$D" ... -exec cat {} +` - with the windowed stream (keep the detector's own jq program unchanged): `find "$D" -name '*.json' -exec cat {} + | jq -c --arg m "<window start, ISO>" --arg p "<--project path, or empty>" 'select((.start // "") >= $m and ((.project // "") | startswith($p)))' | jq -rs '<detector program>'`. A report whose stated window or project filter disagrees with the digests it counted is WRONG.
 
 **Shell note (zsh-safe - the bugs that bit v1):** every detector block below is its own Bash call and shell state does not persist between calls, so start EACH block with `D="$HOME/.claude/velka/digests"` - unset, `"$D"/*.json` becomes `/*.json`. Use `$HOME`, **NOT** `~` - a tilde inside a variable plus an unquoted glob expands empty under zsh, giving `/*.json: no matches`) and always **quote** the glob: `"$D"/*.json`.
 
@@ -158,6 +158,8 @@ A run is complete only when:
 5. A **Headline** (top habit) leads; a **Coverage** line states the window + the blind spot.
 6. The speculative tier appears **only** under `--advice`, each item labelled `argument, not measured`.
 7. The last-run marker is updated (default window only).
+8. The **Coverage** line lists every detector above as ran or not-groundable - a detector silently skipped makes the report incomplete.
+9. Under `--candidates`, each row shows its N + example prompts, and the fuzzy-judgment caveat and the first-2-3-messages limit are stated.
 
 ## Guard rails
 - **Ground or omit - never manufacture.** A habit row without its count is not emitted. A clean corpus → say "no recurring inefficiency stands out," do NOT invent one.
