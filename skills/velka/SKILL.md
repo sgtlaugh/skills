@@ -83,7 +83,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   jq -rs 'map({id:.id[0:8],proj:(.project|split("/")|last),cr:(.tokens.cache_read // 0)})|sort_by(-.cr)|.[0:5][]
     | "\(.cr) cache_read\t(\(.proj), \(.id))"' "$D"/*.json
   ```
-- **Skill usage / dead skills** (which fleet skills you actually use vs built-and-skip). Skills used **≤2x in the whole window** are dead-weight candidates - low-confidence: prune or start adopting. The fleet is read from the installed skills, so it never goes stale:
+- **Skill usage / dead skills** (which fleet skills you actually use vs built-and-skip). Skills used **≤2x in the window** are dead-weight candidates - low-confidence: prune or start adopting. This detector always looks back at least 30 days, even when the stated window is shorter (say so in its row): on a one-week window every occasional skill would look dead. The fleet is read from the installed skills, so it never goes stale:
   ```
   D="$HOME/.claude/velka/digests"; FLEET=$(ls "$HOME/.claude/skills")
   find "$D" -name '*.json' -exec cat {} + | jq -rs --arg f "$FLEET" '($f|split("\n")|map(select(length>0))) as $fleet | ([.[]|.skill_tooluse + .slash]|add) as $u | $fleet | map(. as $s | {s:$s,n:($u|map(select(.==$s))|length)}) | sort_by(.n) | .[] | "\(.n)x  \(.s)"'
