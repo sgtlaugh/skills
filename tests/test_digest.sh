@@ -76,5 +76,15 @@ edges=$(bash "$SCRIPT" "$FIX/velka-human-edges.jsonl" 2>/dev/null | jq -r '.firs
 assert_exit "typed prompts starting with < or naming caveman are kept, wrapper output dropped" 0 \
     "$([ "$edges" = '<div class="owl"> renders twice after the 3am power cut, why? | Why is caveman mode eating my commit messages again?' ] && echo 0 || echo 1)"
 
+# A crash mid-write leaves a cut-off last line; the session must still digest
+cutoff=$(mktemp)
+cat "$FIX/basic-session.jsonl" > "$cutoff"
+printf '{"type":"user","message":{"content":"the bonfire went out mid-wri' >> "$cutoff"
+truncated=$(bash "$SCRIPT" "$cutoff" 2>/dev/null); rc=$?
+rm -f "$cutoff"
+assert_exit "a cut-off last line is skipped, not fatal" 0 "$rc"
+assert_exit "the rest of a cut-off session is still digested" 0 \
+    "$([ "$(jq -r '.assistant_msgs' <<<"$truncated")" = "$(jq -r '.assistant_msgs' <<<"$out")" ] && echo 0 || echo 1)"
+
 echo "  --- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]

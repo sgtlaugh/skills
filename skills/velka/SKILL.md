@@ -1,8 +1,8 @@
 ---
 name: velka
 trigger: /velka
-description: Surface cross-session workflow habits from your Claude Code history. velka digests your past session transcripts (mechanically, no LLM) and reports recurring patterns - edit-thrash, skills you keep skipping, fine-grained committing, token churn, repeated tool-sequences worth forging into a skill. Reports only what the transcripts mechanically prove; inference beyond the footprint is flagged low-confidence, never asserted.
-allowed-tools: Read, Bash(bash ~/.claude/skills/velka/collect.sh:*), Bash(jq:*), Bash(cat:*), Bash(date:*), Bash(ls:*), Bash(find:*)
+description: Surface cross-session workflow habits from your Claude Code history. velka digests your past session transcripts (mechanically, no LLM) and reports recurring patterns - edit-thrash, skills you keep skipping, fine-grained committing, token churn, and (with `--candidates`) intents you keep repeating that could become a skill. Reports only what the transcripts mechanically prove; inference beyond the footprint is flagged low-confidence, never asserted.
+allowed-tools: Read, Grep, Bash(bash ~/.claude/skills/velka/collect.sh:*), Bash(jq:*), Bash(cat:*), Bash(date:*), Bash(ls:*), Bash(find:*)
 ---
 
 # /velka - observe the cycle, name the recurring sin
@@ -54,7 +54,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
 
 **Shell note (zsh-safe - the bugs that bit v1):** every detector block below is its own Bash call and shell state does not persist between calls, so start EACH block with `D="$HOME/.claude/velka/digests"` - unset, `"$D"/*.json` becomes `/*.json`. Use `$HOME`, **NOT** `~` - a tilde inside a variable plus an unquoted glob expands empty under zsh, giving `/*.json: no matches`) and always **quote** the glob: `"$D"/*.json`.
 
-**Only emit detectors GROUNDABLE from the digest schema. Do NOT improvise jq against fields that don't exist** (that crashes with "Cannot iterate over null"). The digest has exactly: `bash.{total,git_commit,git_revert,test_run,grep}`, `skill_tooluse[]`, `slash[]`, `tools{}`, `files_edited{}`, `files_read{}`, `tokens{}`, `tool_seq[]` (tool names), `cmd_seq[]` (normalized bash command-heads - **vestigial**: kept for possible future use, but `--candidates` no longer mines it, command-dance mining was proven useless), `first_prompt` (first 2-3 substantive human messages joined with ` | ` = intent signal for `--candidates`; covers slash-start sessions where turn-1 is skill text, not the goal), `assistant_msgs`, `user_str/arr`, `start/end`, `id`, `project`. There is **no** raw-bash-command list and **no** gh-subcommand count.
+**Only emit detectors GROUNDABLE from the digest schema. Do NOT improvise jq against fields that don't exist** (that crashes with "Cannot iterate over null"). The digest has exactly: `bash.{total,git_commit,git_revert,test_run,grep}`, `skill_tooluse[]`, `slash[]`, `tools{}`, `files_edited{}`, `files_read{}`, `tokens{}`, `first_prompt` (first 2-3 substantive human messages joined with ` | ` = intent signal for `--candidates`; covers slash-start sessions where turn-1 is skill text, not the goal), `assistant_msgs`, `user_str/arr`, `start/end`, `id`, `project`. There is **no** raw-bash-command list and **no** gh-subcommand count.
 
 - **Edit-thrash** (cleanest signal - a file edited many times = churn = design unclear before coding):
   ```
@@ -90,7 +90,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   ```
   **Before calling any skill dead, cross-check typed history** - old transcripts get pruned, so digests undercount (this detector once reported a skill at 0 that history showed at 5 runs). For each ≤2x skill, count its typed invocations **inside the same window** (`.timestamp` is epoch milliseconds; use `0` for `--all`) and report the larger number:
   ```
-  jq -s --arg s "/<skill>" --arg d '<window start: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ>' '($d | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . + "T00:00:00Z" else . end | fromdateiso8601 * 1000) as $since | [.[] | objects | select(((.display // "") | startswith($s)) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
+  jq -s --arg s "/<skill>" --arg d '<window start: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ>' '($d | sub("\\.[0-9]+Z$";"Z") | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . + "T00:00:00Z" else . end | fromdateiso8601 * 1000) as $since | [.[] | objects | select(((.display // "") | startswith($s)) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
   ```
 - **Cross-session file hotspots** (a file edited across MANY sessions = a churn magnet / refactor candidate - higher-value than within-session thrash):
   ```
@@ -100,15 +100,12 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   ```
   find "$D" -name '*.json' -exec cat {} + | jq -rs 'group_by(.project)|map({p:(.[0].project|split("/")|last),sess:length,edits:(map(.tools.Edit//0)|add),cr:(map(.tokens.cache_read//0)|add)})|sort_by(-.sess)|.[0:8][]|"\(.sess) sess · \(.edits) edits · \(.cr) cache_read  \(.p)"'
   ```
-- **Intent ↔ skill cross-check** (`--candidates` only - the LLM tier; velka *reasons over intents* here, unlike the mechanical detectors above). This replaces the old command-dance miner, which was **empirically proven useless** (recurring `cmd_seq` n-grams were ~100% skill-internal plumbing - API skills running `curl>jq` - or universal `git add>commit`; the genuinely forge-worthy patterns are *semantic intents*, not command strings, so no n-gram over commands can see them). Instead, cross-check each session's **intent** against the **skill catalog**:
+- **Intent ↔ skill cross-check** (`--candidates` only - the LLM tier; velka *reasons over intents* here, unlike the mechanical detectors above). Command-string patterns were tried and dropped: the recurring ones were skill plumbing or universal `git add>commit`. Skill-worthy patterns are *intents*, not command strings. Instead, cross-check each session's **intent** against the **skill catalog**:
   1. **Adoption gaps** - a recurring intent an EXISTING skill covers, done by hand (skill never invoked). "Covered-by" is an LLM judgment; **"not-used" is mechanical fact** (`skill_tooluse`/`slash`) - that half anchors the row.
   2. **New-skill candidates** - a recurring intent NO existing skill covers → forge one.
 
   Method:
-  a. Read the LIVE skill catalog (so matching is grounded in what actually exists, incl. skills not in this repo):
-  ```
-  for d in ~/.claude/skills/*/; do n=$(basename "$d"); desc=$(sed -n 's/^description: //p' "$d/SKILL.md" 2>/dev/null | head -1); echo "$n :: ${desc:0:100}"; done
-  ```
+  a. Read the LIVE skill catalog (so matching is grounded in what actually exists, incl. skills not in this repo): run the Grep tool for `^description:` across `~/.claude/skills/*/SKILL.md`. Each hit's directory name is the skill.
   b. Pull intent + used-skills per session:
   ```
   find "$D" -name '*.json' -exec cat {} + | jq -rs '.[] | select((.first_prompt//"")|length>0) | {p:.first_prompt, used:(.skill_tooluse+.slash), proj:(.project|split("/")|last)}'
@@ -168,5 +165,5 @@ A run is complete only when:
 - **The blind-spot caveat is mandatory** on testing/coverage findings: velka sees only tools run *through Claude Code*; IDE/CI/other-shell activity is invisible. Stating "you don't test" without it is a false accusation.
 - **Cross-session by default.** Single-session windows are low-value (you lived it); warn and recommend `--all`.
 - **Speculative is OFF by default.** Mechanical counts carry the report; `--advice` gates the judgment tier, every item labelled `argument, not measured`.
-- **Read-only on your code (instruction-enforced, NOT structural).** velka reads transcripts and writes ONLY its own cache (`~/.claude/velka/` digests + last-run marker); it never edits your code, commits, or touches the repo. Be honest about the enforcement: the `allowed-tools` grant is narrowed to `collect.sh` + `jq`/`cat`/`ls`/`date` (arbitrary `bash` is NOT pre-approved, so an unexpected shell command prompts - the tripwire). But any `Bash` grant can in principle write via redirection - this is a **prompt-level boundary, not a hard guarantee.** For a hard backstop, add a `deny` rule in `settings.json`. Do not claim velka "physically cannot" alter code.
+- **Read-only on your code (instruction-enforced, NOT structural).** velka reads transcripts and writes ONLY its own cache (`~/.claude/velka/` digests + last-run marker); it never edits your code, commits, or touches the repo. Be honest about the enforcement: the `allowed-tools` grant is narrowed to `collect.sh` + `jq`/`cat`/`ls`/`date`/`find` and the Grep tool (`find` is the widest: it can `-delete`) (arbitrary `bash` is NOT pre-approved, so an unexpected shell command prompts - the tripwire). But any `Bash` grant can in principle write via redirection - this is a **prompt-level boundary, not a hard guarantee.** For a hard backstop, add a `deny` rule in `settings.json`. Do not claim velka "physically cannot" alter code.
 - **Efficient.** Digests are mtime-cached - only changed sessions re-parse. Never re-ingest raw transcripts in the analyzer; read the digests.

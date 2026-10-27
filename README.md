@@ -80,7 +80,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 |---|---|
 | [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
 | [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and shows which findings were consistent and which were luck |
-| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (no LLM) |
+| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (digested mechanically, no LLM) |
 | [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text |
 
 Review skills are read-only. `/bonfire`, `/forge` and `/nicepr --create` write only what you ask for.
