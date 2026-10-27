@@ -28,10 +28,10 @@ Strategically, Substantially, Truly.
 ## Abstract nouns that signal AI
 
 Bandwidth (figurative), Bedrock, Cadence, Catalyst, Cornerstone, Deep dive, Ecosystem
-(figurative), Efficiency, Framework (when vague), Game-changer, Guardrails (figurative),
-Headwinds/Tailwinds (figurative), Implementation, Innovation, Institution, Integration,
+(figurative), Efficiency (when vague), Framework (when vague), Game-changer, Guardrails (figurative),
+Headwinds/Tailwinds (figurative), Implementation (when vague), Innovation, Integration (when vague),
 Interplay, Intersection (figurative), Intricacies, Juxtaposition, Landscape (figurative),
-Linchpin, North star (figurative), Optimization, Pain point, Paradigm/Paradigm shift,
+Linchpin, North star (figurative), Optimization (when vague), Pain point, Paradigm/Paradigm shift,
 Realm, Synergy, Takeaway/Key takeaway, Tapestry (figurative), Transformation.
 
 ## Verbs AI defaults to
@@ -43,6 +43,8 @@ Empower, Enhance, Facilitate, Foster, Garner, Harness, Leverage, Maximize, Navig
 Underscore, Unlock (figurative, as in "unlock potential"), Unpack (figurative), Utilize.
 
 ## Plain-word swaps
+
+Skip a swap when the word is the precise technical term: implement an interface, optimize a query, a feature flag.
 
 | AI default | Plain alternative |
 |---|---|
@@ -318,7 +320,7 @@ to enterprise rollouts" is filler.
 
 Don't bold key terms mechanically. Use bold sparingly or not at all.
 
-Exception: a bold lead-in label with a colon (`**Root Cause:** the retry loop...`) is the user's required PR style - keep it in PR text.
+Exception: a bold lead-in label with a colon (`**Root Cause:** the retry loop...`) is required by `/nicepr`'s PR format - keep it in PR text.
 
 ### Vertical lists with inline headers
 
@@ -329,7 +331,7 @@ Replace "- Performance: Performance improved" style lists with normal sentences.
 Use sentence case for headings and titles. "How to write better emails" beats "How To
 Write Better Emails." Title case feels formal in a dated, corporate way.
 
-Exception: PR titles use Title Case (the user's PR rule) - leave them alone.
+Exception: PR titles use Title Case (`/nicepr`'s format) - leave them alone.
 
 ### Curly quotes
 

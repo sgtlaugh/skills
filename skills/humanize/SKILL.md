@@ -9,6 +9,15 @@ allowed-tools: Read
 
 Remove the patterns that mark text as AI-generated, then tighten for clarity.
 
+## Usage
+
+```
+/humanize <text>          # rewrite the pasted text
+/humanize                 # rewrite your previous response
+/humanize <file>          # print a rewrite of the file (the file itself is not edited)
+/humanize --concise ...   # any of the above, and cut length roughly in half
+```
+
 ## Workflow
 
 ### Step 1: Scan for tells
@@ -34,7 +43,7 @@ Two passes:
 - First pass: remove banned patterns (the cleanup)
 - Second pass: tighten for clarity and directness
 
-For the full banned list (words, phrases, transitions), read `references/banned-list.md`.
+Read `references/banned-list.md` before the first pass: the completion contract checks against it.
 
 ### Step 3: Self-check
 
@@ -49,7 +58,7 @@ Output the rewritten text directly. No preamble ("here's the rewrite!"). If the 
 ## Hard rules
 
 1. **No em dashes.** Use commas, periods, or restructure.
-2. **No rule-of-three lists.** Two items or four. Three every time is the giveaway.
+2. **No rule-of-three lists** of adjectives, slogans or rhetorical beats. Two items or four; three every time is the giveaway. A factual list (three files that changed) stays as long as it is.
 3. **No contrast framing.** Never "It's not X, it's Y" or the escalation version. Just say what it is.
 4. **No staccato bursts.** Don't string three+ short sentences for drama. Vary length.
 5. **No rhetorical transition questions.** Delete "The catch?" "But here's the thing."
@@ -93,7 +102,7 @@ After stripping patterns, apply these for technical/PR/doc contexts:
 - **Be direct.** State what changed and why. Not "This PR introduces comprehensive improvements to the upload flow by ensuring that file storage is properly delegated" but "Delegate file storage to the archive service instead of writing to S3 directly."
 - **Specifics over adjectives.** Not "significant performance improvement" but "8x speedup (40 min - 5 min)."
 - **Cut throat-clearing.** If the first sentence of a section doesn't add information, delete it.
-- **One idea per sentence.** Long compound sentences with semicolons and dependent clauses are the other AI tell - not every sentence needs to be a complex construction.
+- **Split any sentence with two or more dependent clauses.** Long compound sentences with semicolons are the other AI tell - not every sentence needs to be a complex construction.
 
 ---
 
