@@ -16,8 +16,8 @@ Claude Code skills that make the agent prove it.
 ## Contents
 
 - [Quick start](#quick-start)
-- [What it looks like](#what-it-looks-like)
 - [The skills](#the-skills)
+- [Example verdict](#example-verdict)
 - [How they connect](#how-they-connect)
 - [Configuration](#configuration)
 - [Requirements](#requirements)
@@ -36,22 +36,6 @@ Restart Claude Code, then type `/` to see the skills. Every flag and example is 
 `install.sh` links the skills, the agent and the hook into `~/.claude/`. It also creates the two config files in `~/.config/claude-skills/`. Re-run it after a pull.
 
 It never overwrites your config, and backs up anything in the way to `.bak`.
-
-## What it looks like
-
-`/darkmoon --claims` on a repo built to fool a grep (trimmed):
-
-```
-## 🌑 darkmoon - judgment on 7 claims
-
-| # | Claim                                 | Verdict   | Evidence                                                     |
-|---|---------------------------------------|-----------|--------------------------------------------------------------|
-| 2 | issue_refund is never called          | Refuted ✗ | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
-| 3 | handle_chargeback is dead code        | Refuted ✗ | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
-| 4 | The repo never imports pickle         | Upheld ✓  | grep -rniE 'pickle|__import__' → no output                   |
-
-Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
-```
 
 ## The skills
 
@@ -105,6 +89,22 @@ Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 | [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text |
 
 Review skills are read-only. `/bonfire`, `/forge` and `/nicepr --create` write only what you ask for.
+
+## Example verdict
+
+`/darkmoon --claims` on a repo built to fool a grep (trimmed):
+
+```
+## 🌑 darkmoon - judgment on 7 claims
+
+| # | Claim                                 | Verdict   | Evidence                                                     |
+|---|---------------------------------------|-----------|--------------------------------------------------------------|
+| 2 | issue_refund is never called          | Refuted ✗ | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
+| 3 | handle_chargeback is dead code        | Refuted ✗ | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
+| 4 | The repo never imports pickle         | Upheld ✓  | grep -rniE 'pickle|__import__' → no output                   |
+
+Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
+```
 
 ## How they connect
 
