@@ -2,7 +2,7 @@
 name: gadfly
 description: Interrogate a tech spec or architecture doc before it gets built - extract requirements, gate the blocking gaps, ground the design in the code it touches, stress-test through four adversarial lenses. `--prd` checks whether the HOW satisfies the WHY. Hypotheses to check, not verdicts.
 trigger: /gadfly
-allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(git log:*), Bash(git show:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
+allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
 ---
 
 # /gadfly - sting the design awake
@@ -50,7 +50,7 @@ curl -sS --fail-with-body "$JIRA_URL/wiki/rest/api/content/$PAGE_ID?expand=body.
 jq -r '"# \(.title)\nSpace \(.space.key) | Version \(.version.number) (\(.version.when)) | ID \(.id)"' "$G/page.json"
 jq -r '.body.export_view.value' "$G/page.json" | { command -v pandoc >/dev/null && pandoc -f html -t gfm || cat; }
 curl -sS --fail-with-body "$JIRA_URL/wiki/rest/api/content/$PAGE_ID/child/attachment" -H "Authorization: Basic $JIRA_B64" \
-  | jq -r 'if (.results|length)>0 then (.results[] | "ATTACHMENT: \(.title) [\(.metadata.mediaType)] \(._links.download)") else "no attachments" end'
+  | jq -r 'if .results == null then "ATTACHMENT FETCH FAILED: \(.message // "no results field")" elif (.results|length)>0 then (.results[] | "ATTACHMENT: \(.title) [\(.metadata.mediaType)] \(._links.download)") else "no attachments" end'
 ```
 **If the fetch fails** - empty `PAGE_ID`, any `curl: (N)` on stderr, or the JSON carries `.message` / no `.id` (401/403/404) - **report it and stop.** A failed diagram download (any `curl: (N)`) means that attachment is unread - list it under **Not analyzed**, never `Read` the error page as the diagram. Don't review a half-fetched or empty page. Tiny links (`/wiki/x/..`) carry no numeric id; resolve the redirect (see the jira skill's tiny-link step) or ask for the page id.
 
@@ -74,7 +74,7 @@ Fold what the diagram shows (an ER diagram's tables/relations, a sequence/arch d
 Never pretend a diagram was read - and equally, never punt one you could have read. (Lesson: didn't-read ≠ not-there.)
 
 ### PRD (optional - `--prd <path|url>`)
-If `--prd` is given, ingest the PRD the same way (Confluence or local file) and **version-stamp it too.** Two docs now: the **spec = HOW**, the **PRD = WHY**. Diagram + stamp rules apply to both. The PRD feeds the coverage check in Phase 1. **Without `--prd`, skip all PRD logic - gadfly behaves exactly as before.**
+If `--prd` is given, ingest the PRD the same way (Confluence or local file) and **version-stamp it too.** Two docs now: the **spec = HOW**, the **PRD = WHY**. Diagram + stamp rules apply to both. The PRD feeds the coverage check in Phase 1. **Without `--prd`, skip all PRD logic.**
 
 **Parallel fetch:** spec and PRD are independent - fetch both as parallel tool calls in ONE message when `--prd` is given.
 
@@ -140,14 +140,14 @@ Gaps (findings - spec should have specified):
 
 Gate: <READY to review | BLOCKED - N questions below>
 ```
-- `BLOCKED` → ask the questions (Step 2), then stop. Don't proceed on a guess.
+- `BLOCKED` → ask the questions (Step 2), then stop. Don't proceed on a guess. When the user answers, re-emit Step 3 with the answers folded in and continue to Phase 2.
 - `READY` → proceed to **Phase 2**.
 
 ## Phase 2 - Ground the design in the code (seams only)
 
 Runs only when the gate is `READY`. Purpose: understand the **terrain the design lands in.** The design is unbuilt, so there is nothing to *verify* in code - you ground the **existing systems it touches** so the coming attack rests on facts, not guesses.
 
-**Greenfield** (from the Phase 1 type) → no existing seams. State *"net-new - no code to ground against"* and skip to the summary.
+**Greenfield** (from the Phase 1 type) → no existing seams. State *"net-new - no code to ground against"* and go straight to the Step 4 output with `Seams: net-new`.
 
 ### Step 1 - Discover & confirm the repos (mini-gate)
 List the repos/services the design touches, each `[Stated]`/`[Inferred]`. Locate each locally:
@@ -161,7 +161,7 @@ Present the found path(s) and **confirm before reading** - a deep-dive on the wr
 
 Also list **services the design's correctness depends on even if it doesn't edit them** - an external auth/permissions service, a queue consumer, a search indexer. These are grounding targets too (Step 2b) when a finding will hinge on their behaviour.
 
-**Stamp each confirmed repo's baseline:** `git -C <path> rev-parse --short HEAD`. The review is a snapshot of that commit - record it like the spec version (and it tells a later reader whether the grounding is stale).
+**Stamp each confirmed repo's baseline:** `cd <path> && git rev-parse --short HEAD`. The review is a snapshot of that commit - record it like the spec version (and it tells a later reader whether the grounding is stale).
 
 ### Step 2 - Read the hotspots thoroughly (calibrated - not a keyhole, not the whole repo)
 For each confirmed repo:
@@ -171,7 +171,7 @@ For each confirmed repo:
 - **Follow the context the design's correctness depends on** - a hotspot that calls a global filter / inherits a base / uses a shared util: read that too. Bounded by *relevance to the design*, not exhaustiveness.
 - **The bound:** a *few* hotspots, read *deep*. Not the seam line alone (the keyhole that ships false findings), not the whole repo (cost trap). When unsure whether surrounding context matters, read it - a cheap-but-wrong review costs more than a dearer-right one.
 
-**Execution (fan-out + degrade).** With several repos, delegate grounding to **one subagent per top repo, in parallel** - the few the design most changes (typically ≤4; skim the rest). For 1-2 repos, ground inline - the subagent tax isn't worth it. **If you cannot spawn subagents - you're running nested (e.g. under `jury`) - ground inline yourself, serially. Never skip grounding to work around the limit.** Either way the assembler re-verifies top-severity citations itself (Phase 3) - a subagent's report is `[Inferred]` until reproduced.
+**Execution (fan-out + degrade).** With several repos, delegate grounding to **one subagent per top repo, in parallel** - the few the design most changes (typically ≤4; skim the rest). For 1-2 repos, ground inline - the subagent tax isn't worth it. **If you cannot spawn subagents (an error, or a host that doesn't allow nesting), ground inline yourself, serially. Never skip grounding to work around the limit.** Either way the assembler re-verifies top-severity citations itself (Phase 3) - a subagent's report is `[Inferred]` until reproduced.
 
 ### Step 2b - Cross the service boundary (follow the data)
 A finding often hinges on what **another service** does with the data this design touches - e.g. *how service B computes a result from what service A sends it.* **Never conclude on another service's behaviour from your repo's side alone.** If a `Sinks`/`Blocker` would depend on it:
@@ -285,7 +285,7 @@ Cleared: <lenses that found nothing real + the cited reason each held>
 Open questions: <the few the author must answer before building>
 ```
 - **No real findings → say so:** *"Holds against all four lenses - <cited reasons>."* Don't invent nits to look useful.
-- **Save a fresh, self-contained report** to `~/.claude/reports/gadfly/<spec-slug>.gadfly.<ts>.md` (expanded to an **absolute** path; `<ts>=$(date +%Y%m%d-%H%M%S)`; the Write tool creates the directory). Never inside the reviewed repo - a report saved to the working directory leaves untracked files in the codebase under review. Always print the absolute path so it's clickable/locatable, never a bare relative filename. **Always a new file; never `Update` or overwrite a prior run's report.** Merging into an old report inherits its stale/false findings and masks run-to-run disagreement; a second run must be an *independent* opinion. The file holds Requirements (Phase 1) + Grounding summary with repo SHAs (Phase 2) + this Review; the chat echo is a compact scannable summary (next bullet), not the prose report. Never post back to Confluence.
+- **Save a fresh, self-contained report** to `~/.claude/reports/gadfly/<spec-slug>.gadfly.<ts>.md` (expanded to an **absolute** path; `<ts>` = the literal output of running `date +%Y%m%d-%H%M%S` in Bash now, never a typed-in guess; the Write tool creates the directory). Never inside the reviewed repo - a report saved to the working directory leaves untracked files in the codebase under review. Always print the absolute path so it's clickable/locatable, never a bare relative filename. **Always a new file; never `Update` or overwrite a prior run's report.** Merging into an old report inherits its stale/false findings and masks run-to-run disagreement; a second run must be an *independent* opinion. The file holds Requirements (Phase 1) + Grounding summary with repo SHAs (Phase 2) + this Review; the chat echo is a compact scannable summary (next bullet), not the prose report. Never post back to Confluence.
 - **Chat echo format - scannable, but carry the high-signal one-liners:**
   - a one-line **Steelman**
   - the **ranked table** sorted Sinks→Blocker→Handle, one line per finding (title only): `| Sev | Finding | §ref | Conf |` (with `--prd`, add a `Tag` column for `[SPEC]`/`[PRD]`)
@@ -304,10 +304,10 @@ Open questions: <the few the author must answer before building>
 
 ## Completion contract
 A run is complete only when the saved report contains **all** of these - missing any = incomplete, not done:
-1. **Requirements** - the table with every item tagged `[Stated|Inferred|Missing]` (Phase 1); with `--prd`, the PRD internal-conflicts line + coverage table.
+1. **Requirements** - the requirements list with every item tagged `[Stated|Inferred|Missing]` (Phase 1); with `--prd`, the PRD internal-conflicts line + coverage table.
 2. **Grounding** - the seam summary with **repo + SHA** stamped (Phase 2); each code claim carries `path:line` or `Can't-determine`.
 3. **Core model** - the per-store representation **and** the `Alternative model(s) considered: … | none viable because …` line (Phase 3).
-4. **Findings** - the ranked table, **each row carrying a confidence + a verify-by**; or the explicit *"holds against all four lenses"* if none.
+4. **Findings** - one block per finding in the saved report (ranked in the chat table), **each carrying a confidence + a verify-by**; or the explicit *"holds against all four lenses"* if none.
 5. **Saved file** - `<slug>.gadfly.<ts>.md`, a fresh file (never an overwrite).
 
 This is one checklist to self-verify against, not three scattered templates. If any item is absent, the run isn't finished - produce it or state why it can't exist (e.g. *"no `--prd` given"*).
