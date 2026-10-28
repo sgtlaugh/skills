@@ -48,7 +48,7 @@ Spawn one `general-purpose` `Agent`. Its prompt is: the goal line, the repo path
 >
 > *Rules: every finding cites `file:line` and the evidence (the grep or the lines that prove it). "Unused", "one caller", "dead", "never reached" need a whole-repo grep shown - one negative grep with the wrong scope or a missed alias is not proof; if you can't settle it, say "unverified" instead of asserting. Skip what a linter or formatter owns. No findings in a category is a valid answer - never manufacture one to look useful.*
 >
-> *Return: `Verdict: Clean ✓ | Fix first ⚠️ | Trim ✂️` (Fix first = any bug or goal gap; Trim = only simplification/drift/convention items), then findings grouped Bug / Drift / Simplify / Goal-Convention, each `file:line - what is wrong - evidence - the fix`, then one line naming what is already solid.*
+> *Return: `Verdict: Clean ✓ | Fix first ⚠️ | Trim ✂️` (Fix first = any bug or goal gap; Trim = only simplification/drift/convention items), then findings grouped Bug / Drift / Simplify / Goal-Convention, each `file:line - what is wrong - evidence - the fix`, then one line naming what is already solid, then `reviewed_paths:` and every file you read in full or grepped, so the reader sees what the review did not cover.*
 
 ## Step 3 - Surface and stop
 
@@ -62,7 +62,8 @@ A run is complete only when the output shows:
 1. The mode, the file count and the goal line.
 2. The verdict (Clean / Fix first / Trim).
 3. Every finding with `file:line` + its evidence, or "Clean ✓" with what was checked.
-4. Any author disagreement in its own `## Author's reply` block, never merged into the reviewer's text.
+4. The reviewer's `reviewed_paths:` line, verbatim.
+5. Any author disagreement in its own `## Author's reply` block, never merged into the reviewer's text.
 
 ## Guard rails
 
