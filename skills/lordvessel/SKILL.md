@@ -47,7 +47,7 @@ Union the two lists by URL. dev-status often succeeds and returns nothing while 
 Number every requirement `R1..Rn`, quoted verbatim. The same ticket must give the same rows on every run - Step 4b judges code against them:
 - **The description has an Acceptance Criteria section, a checklist, or a numbered or bulleted list** → those items ARE the requirements: one row per item, verbatim, untagged. Never split an item into two rows, never merge two, never add the title or a sentence outside the list as a row.
 - **Scope changes in comments** - a later comment that adds, drops or changes a requirement becomes its own row, tagged with author and date. A dropped requirement stays in the table as `Dropped (<who>, <date>)`.
-- **Scope narrowed by a linked spec** (an MVP section that excludes it) → `Dropped (spec: "<quoted line>")` only when the ticket links that spec; otherwise `Partial`, and the mismatch goes in the status note as a question.
+- **A linked spec can only drop or narrow, never add.** The ticket's own items are the requirements; a spec the ticket links is context. When it excludes an item (an MVP section that leaves it out) → `Dropped (spec: "<quoted line>")`; when it narrows one, judge the item against the narrower reading. Spec details beyond the ticket's items (field names, rollout gating, extra asset types) are never rows and never make an item `Partial` - where the code differs from them, that is a Contradiction (Step 5). A spec the ticket does not link changes nothing; a mismatch with it goes in the status note as a question.
 - **No list at all** (prose only, or just a stack trace) → derive the requirements from the description, tag each `(derived)`, and say in the header that the ticket has no acceptance criteria; that gap belongs in the status note.
 - **And, only when there is no list: exactly one row per linked PR**, its title verbatim and tagged `(derived from <repo>#<n>)`. The title only - never the PR body's list of changes: the body describes the solution, which is what is under review, and taking it as scope would make every change look requested - for example `| R3 | "Block deleting the only photo of a sighting for nest editors" (derived from owl-web#812) | Covered | ...`. Without criteria, what each author set out to do is the best evidence of scope; leaving it out makes their intended change look like scope creep in Step 4b. A review of a ticket with no list and no PR-derived rows is incomplete.
 
@@ -106,6 +106,7 @@ Step 4 asks whether every requirement has code. This step asks the reverse: does
 
 **Contradiction:** two sources that cannot both hold, each cited:
 - the ticket requires X, the code does Y;
+- the linked spec says X (a field name, a rollout rule), the code does Y - cite the spec line and the code, and say whether the spec or the code looks out of date;
 - a comment changed scope and the code follows the old version;
 - the PR description claims a change the diff doesn't contain.
 
