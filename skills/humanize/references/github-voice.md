@@ -6,12 +6,13 @@ How a review comment, PR reply or ticket status note reads when a person wrote i
 
 One or two short paragraphs, a blank line between them. An inline comment is usually 150-400 characters of prose; the gate stops it at 600 (code blocks don't count).
 
-1. **The fact first,** with a SHA-pinned permalink and identifiers in backticks.
-2. **Then why it matters,** as a question or a soft suggestion: "Should we...?", "Can we...?", "Wondering if it would be simpler to...".
+1. **The consequence first,** in plain words: what goes wrong and when. Identifiers in backticks, every file reference a link.
+2. **Then the evidence.** One fact per sentence. When it takes two or more hops (this calls that, which also runs there), give the hops as a short list instead of a chain of clauses.
+3. **Then the ask,** as a question or a soft suggestion: "Should we...?", "Can we...?", "Wondering if it would be simpler to...".
 
 When proposing an alternative, name what it costs. Calibrate instead of asserting: "That might be fine for X, but...", "Fine by me, just flagging...".
 
-Lists only for real enumerations (two questions, three files). Never for a single point split into fragments.
+Lists for real enumerations (two questions, three files, the hops of a call chain). Never for a single point split into fragments.
 
 ## Lead-ins
 
@@ -25,6 +26,11 @@ Lists only for real enumerations (two questions, three files). Never for a singl
 - A `suggestion` block only for a fix of 3 lines or fewer that the author can accept with one click. Anything bigger is a description plus a permalink.
 - Permalinks pin a commit SHA (`/blob/4f2a9c1/...`), never a branch: a branch link points at different code next week.
 
+## References
+
+- **A file and line is a link** to the blob at the reviewed commit: ``[`moon.py:88`](https://github.com/acme/owl/blob/4f2a9c1/owl/moon.py#L88)``. A bare `moon.py:88` makes the reader go find it.
+- **A PR or issue in another repo** is `owner/repo#N` (`acme/nest-config#16394`). GitHub autolinks only that form; `nest-config#16394` stays plain text. In the same repo, `#N` is enough.
+
 ## Approvals and status
 
 - An approval says "Looks good!" plus what was checked, and admits what wasn't: "I did not test locally, but the retry path looks right."
@@ -37,6 +43,16 @@ Lists only for real enumerations (two questions, three files). Never for a singl
 > `refresh_moon_cache` holds the lock across the HTTP call ([here](https://github.com/acme/owl/blob/4f2a9c1/owl/moon.py#L88)), so a slow upstream stalls every reader.
 >
 > Can we fetch first and take the lock only for the swap? We'd occasionally fetch twice on a cold start, which seems cheaper than the stall.
+
+**A finding that crosses files, as hops:**
+
+> `purge_expired_sightings` can now run twice at once.
+>
+> - Every nest delete enqueues it ([`nest.py:128`](https://github.com/acme/owl/blob/4f2a9c1/owl/nest.py#L128)).
+> - This PR routes those messages to the `sightings` queue, where acme/nest-config#16394 starts a worker.
+> - The nightly CronJob runs the same purge ([`purge.py:16`](https://github.com/acme/owl/blob/4f2a9c1/scripts/purge.py#L16)).
+>
+> Is the purge safe to run concurrently? If not, can we drop the enqueue now that the CronJob owns cleanup?
 
 **Question about intent:**
 

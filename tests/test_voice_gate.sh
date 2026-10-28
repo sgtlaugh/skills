@@ -41,6 +41,10 @@ check "praise filler" 1 "praise filler" "Great job on this, the cache works."
 check "contrast framing" 1 "contrast framing" "It's not a cache, it's a leak."
 check "banned phrase from the list" 1 "banned phrase" "It's worth noting that the owl hoots at 3am."
 check "self-narration from the list" 1 "banned phrase" "This highlights a race in the scheduler."
+check "file:line in backticks is not a link" 1 "is not a link" "Every delete calls \`delay()\` (\`rendition_type.py:128\`)."
+check "file:line linked to a SHA blob" 0 "" "Every delete calls \`delay()\` ([\`rendition_type.py:128\`](https://github.com/acme/owl/blob/$SHA/app/rendition_type.py#L128))."
+check "cross-repo PR without owner" 1 "needs its owner" "With nest-config#16394 this runs twice."
+check "owner/repo#N, PR#N and #N are fine" 0 "" "With acme/nest-config#16394 and PR#12 this runs twice, see #554."
 check "six comments in a review" 1 "6 inline comments" '[{"body":"a"},{"body":"b"},{"body":"c"},{"body":"d"},{"body":"e"},{"body":"f"}]'
 check "per-comment numbering in JSON" 1 "comment 2: em dash" "[{\"body\":\"fine\"},{\"body\":\"hoot ${EM} hoot\"}]"
 

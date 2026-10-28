@@ -96,6 +96,13 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     for my $id ($text =~ /(?<![\w.\/-])([a-z][a-z0-9]*_[a-z0-9_]+|[a-z]+[A-Z][A-Za-z0-9]*|\w+\(\)|[\w\/-]+\.(?:py|ts|tsx|js|go|rb|sh|md|json|ya?ml|toml|sql))(?![\w\/-])/g) {
         push @v, "identifier \"$id\" outside backticks";
     }
+    # References must be clickable: a file:line as a link to the blob, a PR in another repo as owner/repo#N
+    # (GitHub autolinks only that form). Code spans count here: `a.py:12` in backticks is still not a link.
+    (my $unlinked = $prose) =~ s/\[[^\]\n]*\]\([^)\s]*\)//g;
+    $unlinked =~ s{https?://\S+}{}g;
+    push @v, "file reference \"$1\" is not a link - link it to the blob at a commit SHA" while $unlinked =~ /(?<![\w\/.-])([\w\/.-]+\.[A-Za-z0-9]{1,6}:L?\d+(?:-L?\d+)?)\b/g;
+    (my $refs = $unlinked) =~ s/`[^`\n]+`//g;
+    push @v, "reference \"$1\" needs its owner (owner/$1) to link" while $refs =~ /(?<![\w\/.-])((?!(?:PR|pr|issue|Issue)#)[A-Za-z][\w.-]*#\d+)\b/g;
     for my $p (our @phrases) { push @v, "banned phrase \"$p->[0]\"" if $text =~ $p->[1] }
 
     my %seen;
