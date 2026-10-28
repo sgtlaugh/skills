@@ -35,7 +35,9 @@ check "bare identifier" 1 "identifier \"retry_count\"" "Should retry_count reset
 check "bare camelCase" 1 "identifier \"checkExpiry\"" "Does checkExpiry default to true?"
 check "identifier inside a URL is fine" 0 "" "See [the spike](https://github.com/acme/owl/pull/3881) for limits."
 check "prose over the cap" 1 "characters of prose" "$(printf 'hoot %.0s' $(seq 130))"
-check "permalink URLs do not count toward the cap" 0 "" "$(printf 'hoot %.0s' $(seq 110))[\`a.py:12\`](https://github.com/acme/owl/blob/$SHA/some/long/path/to/a.py#L12) and [\`b.py:3\`](https://github.com/acme/owl/blob/$SHA/another/long/path/b.py#L3)"
+check "permalink URLs do not count toward the cap" 0 "" "$(printf 'hoot %.0s' $(seq 55))
+
+$(printf 'hoot %.0s' $(seq 55))[\`a.py:12\`](https://github.com/acme/owl/blob/$SHA/some/long/path/to/a.py#L12) and [\`b.py:3\`](https://github.com/acme/owl/blob/$SHA/another/long/path/b.py#L3)"
 check "code does not count toward the cap" 0 "" "$(printf 'Repro:\n```text\n'; printf 'hoot %.0s' $(seq 200); printf '\n```')"
 check "severity tag" 1 "severity tag" "**Critical:** the owl escapes."
 check "praise filler" 1 "praise filler" "Great job on this, the cache works."
@@ -50,6 +52,9 @@ check "two interjections in one review" 1 "one at most" '[{"body":"Hmm, `a` look
 check "same opening twice" 1 "vary the openings" '[{"body":"Can we drop `a`?"},{"body":"Can we rename `b`?"}]'
 check "varied openings with one interjection" 0 "" '[{"body":"Hmm, `a` races with the cron."},{"body":"Wondering if `b` needs a lock."},{"body":"Not sure why `c` retries twice."}]'
 check "Well, opener" 1 "talking down" "Well, this is wrong."
+check "a long paragraph is split" 1 "split it, or turn its parallel facts into bullets" "$(printf 'The owl hoots at three in the morning and wakes the nest. %.0s' $(seq 7))"
+check "four short sentences are fine" 0 "" "Looks good. Logs help. I did not test. Merge on Sunday."
+check "a bulleted list is not a paragraph" 0 "" "$(printf 'Hops:\n\n'; for i in 1 2 3 4 5 6; do printf -- '- The owl hoots at three in the morning and wakes the nest number %s.\n' $i; done)"
 check "six comments in a review" 1 "6 inline comments" '[{"body":"a"},{"body":"b"},{"body":"c"},{"body":"d"},{"body":"e"},{"body":"f"}]'
 check "per-comment numbering in JSON" 1 "comment 2: em dash" "[{\"body\":\"fine\"},{\"body\":\"hoot ${EM} hoot\"}]"
 

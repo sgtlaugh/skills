@@ -12,7 +12,9 @@ One or two short paragraphs, a blank line between them. An inline comment is usu
 
 When proposing an alternative, name what it costs. Calibrate instead of asserting: "That might be fine for X, but...", "Fine by me, just flagging...".
 
-Lists for real enumerations (two questions, three files, the hops of a call chain). Never for a single point split into fragments.
+**Short paragraphs, or bullets.** A paragraph runs a few short sentences, about 320 characters at most; the gate flags longer ones. When a comment carries two or more parallel facts - the hops of a call chain, several files, a list of cases - they go in bullets, one fact each, instead of one long paragraph. A single point is never split into bullet fragments.
+
+**One review says each thing once.** The summary gives the overall concern in a sentence or two; the comments carry the detail. A summary that restates a comment is cut.
 
 ## Sounding like a person
 

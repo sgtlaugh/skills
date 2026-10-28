@@ -106,6 +106,20 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "reference \"$1\" needs its owner (owner/$1) to link" while $refs =~ /(?<![\w\/.-])((?!(?:PR|pr|issue|Issue)#)[A-Za-z][\w.-]*#\d+)\b/g;
     for my $p (our @phrases) { push @v, "banned phrase \"$p->[0]\"" if $text =~ $p->[1] }
 
+    # Short paragraphs: a wall of text gets skimmed. A prose paragraph (not a list item, quote or table) runs
+    # at most ~320 characters, and more than 3 sentences only when they are short (240 characters in all); past that it splits, or its parallel facts become bullets.
+    my $pn = 0;
+    for my $para (split /\n\s*\n/, $unlinked) {
+        next if $para =~ /^\s*([-*>|]|\d+\.)\s/;
+        (my $flat = $para) =~ s/\s+/ /g; $flat =~ s/^ | $//g;
+        next unless length $flat;
+        $pn++;
+        my $sentences = () = $flat =~ /[^.!?]+(?:[.!?]+(?=\s|$)|$)/g;
+        $sentences-- while $flat =~ /\b(?:e\.g|i\.e|etc|vs)\.\s/gi && $sentences > 1;
+        push @v, "paragraph $pn runs $sentences sentences / " . length($flat) . " characters - split it, or turn its parallel facts into bullets"
+            if length($flat) > 320 || ($sentences > 3 && length($flat) > 240);
+    }
+
     # Variety across one review: openings repeated comment to comment read as a template, and an
     # interjection is human once and a tic twice. "Well," as an opener reads as talking down.
     our (%opening, $interjections);
