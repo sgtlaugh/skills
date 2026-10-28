@@ -29,6 +29,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 | Pick between designs | `/dialectic <question>` |
 | Handle an alert that just fired | `/firewatch <alert>` |
 | Find why a ticket's bug happens | `/triage <TICKET-ID>` |
+| Check whether a ticket is really done | `/lordvessel <TICKET-ID>` |
 | Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
 | See if a skill's output is stable | `/jury <skill> <args>` |
 
@@ -128,6 +129,12 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
     /triage <TICKET-ID>           # evidence ledger, darkmoon check, ticket note
     /triage <jira-url>            # same, by URL
     /triage <TICKET-ID> --fast    # skip the darkmoon pass
+
+**`/lordvessel`** - is the ticket done?
+
+    /lordvessel <TICKET-ID>       # coverage per requirement, open threads, CI, status note
+    /lordvessel <jira-url>        # same, by URL
+    /lordvessel <TICKET-ID> --fast  # skip the darkmoon pass
 
 **`/jira`** - tickets and Confluence
 

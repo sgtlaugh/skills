@@ -1,0 +1,13 @@
+query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      title state isDraft url headRefOid baseRefOid mergeCommit { oid } body author { login }
+      comments(first: 100) { nodes { author { login } body createdAt url } }
+      reviews(first: 50) { nodes { author { login } state body submittedAt url } }
+      reviewThreads(first: 100) { nodes { isResolved isOutdated path line originalLine
+        comments(first: 20) { nodes { author { login } body createdAt url } } } }
+      commits(last: 1) { nodes { commit { statusCheckRollup { state
+        contexts(first: 50) { nodes { ... on CheckRun { name conclusion } ... on StatusContext { context state } } } } } } }
+    }
+  }
+}

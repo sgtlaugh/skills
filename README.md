@@ -72,6 +72,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM and alert history |
 | [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release, and checks whether a deploy fixed it |
 | [`/triage`](skills/triage/SKILL.md) | Takes a ticket to a proven root cause, with a note ready to post |
+| [`/lordvessel`](skills/lordvessel/SKILL.md) | Checks a ticket against its PRs: each requirement traced to code or marked missing, open questions and threads, a status note ready to post |
 | [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets, and reads Confluence pages |
 
 ### About skills themselves
@@ -81,7 +82,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
 | [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and shows which findings were consistent and which were luck |
 | [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (digested mechanically, no LLM) |
-| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text |
+| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text, and gates text headed for GitHub against a house style |
 
 Review skills never touch your code. `/bonfire`, `/duck --quack` and `/nicepr --create` write only what you ask for. `/gadfly`, `/forge`, `/dialectic` and `/jury` save their reports under `~/.claude/`.
 
@@ -110,6 +111,9 @@ flowchart LR
     triage["/triage"] --> sentry["/sentry"]
     triage --> jira["/jira"]
     triage --> darkmoon["/darkmoon"]
+    lordvessel["/lordvessel"] --> jira
+    lordvessel --> darkmoon
+    lordvessel -. status note .-> humanize
     firewatch["/firewatch"] --> sentry
     firewatch --> jira
     aristarchus["/aristarchus"] --> darkmoon
@@ -138,9 +142,9 @@ Two files live in `~/.config/claude-skills/`. `install.sh` creates both if they'
 | `datadogSite` | `/firewatch` | Your Datadog site, e.g. `datadoghq.com` |
 | `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
 | `jenkinsUser` | `/firewatch` | Your Jenkins username |
-| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
-| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck` | Your Atlassian email |
+| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/lordvessel` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/lordvessel` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
+| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/lordvessel` | Your Atlassian email |
 | `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
 | `sentryAuthToken` | `/sentry` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
 | `sentryOrg` | `/sentry` | Your Sentry org slug |
@@ -155,7 +159,7 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 |---|---|
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
 | [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills |
-| [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/sentry`, `/firewatch`, `/darkmoon` |
+| [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/lordvessel`, `/sentry`, `/firewatch`, `/darkmoon` |
 | curl 7.76+ | The API skills (they use `--fail-with-body`) |
 | [pandoc](https://pandoc.org/) | Document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` |
 | python + [pytest](https://pytest.org/) | `/bonfire` and `/duck --quack` |
