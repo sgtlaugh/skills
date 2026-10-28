@@ -396,7 +396,7 @@ Rules:
 **Confidence:** High/Medium/Low - one clause why (e.g. "traced the call chain + verified" vs "no caller tracing").
 ```
 
-Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Request Changes (any `critical`). After the verdict block, add a `---` separator (blank line before it so markdown renders the rule), then the elapsed time on the next line: run `date +%s` and subtract the Step 1 start time - display as `**Time taken**: Xm Ys`.
+Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Request Changes (any `critical` in this diff - a pre-existing critical is reported and named in the summary, but the PR did not cause it, so it does not request changes on its own). After the verdict block, add a `---` separator (blank line before it so markdown renders the rule), then the elapsed time on the next line: run `date +%s` and subtract the Step 1 start time - display as `**Time taken**: Xm Ys`.
 
 **Check the format before printing.** Pass the full draft review to the checker on stdin and fix every problem it prints, then re-run it until it prints `parse-findings: ok`:
 ```bash
@@ -419,7 +419,7 @@ It checks each finding header, that the emoji matches the severity word, that th
 
 ## Guard Rails
 
-- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST` - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`; short `-f`/`-F` stay allowed so GraphQL reads work) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only.
+- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`; short `-f`/`-F` stay allowed so GraphQL reads work) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only.
 - **Always use `EnterWorktree`** - never raw `git worktree add`. The worktree is disposable and read-only.
 - **`gh` auth required** - if `gh auth status` fails, stop and tell the user to run `gh auth login`.
 - **Always clean up the worktree** via `ExitWorktree`, even if interrupted.
