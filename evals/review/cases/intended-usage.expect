@@ -1,0 +1,5 @@
+goal :: Bucket sightings by hour instead of by minute
+targets :: occam saboteur
+avoid :: naive or None input flagged on a private helper only called with aware UTC :: (naive|None)[^.\n]{0,60}(crash|raise|break|TypeError|AttributeError|wrong|bug)
+avoid :: no blocking verdict on a correct change :: Fix first
+find :: coverage record :: reviewed_paths

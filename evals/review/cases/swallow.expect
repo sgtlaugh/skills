@@ -1,0 +1,5 @@
+goal :: Keep record() from crashing the endpoint when the database is locked
+targets :: occam saboteur
+find :: swallowed error :: swallow|silent|except Exception|bare except
+find :: caller still reports success :: ok.{0,20}True|reports success|returns ok|"ok"
+find :: coverage record :: reviewed_paths

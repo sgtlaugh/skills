@@ -1,0 +1,8 @@
+goal :: Add an optional limit parameter to the three read endpoints
+targets :: occam saboteur
+find :: list_sightings site :: list_sightings|api\.py:16
+find :: species_summary site :: species_summary|api\.py:21
+find :: export site :: export|api\.py:2[67]
+find :: required key breaks callers :: KeyError|missing|optional|\.get\(
+max :: 2 :: reported once, not per site (finding bullets naming KeyError) :: ^\s*([-*]|[0-9]+\.)\s+\*\*[^*]+\*\*.*KeyError
+find :: coverage record :: reviewed_paths

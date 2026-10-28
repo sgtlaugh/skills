@@ -1,0 +1,22 @@
+diff --git a/owlpost/store.py b/owlpost/store.py
+index 39aff0c..efcb56f 100644
+--- a/owlpost/store.py
++++ b/owlpost/store.py
+@@ -9,10 +9,13 @@ class SightingStore:
+         )
+ 
+     def add(self, species, count, seen_at):
+-        self.conn.execute(
+-            "INSERT INTO sightings VALUES (?, ?, ?)", (species, count, seen_at.isoformat())
+-        )
+-        self.conn.commit()
++        try:
++            self.conn.execute(
++                "INSERT INTO sightings VALUES (?, ?, ?)", (species, count, seen_at.isoformat())
++            )
++            self.conn.commit()
++        except Exception:
++            pass
+ 
+     def list(self, limit=50):
+         rows = self.conn.execute(

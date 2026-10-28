@@ -1,0 +1,34 @@
+diff --git a/owlpost/api.py b/owlpost/api.py
+index 049d0dc..36ad52f 100644
+--- a/owlpost/api.py
++++ b/owlpost/api.py
+@@ -13,7 +13,7 @@ def record(args):
+ 
+ 
+ def list_sightings(args):
+-    return {"sightings": store.list()}
++    return {"sightings": store.recent()}
+ 
+ 
+ def species_summary(args):
+@@ -24,6 +24,6 @@ def species_summary(args):
+ def export(args):
+     out = io.StringIO()
+     writer = csv.writer(out)
+-    for row in store.list():
++    for row in store.recent():
+         writer.writerow([row["species"], row["count"], row["seen_at"]])
+     return out.getvalue()
+diff --git a/owlpost/store.py b/owlpost/store.py
+index 39aff0c..6ff27bd 100644
+--- a/owlpost/store.py
++++ b/owlpost/store.py
+@@ -14,7 +14,7 @@ class SightingStore:
+         )
+         self.conn.commit()
+ 
+-    def list(self, limit=50):
++    def recent(self, limit=50):
+         rows = self.conn.execute(
+             "SELECT species, count, seen_at FROM sightings ORDER BY seen_at DESC LIMIT ?", (limit,)
+         )

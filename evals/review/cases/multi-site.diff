@@ -1,0 +1,28 @@
+diff --git a/owlpost/api.py b/owlpost/api.py
+index 049d0dc..2de187f 100644
+--- a/owlpost/api.py
++++ b/owlpost/api.py
+@@ -13,17 +13,20 @@ def record(args):
+ 
+ 
+ def list_sightings(args):
+-    return {"sightings": store.list()}
++    limit = int(args["limit"])
++    return {"sightings": store.list(limit)}
+ 
+ 
+ def species_summary(args):
++    limit = int(args["limit"])
+     totals = store.by_species()
+-    return {"species": sorted(totals.items(), key=lambda kv: -kv[1])}
++    return {"species": sorted(totals.items(), key=lambda kv: -kv[1])[:limit]}
+ 
+ 
+ def export(args):
++    limit = int(args["limit"])
+     out = io.StringIO()
+     writer = csv.writer(out)
+-    for row in store.list():
++    for row in store.list(limit):
+         writer.writerow([row["species"], row["count"], row["seen_at"]])
+     return out.getvalue()

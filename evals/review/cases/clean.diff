@@ -1,0 +1,15 @@
+diff --git a/owlpost/api.py b/owlpost/api.py
+index 049d0dc..14eff98 100644
+--- a/owlpost/api.py
++++ b/owlpost/api.py
+@@ -17,8 +17,8 @@ def list_sightings(args):
+ 
+ 
+ def species_summary(args):
+-    totals = store.by_species()
+-    return {"species": sorted(totals.items(), key=lambda kv: -kv[1])}
++    by_species = store.by_species()
++    return {"species": sorted(by_species.items(), key=lambda kv: kv[1], reverse=True)}
+ 
+ 
+ def export(args):

@@ -1,0 +1,5 @@
+goal :: Rename SightingStore.list to recent
+targets :: occam
+find :: README still says list :: README
+find :: test still calls list :: test_store|tests/
+find :: coverage record :: reviewed_paths

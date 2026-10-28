@@ -1,0 +1,13 @@
+diff --git a/owlpost/time_utils.py b/owlpost/time_utils.py
+index 0e59009..137bbec 100644
+--- a/owlpost/time_utils.py
++++ b/owlpost/time_utils.py
+@@ -2,7 +2,7 @@ from datetime import datetime, timezone
+ 
+ 
+ def _bucket(ts):
+-    return ts.replace(second=0, microsecond=0)
++    return ts.replace(minute=0, second=0, microsecond=0)
+ 
+ 
+ def current_bucket():
