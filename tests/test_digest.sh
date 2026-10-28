@@ -76,6 +76,15 @@ edges=$(bash "$SCRIPT" "$FIX/velka-human-edges.jsonl" 2>/dev/null | jq -r '.firs
 assert_exit "typed prompts starting with < or naming caveman are kept, wrapper output dropped" 0 \
     "$([ "$edges" = '<div class="owl"> renders twice after the 3am power cut, why? | Why is caveman mode eating my commit messages again?' ] && echo 0 || echo 1)"
 
+# Test 11: real hook blocks only - harness PreToolUse errors, commit-msg from a real git commit, deny rules.
+# Reading the hook source, running its tests or committing in a mktemp test repo is not a block.
+blocks=$(bash "$SCRIPT" "$FIX/velka-blocks.jsonl" 2>/dev/null)
+assert_jq "PreToolUse block counted by hook" '.hook_blocks["commit-guard.sh"]' "1" "$blocks"
+assert_jq "commit-msg counted once (source, test run, mktemp repo ignored)" '.hook_blocks["commit-msg"]' "1" "$blocks"
+assert_jq "deny rule counted" '.hook_blocks["deny-rule"]' "1" "$blocks"
+assert_jq "only the pushback turn is a correction" '.corrections | map(.text) | join("|")' \
+    "Don't commit until I say so, and never squash my commits" "$blocks"
+
 # A crash mid-write leaves a cut-off last line; the session must still digest
 cutoff=$(mktemp)
 cat "$FIX/basic-session.jsonl" > "$cutoff"

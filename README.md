@@ -81,7 +81,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 |---|---|
 | [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
 | [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and shows which findings were consistent and which were luck |
-| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (digested mechanically, no LLM) |
+| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (digested mechanically, no LLM). `--propose` turns repeated pushback into CLAUDE.md edits |
 | [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text, and gates text headed for GitHub against a house style |
 
 Review skills never touch your code. `/bonfire`, `/duck --quack` and `/nicepr --create` write only what you ask for. `/gadfly`, `/forge`, `/dialectic` and `/jury` save their reports under `~/.claude/`.
@@ -174,7 +174,7 @@ Linux and macOS, bash 3.2 or newer.
 bash tests/run.sh
 ```
 
-Covers `/darkmoon`'s extractor and hook, `/velka`'s scripts, `/humanize`'s voice gate, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
+Covers `/darkmoon`'s extractor and hook, `/velka`'s scripts and quote check, `/humanize`'s voice gate, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
 
 ### `/darkmoon` eval
 

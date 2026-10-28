@@ -1,8 +1,8 @@
 ---
 name: velka
 trigger: /velka
-description: Surface cross-session workflow habits from your Claude Code history. velka digests your past session transcripts (mechanically, no LLM) and reports recurring patterns - edit-thrash, skills you keep skipping, fine-grained committing, token churn, and (with `--candidates`) intents you keep repeating that could become a skill. Reports only what the transcripts mechanically prove; inference beyond the footprint is flagged low-confidence, never asserted.
-allowed-tools: Read, Grep, Bash(bash ~/.claude/skills/velka/collect.sh:*), Bash(jq:*), Bash(cat:*), Bash(date:*), Bash(ls:*), Bash(find:*)
+description: Surface cross-session workflow habits from your Claude Code history. velka digests your past session transcripts (mechanically, no LLM) and reports recurring patterns - edit-thrash, skills you keep skipping, fine-grained committing, token churn, (with `--candidates`) intents you keep repeating that could become a skill, and (with `--propose`) CLAUDE.md edits backed by pushback you gave in 2+ sessions, every quote mechanically verified. Reports only what the transcripts mechanically prove; inference beyond the footprint is flagged low-confidence, never asserted.
+allowed-tools: Read, Grep, Bash(bash ~/.claude/skills/velka/collect.sh:*), Bash(bash ~/.claude/skills/velka/quote-check.sh:*), Bash(jq:*), Bash(cat:*), Bash(date:*), Bash(ls:*), Bash(find:*)
 ---
 
 # /velka - observe the cycle, name the recurring sin
@@ -25,6 +25,7 @@ Velka, Goddess of Sin: she *observes and records transgressions* across the whol
 /velka --advice              # ALSO emit the speculative tier (off by default - see below)
 /velka --explain             # add a "what it means / what to do" column (teaching mode)
 /velka --candidates          # ALSO cross-check session intents vs skill catalog → adoption gaps + new-skill candidates (LLM tier)
+/velka --propose             # ALSO propose CLAUDE.md edits from pushback repeated across sessions (LLM tier, proposes only)
 ```
 
 ## Phase 0 - Refresh the digests (cheap, cached)
@@ -54,7 +55,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
 
 **Shell note (zsh-safe - the bugs that bit v1):** every detector block below is its own Bash call and shell state does not persist between calls, so start EACH block with `D="$HOME/.claude/velka/digests"` - unset, `"$D"/*.json` becomes `/*.json`. Use `$HOME`, **NOT** `~` - a tilde inside a variable plus an unquoted glob expands empty under zsh, giving `/*.json: no matches`) and always **quote** the glob: `"$D"/*.json`.
 
-**Only emit detectors GROUNDABLE from the digest schema. Do NOT improvise jq against fields that don't exist** (that crashes with "Cannot iterate over null"). The digest has exactly: `bash.{total,git_commit,git_revert,test_run,grep}`, `skill_tooluse[]`, `slash[]`, `tools{}`, `files_edited{}`, `files_read{}`, `tokens{}`, `first_prompt` (first 2-3 substantive human messages joined with ` | ` = intent signal for `--candidates`; covers slash-start sessions where turn-1 is skill text, not the goal), `assistant_msgs`, `user_str/arr`, `start/end`, `id`, `project`. There is **no** raw-bash-command list and **no** gh-subcommand count.
+**Only emit detectors GROUNDABLE from the digest schema. Do NOT improvise jq against fields that don't exist** (that crashes with "Cannot iterate over null"). The digest has exactly: `bash.{total,git_commit,git_revert,test_run,grep}`, `skill_tooluse[]`, `slash[]`, `tools{}`, `files_edited{}`, `files_read{}`, `tokens{}`, `first_prompt` (first 2-3 substantive human messages joined with ` | ` = intent signal for `--candidates`; covers slash-start sessions where turn-1 is skill text, not the goal), `corrections[]` (`{ts, text}` human turns that push back: "don't", "never", "instead", "I said"... - raw material, most are not rules), `hook_blocks{}` (hook file name, `commit-msg` or `deny-rule` → times it stopped a real call), `assistant_msgs`, `user_str/arr`, `start/end`, `id`, `project`. There is **no** raw-bash-command list and **no** gh-subcommand count.
 
 - **Edit-thrash** (cleanest signal - a file edited many times = churn = design unclear before coding):
   ```
@@ -88,7 +89,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   D="$HOME/.claude/velka/digests"; FLEET=$(ls "$HOME/.claude/skills")
   find "$D" -name '*.json' -exec cat {} + | jq -rs --arg f "$FLEET" '($f|split("\n")|map(select(length>0))) as $fleet | ([.[]|.skill_tooluse + .slash]|add) as $u | $fleet | map(. as $s | {s:$s,n:($u|map(select(.==$s))|length)}) | sort_by(.n) | .[] | "\(.n)x  \(.s)"'
   ```
-  **Before calling any skill dead, cross-check typed history** - old transcripts get pruned, so digests undercount (this detector once reported a skill at 0 that history showed at 5 runs). For each ≤2x skill, count its typed invocations **inside the same window** (`.timestamp` is epoch milliseconds; use `0` for `--all`) and report the larger number:
+  **Before calling any skill dead, cross-check typed history** - old transcripts get pruned, so digests undercount (this detector once reported a skill at 0 that history showed at 5 runs). For each ≤2x skill, count its typed invocations **inside the same window** (`.timestamp` is epoch milliseconds; use `1970-01-01` for `--all`) and report the larger number:
   ```
   jq -s --arg s "/<skill>" --arg d '<window start: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ>' '($d | sub("\\.[0-9]+Z$";"Z") | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . + "T00:00:00Z" else . end | fromdateiso8601 * 1000) as $since | [.[] | objects | select(((.display // "") | startswith($s)) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
   ```
@@ -100,6 +101,12 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   ```
   find "$D" -name '*.json' -exec cat {} + | jq -rs 'group_by(.project)|map({p:(.[0].project|split("/")|last),sess:length,edits:(map(.tools.Edit//0)|add),cr:(map(.tokens.cache_read//0)|add)})|sort_by(-.sess)|.[0:8][]|"\(.sess) sess · \(.edits) edits · \(.cr) cache_read  \(.p)"'
   ```
+- **Hook blocks** (how often a guard stopped a real call - the rules a prompt alone did not hold). The harness writes a hook's block into the transcript, so a test that feeds the hook JSON directly never counts; `commit-msg` counts only when the call ran `git commit` outside a `mktemp` test repo:
+  ```
+  D="$HOME/.claude/velka/digests"
+  find "$D" -name '*.json' -exec cat {} + | jq -rs '[.[] | (.hook_blocks // {}) as $h | ($h | keys[]) as $k | {k: $k, n: $h[$k], id: .id[0:8]}] | group_by(.k) | map({k: .[0].k, n: (map(.n) | add), s: length, ids: (map(.id) | .[0:3] | join(","))}) | sort_by(-.n)[] | "\(.n) blocks in \(.s) sessions  \(.k)  (\(.ids))"'
+  ```
+  Read it as: the rule needed its hook N times in S sessions. Many blocks of one kind means the prompt rule isn't landing - a `--propose` candidate to strengthen. Zero blocks is not evidence a hook is unneeded. Ceiling: a deliberate live probe through the real tool counts like a real call.
 - **Intent ↔ skill cross-check** (`--candidates` only - the LLM tier; velka *reasons over intents* here, unlike the mechanical detectors above). Command-string patterns were tried and dropped: the recurring ones were skill plumbing or universal `git add>commit`. Skill-worthy patterns are *intents*, not command strings. Instead, cross-check each session's **intent** against the **skill catalog**:
   1. **Adoption gaps** - a recurring intent an EXISTING skill covers, done by hand (skill never invoked). "Covered-by" is an LLM judgment; **"not-used" is mechanical fact** (`skill_tooluse`/`slash`) - that half anchors the row.
   2. **New-skill candidates** - a recurring intent NO existing skill covers → forge one.
@@ -116,6 +123,29 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
      - **New candidates**: proposed skill theme · N sessions · example prompts.
 
   **Honest caveats (state them):** intent-match is a fuzzy JUDGMENT - label confidence, never assert a gap without showing the prompts behind it; `first_prompt` holds only the first 2-3 human messages, so later intent drift is missed; this tier costs an LLM pass over ~all sessions (opt-in by design). If nothing recurs, say "no adoption gap or new-skill pattern stands out" - do not manufacture one.
+
+## Phase 2b - CLAUDE.md proposals (`--propose` only)
+Turn pushback you keep repeating into edits you can paste. velka proposes; it never writes a CLAUDE.md - applying one is a separate request, and editing an instruction file inside a velka run is WRONG.
+
+a. Read `~/.claude/CLAUDE.md`, plus the `CLAUDE.md` of each project a proposal's sessions ran in (step e names them).
+b. Pull the corrections, one line each (windowed like every detector). Sessions under `/tmp/` are eval and scratch runs whose scripted prompts read like pushback - they are excluded:
+  ```
+  find "$D" -name '*.json' -exec cat {} + | jq -rs 'map(select((.project // "") | startswith("/tmp/") | not)) | .[] | .id[0:8] as $id | (.project | split("/") | last) as $p | (.corrections // [])[] | "\($id)\t\($p)\t\(.text[0:200])"'
+  ```
+  Digests older than the `corrections` field have none; count the sessions that carry it (`map(select(has("corrections"))) | length`) - that, not the window, is what proposals drew on.
+c. Group corrections by the behavior they push back on or keep pre-empting ("do not write code yet" typed in 9 sessions is a rule you keep restating). A group becomes a proposal only with corrections from **2+ distinct sessions** - one session's pushback stays in that session.
+d. Classify each proposal:
+  - **Add** - no rule in the files covers it.
+  - **Strengthen** - a rule exists and the pushback happened anyway. An advisory rule becomes a fixed outcome ("X is WRONG"). A rule that is already a fixed outcome gets a mechanical check instead (a hook, a test, a gate script) - and when none can check it, list it as `holding poorly, no mechanical fix` with its quotes and no diff.
+  - **Delete** - only on evidence of harm: 2+ sessions where you pushed back on behavior the rule itself demands. A rule that looks unused, never fires or seems obvious is never proposed for deletion.
+e. Each proposal shows: type, target file and section, the exact edit as a `diff` block (`-` old, `+` new), and 2+ verbatim quotes `{session, quote}` copied from `corrections[].text` - a substring is fine, a paraphrase or an ellipsis inside the quote is not.
+f. Verify every quote before showing anything: write them as one JSON array to `/tmp/velka-quotes.json` (`jq -n` with the quotes as `--arg`s) and run
+  ```
+  bash ~/.claude/skills/velka/quote-check.sh /tmp/velka-quotes.json
+  ```
+  A proposal with any `FAIL` quote is dropped, and the drop is listed with its reason. Show the quote-check output.
+
+Hook blocks alone never make a proposal: a hook that blocks is the rule working. No group reaches 2 sessions → "no repeated pushback - nothing to propose". Never pad the list.
 
 ## Phase 3 - Rank and lead
 Rank habits by **impact = frequency × cost** (how often it recurs × how much it wastes). **Lead with the single highest-leverage habit as a Headline** - a reader skims the table and misses the one that matters.
@@ -160,6 +190,7 @@ A run is complete only when:
 7. The last-run marker is updated (default window only).
 8. The **Coverage** line lists every detector above as ran or not-groundable - a detector silently skipped makes the report incomplete.
 9. Under `--candidates`, each row shows its N + example prompts, and the fuzzy-judgment caveat and the first-2-3-messages limit are stated.
+10. Under `--propose`, each proposal shows its type, target, `diff` and 2+ quotes from distinct sessions; the quote-check output is shown; dropped proposals are listed with the failing quote; the Coverage line states how many sessions carried `corrections`.
 
 ## Guard rails
 - **Ground or omit - never manufacture.** A habit row without its count is not emitted. A clean corpus → say "no recurring inefficiency stands out," do NOT invent one.
@@ -167,5 +198,5 @@ A run is complete only when:
 - **The blind-spot caveat is mandatory** on testing/coverage findings: velka sees only tools run *through Claude Code*; IDE/CI/other-shell activity is invisible. Stating "you don't test" without it is a false accusation.
 - **Cross-session by default.** Single-session windows are low-value (you lived it); warn and recommend `--all`.
 - **Speculative is OFF by default.** Mechanical counts carry the report; `--advice` gates the judgment tier, every item labelled `argument, not measured`.
-- **Read-only on your code (instruction-enforced, NOT structural).** velka reads transcripts and writes ONLY its own cache (`~/.claude/velka/` digests + last-run marker); it never edits your code, commits, or touches the repo. Be honest about the enforcement: the `allowed-tools` grant is narrowed to `collect.sh` + `jq`/`cat`/`ls`/`date`/`find` and the Grep tool (`find` is the widest: it can `-delete`) (arbitrary `bash` is NOT pre-approved, so an unexpected shell command prompts - the tripwire). But any `Bash` grant can in principle write via redirection - this is a **prompt-level boundary, not a hard guarantee.** For a hard backstop, add a `deny` rule in `settings.json`. Do not claim velka "physically cannot" alter code.
+- **Read-only on your code (instruction-enforced, NOT structural).** velka reads transcripts and writes ONLY its own cache (`~/.claude/velka/` digests + last-run marker); it never edits your code or any CLAUDE.md, commits, or touches the repo (`--propose` only writes its quote list to `/tmp`). Be honest about the enforcement: the `allowed-tools` grant is narrowed to `collect.sh` + `jq`/`cat`/`ls`/`date`/`find` and the Grep tool (`find` is the widest: it can `-delete`) (arbitrary `bash` is NOT pre-approved, so an unexpected shell command prompts - the tripwire). But any `Bash` grant can in principle write via redirection - this is a **prompt-level boundary, not a hard guarantee.** For a hard backstop, add a `deny` rule in `settings.json`. Do not claim velka "physically cannot" alter code.
 - **Efficient.** Digests are mtime-cached - only changed sessions re-parse. Never re-ingest raw transcripts in the analyzer; read the digests.

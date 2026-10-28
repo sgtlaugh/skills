@@ -165,6 +165,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
     /velka --since 2026-08-20     # from a date
     /velka --project <path>       # only sessions in that directory
     /velka --candidates           # what you keep asking for vs the skills you have
+    /velka --propose              # CLAUDE.md edits from pushback you repeated, quotes verified
     /velka --explain              # add what each habit means and what to do
     /velka --advice               # also show speculative suggestions
 
