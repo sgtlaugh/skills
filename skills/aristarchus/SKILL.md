@@ -2,7 +2,7 @@
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status:*), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -52,7 +52,7 @@ Repo name from the URL (e.g. `owl-api`). If `$WORKSPACE/<repo>` is missing, **st
 `cd "$WORKSPACE/<repo>"` → use `EnterWorktree` (NOT raw `git worktree add`) with a **unique name** (`pr-<number>-review-<short-nonce>`) so parallel reviews of the same PR don't collide → checkout the PR head **detached** (avoids "branch already checked out" collisions and fork-remote issues - a clone may have no `origin`):
 ```bash
 gh pr checkout <url> --detach \
-  || { up=$(git remote -v | awk '/<owner>\/<repo>/{print $1; exit}'); git fetch "$up" pull/<number>/head && git checkout --detach FETCH_HEAD; }
+  || { up=$(git remote -v | grep -m1 '<owner>/<repo>' | cut -f1); git fetch "$up" pull/<number>/head && git checkout --detach FETCH_HEAD; }
 ```
 All later file reads use worktree paths. After review, `ExitWorktree` with `action: "remove", discard_changes: true` - the checkout is read-only and disposable, and its commits are the PR's own (already on the remote), so the harness "unsaved work" guard would otherwise block removal.
 
@@ -92,7 +92,7 @@ The target repo's own `CLAUDE.md` is **authoritative** - it documents the team's
 Read the diff from the worktree, not from `gh`: `gh pr view --json files` silently stops at 100 files and `gh pr diff` fails above 300. (`gh pr diff` stays for reading a companion PR in another repo, e.g. in Step 6c.) Get the base once, then write its SHA literally into each command (shell variables don't survive between Bash calls):
 ```bash
 gh pr view <url> --json baseRefOid,baseRefName --jq '"\(.baseRefOid) \(.baseRefName)"'
-git cat-file -e <baseRefOid>^{commit} 2>/dev/null || git fetch "$(git remote -v | awk '/<owner>\/<repo>/{print $1; exit}')" <baseRefName>
+git cat-file -e <baseRefOid>^{commit} 2>/dev/null || git fetch "$(git remote -v | grep -m1 '<owner>/<repo>' | cut -f1)" <baseRefName>
 git diff --name-only <baseRefOid>...HEAD
 git diff <baseRefOid>...HEAD
 ```
