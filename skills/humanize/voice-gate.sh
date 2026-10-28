@@ -86,7 +86,8 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     $text =~ s{https?://\S+}{}g;
     $text =~ s{\]\([^)]*\)}{]}g;
 
-    my $len = length($prose =~ s/\s+$//r);
+    # A link counts as its visible text: a permalink URL is not prose the reader has to get through
+    my $len = length($prose =~ s/\[([^\]\n]*)\]\([^)\s]*\)/$1/gr =~ s/\s+$//r);
     push @v, "$len characters of prose (max $ENV{MAX}) - cut to the fact and the question" if $len > $ENV{MAX};
     push @v, "heading \"$1\" (comments are paragraphs)" if $text =~ /^(#{1,6}\s.*)$/m;
     push @v, "emoji \"$1\"" if $text =~ /([\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B50}\x{2B06}\x{2934}\x{2935}\x{3030}\x{FE0F}])/;

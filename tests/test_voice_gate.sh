@@ -35,6 +35,7 @@ check "bare identifier" 1 "identifier \"retry_count\"" "Should retry_count reset
 check "bare camelCase" 1 "identifier \"checkExpiry\"" "Does checkExpiry default to true?"
 check "identifier inside a URL is fine" 0 "" "See [the spike](https://github.com/acme/owl/pull/3881) for limits."
 check "prose over the cap" 1 "characters of prose" "$(printf 'hoot %.0s' $(seq 130))"
+check "permalink URLs do not count toward the cap" 0 "" "$(printf 'hoot %.0s' $(seq 110))[\`a.py:12\`](https://github.com/acme/owl/blob/$SHA/some/long/path/to/a.py#L12) and [\`b.py:3\`](https://github.com/acme/owl/blob/$SHA/another/long/path/b.py#L3)"
 check "code does not count toward the cap" 0 "" "$(printf 'Repro:\n```text\n'; printf 'hoot %.0s' $(seq 200); printf '\n```')"
 check "severity tag" 1 "severity tag" "**Critical:** the owl escapes."
 check "praise filler" 1 "praise filler" "Great job on this, the cache works."
