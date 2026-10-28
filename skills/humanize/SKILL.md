@@ -2,7 +2,7 @@
 name: humanize
 description: Strip AI patterns from text and rewrite for human voice. Use when text sounds robotic, AI-generated, or needs de-AI-ing.
 trigger: /humanize
-allowed-tools: Read
+allowed-tools: Read, Bash(bash ~/.claude/skills/humanize/voice-gate.sh:*)
 ---
 
 # /humanize - strip the AI, keep the substance
@@ -27,6 +27,8 @@ Read the input. Notice: em dashes, rule-of-three lists, "it's not X, it's Y" fra
 If the user gave instructions about voice, audience, or format, honor those alongside the rules below.
 
 **Required format beats these style rules.** On another skill's output (e.g. `/nicepr --humanize`), keep the structure it requires - headings and their fixed emoji (`### ✅ QA Steps`), `**Lead-in:**` bold labels with a colon, Title Case titles, `- [ ]` checkboxes, code blocks, permalinks - and rewrite only the prose inside it. In PR text, nicepr's format requires bold lead-ins with a colon and Title Case PR titles; stripping those from a PR is WRONG. Outside PRs the banned list's bold and casing rules apply as written.
+
+**Text headed for GitHub** (a review comment, PR reply or status note): also follow `references/github-voice.md`, then run `bash ~/.claude/skills/humanize/voice-gate.sh <file>` on the rewrite and fix every line it prints until it prints `voice-gate: clean`.
 
 ### Step 1b: Concise mode (only with --concise)
 
@@ -150,3 +152,5 @@ The output is NOT done until:
 ## Reference files
 
 - `references/banned-list.md` - full banned words, phrases, transitions, and emojis
+- `references/github-voice.md` - shape, tone and examples for review comments, PR replies and status notes
+- `voice-gate.sh` - mechanical check for text about to be posted on GitHub
