@@ -2,7 +2,7 @@
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos:*), Bash(gh auth status:*), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status:*), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote:*), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(awk:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -89,7 +89,7 @@ The target repo's own `CLAUDE.md` is **authoritative** - it documents the team's
 
 ## Step 5 - Diff and File List
 
-Read the diff from the worktree, not from `gh`: `gh pr view --json files` silently stops at 100 files and `gh pr diff` fails above 300. Get the base once, then write its SHA literally into each command (shell variables don't survive between Bash calls):
+Read the diff from the worktree, not from `gh`: `gh pr view --json files` silently stops at 100 files and `gh pr diff` fails above 300. (`gh pr diff` stays for reading a companion PR in another repo, e.g. in Step 6c.) Get the base once, then write its SHA literally into each command (shell variables don't survive between Bash calls):
 ```bash
 gh pr view <url> --json baseRefOid,baseRefName --jq '"\(.baseRefOid) \(.baseRefName)"'
 git cat-file -e <baseRefOid>^{commit} 2>/dev/null || git fetch "$(git remote -v | awk '/<owner>\/<repo>/{print $1; exit}')" <baseRefName>
@@ -396,7 +396,7 @@ Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Requ
 
 ## Guard Rails
 
-- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos:*)` is granted for reading PR comments and would match `gh api repos/... -X POST` - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`; short `-f`/`-F` stay allowed so GraphQL reads work) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only.
+- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST` - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`; short `-f`/`-F` stay allowed so GraphQL reads work) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only.
 - **Always use `EnterWorktree`** - never raw `git worktree add`. The worktree is disposable and read-only.
 - **`gh` auth required** - if `gh auth status` fails, stop and tell the user to run `gh auth login`.
 - **Always clean up the worktree** via `ExitWorktree`, even if interrupted.
