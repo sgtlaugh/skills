@@ -14,6 +14,15 @@ When proposing an alternative, name what it costs. Calibrate instead of assertin
 
 Lists for real enumerations (two questions, three files, the hops of a call chain). Never for a single point split into fragments.
 
+## Sounding like a person
+
+A template is what gives automated review away: every comment opening the same way, every one ending on the same kind of question. Vary it the way a person does.
+
+- **Openings differ** across one review: a fact, a question, "Wondering if...", "Not sure why...", "Looks like...". The gate stops two comments from opening the same way.
+- **One interjection at most, and only when it means something:** "Hmm," for a real doubt, "Ah," when a chain of cause clicks, "Oh," for a surprising effect. Used everywhere, they become the new tell. Never "Well," as an opener: it reads as talking down.
+- **Calibrated, not hedged:** "unless I'm missing something", "might be fine for X, but...". One per comment, not stacked.
+- **Endings vary** too: a question, a soft suggestion, or just the fact when the fix is obvious.
+
 ## Lead-ins
 
 - `**Minor nit:**` on a nit, and only on a nit.
@@ -46,7 +55,7 @@ Lists for real enumerations (two questions, three files, the hops of a call chai
 
 **A finding that crosses files, as hops:**
 
-> `purge_expired_sightings` can now run twice at once.
+> Ah, this lets `purge_expired_sightings` run twice at once.
 >
 > - Every nest delete enqueues it ([`nest.py:128`](https://github.com/acme/owl/blob/4f2a9c1/owl/nest.py#L128)).
 > - This PR routes those messages to the `sightings` queue, where acme/nest-config#16394 starts a worker.

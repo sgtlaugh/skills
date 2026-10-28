@@ -105,6 +105,20 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "reference \"$1\" needs its owner (owner/$1) to link" while $refs =~ /(?<![\w\/.-])((?!(?:PR|pr|issue|Issue)#)[A-Za-z][\w.-]*#\d+)\b/g;
     for my $p (our @phrases) { push @v, "banned phrase \"$p->[0]\"" if $text =~ $p->[1] }
 
+    # Variety across one review: openings repeated comment to comment read as a template, and an
+    # interjection is human once and a tic twice. "Well," as an opener reads as talking down.
+    our (%opening, $interjections);
+    (my $lead = $text) =~ s/^[\s*_>]+//;
+    my $open = lc join " ", (split /\s+/, $lead =~ s/[^\w\s@\x27-]//gr)[0, 1];
+    if (length $open > 2 && $ENV{COUNT} > 1) {
+        push @v, "opens like comment $opening{$open} (\"$open ...\") - vary the openings" if $opening{$open};
+        $opening{$open} //= $n;
+    }
+    push @v, "\"Well,\" as an opener reads as talking down" if $lead =~ /^well,/i;
+    my @ij = $text =~ /(?:^|[.!?]\s+|\n)(hmm+|ahh?|oh|ooh|huh)\b[,.!]/gi;
+    $interjections += @ij;
+    push @v, "interjection \"$ij[-1]\" makes $interjections in one review (one at most)" if @ij && $interjections > 1;
+
     my %seen;
     for (grep { !$seen{$_}++ } @v) { print "$tag: $_\n"; $bad = 1 }
     END { print "voice-gate: clean\n" unless $bad; exit($bad ? 1 : 0) }

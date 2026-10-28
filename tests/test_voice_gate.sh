@@ -45,6 +45,10 @@ check "file:line in backticks is not a link" 1 "is not a link" "Every delete cal
 check "file:line linked to a SHA blob" 0 "" "Every delete calls \`delay()\` ([\`rendition_type.py:128\`](https://github.com/acme/owl/blob/$SHA/app/rendition_type.py#L128))."
 check "cross-repo PR without owner" 1 "needs its owner" "With nest-config#16394 this runs twice."
 check "owner/repo#N, PR#N and #N are fine" 0 "" "With acme/nest-config#16394 and PR#12 this runs twice, see #554."
+check "two interjections in one review" 1 "one at most" '[{"body":"Hmm, `a` looks off."},{"body":"Ah, and `b` too."}]'
+check "same opening twice" 1 "vary the openings" '[{"body":"Can we drop `a`?"},{"body":"Can we rename `b`?"}]'
+check "varied openings with one interjection" 0 "" '[{"body":"Hmm, `a` races with the cron."},{"body":"Wondering if `b` needs a lock."},{"body":"Not sure why `c` retries twice."}]'
+check "Well, opener" 1 "talking down" "Well, this is wrong."
 check "six comments in a review" 1 "6 inline comments" '[{"body":"a"},{"body":"b"},{"body":"c"},{"body":"d"},{"body":"e"},{"body":"f"}]'
 check "per-comment numbering in JSON" 1 "comment 2: em dash" "[{\"body\":\"fine\"},{\"body\":\"hoot ${EM} hoot\"}]"
 
