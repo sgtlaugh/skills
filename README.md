@@ -39,7 +39,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | Skill | What it does |
 |---|---|
 | [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and simplicity |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then `/darkmoon` checks the findings |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then `/darkmoon` checks the findings. Severity is defined by impact, and the review follows a checked format (`parse-findings.sh`) that tools can read |
 | [`/nicepr`](skills/nicepr/SKILL.md) | Writes short, human PR titles and descriptions from the diff and the ticket |
 
 ### Checking claims

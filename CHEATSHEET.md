@@ -184,6 +184,9 @@ Take these with a grain of salt: a few runs each, and they swing with repo size 
 | `/firewatch check all services` | Opus 5.5 (1M) | ~$0.30 | ~1 min |
 | `/firewatch <alert>` | Opus 5.5 (1M) | $0.70-0.90 | ~3 min |
 | `/triage <TICKET-ID>` | Opus 5.5 (1M) | $2.20-2.50 | ~8 min |
+| `/aristarchus <PR-URL>` (full, headless in pr-watch) | Opus 5.5 (1M) | $3.05-3.39 | 4-7 min |
+| `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | not recorded | 2-5 min |
+| `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | not recorded | ~9 min |
 | `/gadfly <spec>` | Opus 4.6 (1M), June 2026 | $1.30-5.60 | 5-10 min |
 | `/forge <prd>` | not recorded (June 2026) | ~$5-15 | ~14 min |
 | `/jury <skill>` | the target's | N × the target | about one run (parallel) |
