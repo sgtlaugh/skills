@@ -24,7 +24,7 @@ The GitHub org comes from `~/.config/claude-skills/services.md` (`GitHub org`); 
 1. **Header** - key, title, status, assignee, and every PR found with its state (`open`/`draft`/`merged`/`closed`) and where it was found (`dev-status`, `search` or both), plus the count per source (`dev-status: 0, search: 6`).
 2. **Coverage table** - one row per requirement from Step 2: the ticket's list items, or, with no list, derived rows plus one `(derived from <repo>#<n>)` row per linked PR; `R<n>`, the requirement verbatim, `Covered` / `Covered (pre-existing)` / `Partial` / `Not addressed` / `Dropped` / `Can't-determine`, the test level (`endpoint test` / `unit test only` / `no test`), and the evidence (Step 4's rules).
 3. **Unanswered questions** - each with who asked, where (link) and when; or `none found`.
-4. **Unresolved review threads** - per PR: `path:line`, who opened it, its first line (trimmed to ~120 characters), `outdated` when it is, and its link; or `none`.
+4. **Unresolved review threads** - per PR, each current thread opened by a person: `path:line`, who opened it, its first line (trimmed to ~120 characters), and its link; then one line counting the rest (`+12 outdated, 9 from bots`); or `none`. Outdated and bot threads are counted, never listed - they bury the threads someone still has to answer.
 5. **CI** - per open PR, the head SHA's rollup state and the names of failing checks; or `no open PRs`.
 6. **Contradictions** - each with both sides cited; or `none found`.
 7. **Proportionality** (Step 4b) - the changed-file classification with additions per class (`traced` / `support` / `untraced`), then up to 3 findings, each naming the requirement it goes beyond and showing the simpler alternative; or `nothing beyond the requirements`.
@@ -58,10 +58,13 @@ Per PR, one GraphQL read and the diff:
 gh api graphql -F query=@$HOME/.claude/skills/lordvessel/pr.graphql -F owner=<owner> -F name=<repo> -F number=<n> > /tmp/lordvessel-<repo>-<n>.json
 gh pr diff <n> --repo <owner>/<repo>
 ```
-The query returns body, head, base and merge SHAs, conversation comments, reviews, review threads (with `isResolved`, `isOutdated`) and the head commit's check rollup. Unresolved threads and CI come straight from it:
+The query returns body, head, base and merge SHAs, conversation comments, reviews, review threads (with `isResolved`, `isOutdated`) and the head commit's check rollup. Unresolved threads and CI come straight from it - the first command lists the current threads people opened and counts the rest, which is exactly what the output contract shows:
 ```bash
-jq -r '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not)
-  | "\(.path):\(.line // .originalLine)\t\(.comments.nodes[0].author.login)\t\(if .isOutdated then "outdated" else "" end)\t\(.comments.nodes[0].body | split("\n")[0] | .[0:120])\t\(.comments.nodes[0].url)"' /tmp/lordvessel-<repo>-<n>.json
+jq -r '.data.repository.pullRequest.reviewThreads.nodes | map(select(.isResolved | not)) as $t
+  | def bot: (.comments.nodes[0].author.login // "") | test("\\[bot\\]$|^copilot|^github-actions"; "i");
+    ($t[] | select((.isOutdated | not) and (bot | not))
+     | "\(.path):\(.line // .originalLine)\t\(.comments.nodes[0].author.login)\t\(.comments.nodes[0].body | split("\n")[0] | .[0:120])\t\(.comments.nodes[0].url)"),
+    "+\([$t[] | select(.isOutdated)] | length) outdated, \([$t[] | select((.isOutdated | not) and bot)] | length) current from bots"' /tmp/lordvessel-<repo>-<n>.json
 jq -r '.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup
   | "\(.state)\t" + ([.contexts.nodes[] | select((.conclusion // .state) | IN("FAILURE","ERROR","TIMED_OUT","CANCELLED")) | .name // .context] | join(", "))' /tmp/lordvessel-<repo>-<n>.json
 ```
@@ -81,10 +84,10 @@ For each requirement, find the change that implements it:
 Step 4 asks whether every requirement has code. This step asks the reverse: does every changed piece of code serve a requirement? A ticket is often solved with more than it needed - a flag nobody sets, a layer with one caller, two PRs building the same thing.
 
 1. **Classify every changed file** in the merged and open PRs (closed, unmerged PRs are out), with its additions from `gh api "repos/<owner>/<repo>/pulls/<n>/files" --paginate --jq '.[] | "\(.filename)\t\(.additions)"'`:
-   - `traced` - implements a requirement; Step 4 cited it.
+   - `traced` - implements a requirement; Step 4 cited it. Classify this first: a migration or test file that is itself the requirement (the table R1 asks for) is `traced`, not `support`.
    - `support` - tests, fixtures, migrations, generated or lock files, imports and wiring, docs for the change, and format-only edits (whitespace, re-wrapping, trailing commas). Never a finding; when format-only edits are a large share, say so in the totals line.
    - `untraced` - changed behavior no requirement asks for.
-   Report the totals: `<files> files, +<additions>: traced +A, support +B, untraced +C`. The totals classify whole files; a traced file can still hold changes no requirement asks for, and those can be findings.
+   Report the totals (a format-only share you did not measure is labeled `(estimated)`): `<files> files, +<additions>: traced +A, support +B, untraced +C`. The totals classify whole files; a traced file can still hold changes no requirement asks for, and those can be findings.
 2. **A finding needs both of these, or it is not reported:**
    - the requirement it goes beyond (`R2 asks for X`), or `no requirement` for untraced code;
    - a simpler alternative, shown: a code sketch of 10 lines or fewer, a permalink to an existing helper the PR could have reused, or "remove it" with a whole-repo search showing nothing needs it (the Grep tool on the clone under `$WORKSPACE`, or `gh search code --repo <owner>/<repo> <name>`).
@@ -99,7 +102,7 @@ Step 4 asks whether every requirement has code. This step asks the reverse: does
 
 ### Step 5 - Questions and contradictions
 
-**Unanswered question:** a comment containing `?` (ticket comment, PR conversation, review body or review thread) with no later reply from a different person in the same place. Strip URLs before looking for `?` (a link's `?query` is not a question), and skip bot authors (a login ending in `[bot]`, Copilot, CI). A resolved thread counts as answered. Rhetorical asides don't count. Give the asker, link and date.
+**Unanswered question:** a comment containing `?` on this ticket or its PRs (ticket comment, PR conversation, review body or review thread; a parent or split-from ticket's open question gets one context line, never the status note) with no later reply from a different person in the same place. Strip URLs before looking for `?` (a link's `?query` is not a question), and skip bot authors (a login ending in `[bot]`, Copilot, CI). A resolved thread counts as answered. Rhetorical asides don't count. Give the asker, link and date.
 
 **Contradiction:** two sources that cannot both hold, each cited:
 - the ticket requires X, the code does Y;
@@ -108,17 +111,18 @@ Step 4 asks whether every requirement has code. This step asks the reverse: does
 
 ### Step 6 - Verify (skipped with --fast)
 
-Invoke `/darkmoon --claims` (always with `--claims`) with every `Covered` and `Partial` row and every contradiction, each as *"In `<permalink>`, <what the code does>, which satisfies R<n>: <requirement>."*, and every proportionality finding, as *"In `<permalink>`, <the code> serves no requirement beyond R<n>, and <the alternative> would do the same."* Integrate the verdicts:
+Invoke `/darkmoon --claims` (always with `--claims`) with every `Covered` and `Partial` row, every `Dropped (spec: ...)` row (as *"The spec line <quote> excludes R<n>"*), and every contradiction, each as *"In `<permalink>`, <what the code does>, which satisfies R<n>: <requirement>."*, and every proportionality finding, one claim per removable piece (a finding about two things is two claims), as *"In `<permalink>`, <the code> serves no requirement beyond R<n>, and <the alternative> would do the same."* Integrate the verdicts:
 - **Refuted** → `Not addressed`, or `Partial` when part survives.
 - **Weak** → `Partial`, with the skeptic's counter as the missing piece.
 - **Can't-determine** → keep the status, add the skeptic's open question to the row.
 - **Upheld** → mark `(verified)`.
-- **Proportionality findings:** Refuted or Weak → drop it; Can't-determine → keep it as a question with the skeptic's open point. Under `--fast` they are marked `(unverified)`.
+- **Dropped rows:** Refuted → back to `Partial` or `Not addressed`, with the skeptic's counter.
+- **Proportionality findings,** per piece: Refuted → drop the piece; Weak → keep it as a question marked `(weak)` with the skeptic's counter - Weak means the evidence is thin, not that it is wrong, and the reader decides; Can't-determine → keep it with the skeptic's open point; Upheld → `(verified)`. A finding whose pieces were all refuted is gone. Under `--fast` they are marked `(unverified)`.
 
 ### Step 7 - Status note
 
 Draft a note for the ticket or the PR, in the voice of `~/.claude/skills/humanize/references/github-voice.md` (read it first):
-- First line: where the work stands - `<covered> of <N> requirements covered`, and one of: ready for review, blocked, waiting on someone, or done with items still open.
+- First line: where the work stands - `<covered> of <N> requirements covered`, where N excludes Dropped rows and the dropped ones are named (`2 of 2 requirements covered, R2 dropped by the spec` - never `2 of 3`), and one of: ready for review, blocked, waiting on someone, or done with items still open.
 - Then only what is open, as a list: each not-addressed or partial requirement, each contradiction, each unanswered question (who it waits on), unresolved threads, failing CI. Each item carries its link. Five or fewer unresolved threads on a PR are listed one by one; more become one line per PR with the count and the PR link.
 - Nothing else: no praise, no restating covered work, no darkmoon detail.
 
