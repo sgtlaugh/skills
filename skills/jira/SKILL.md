@@ -66,10 +66,11 @@ GitHub PRs are NOT in `issuelinks` or `/remotelink` here - the GitHub integratio
 ID=$(curl -sS --fail-with-body "$JIRA_URL/rest/api/3/issue/PROJ-123?fields=summary" -H "Authorization: Basic $JIRA_B64" | jq -r .id)
 APP=$(curl -sS --fail-with-body "$JIRA_URL/rest/dev-status/latest/issue/summary?issueId=$ID" -H "Authorization: Basic $JIRA_B64" \
   | jq -r '.summary.pullrequest.byInstanceType | keys[0] // empty')
-[ -n "$APP" ] && curl -sS --fail-with-body "$JIRA_URL/rest/dev-status/latest/issue/detail?issueId=$ID&applicationType=$APP&dataType=pullrequest" \
+if [ -n "$APP" ]; then curl -sS --fail-with-body "$JIRA_URL/rest/dev-status/latest/issue/detail?issueId=$ID&applicationType=$APP&dataType=pullrequest" \
   -H "Authorization: Basic $JIRA_B64" | jq -r '.detail[].pullRequests[] | "\(.status)\t\(.url)\t\(.name)"'
+else echo "dev-status: no linked PRs"; fi
 ```
-Empty `APP` = no linked PRs **only if neither call printed `curl: (N)`** - a failed call also leaves `APP` empty, and that is `Can't-determine`, not "none". Verified on a Jira Cloud site with the GitHub for Jira app (instance type `oAuth-com.github.integration.production`); other integrations report a different key - the summary call discovers it.
+Empty `APP` = no linked PRs **only if neither call printed `curl: (N)`** - a failed call also leaves `APP` empty, and that is `Can't-determine`, not "none". Verified on a Jira Cloud site with the GitHub for Jira app (instance type `oAuth-com.github.integration.production`); other integrations report a different key - the summary call discovers it. An empty answer is not proof either: one ticket with 6 merged PRs came back empty here, so also run `gh search prs "PROJ-123"` when completeness matters.
 
 ### Create Ticket
 ```bash
