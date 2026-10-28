@@ -2,7 +2,7 @@
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -139,7 +139,17 @@ For each file (or batch):
 
 **Stack-trap confirmation rule:** A stack-trap pattern match is `Inferred` until you read ±10 lines around the match and verify the consequence is real. Pattern-match alone is NOT `Confirmed` - the pattern may be guarded on the next line. When the finding depends on library/framework behavior (e.g., "health_check_interval doesn't cover BRPOP", "control.ping uses pub/sub not the task queue"), it stays `Inferred` unless Step 6b traced the library source and confirmed the mechanism. Stating what the library does without reading its source is an assumption, not evidence.
 
-**Severity:** `critical` = data loss, security breach, outage, corruption, or breaks prod/build/tests - nothing else; design smells, perf, missing tests, "worth discussing" are at most `warning`; `nit` = optional polish. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure → not critical.
+**Severity** is what goes wrong if the finding is ignored - never how sure you are (that is Confirmed/Inferred and darkmoon's verdict):
+
+| Severity | Means | Examples |
+|---|---|---|
+| `critical` | Data loss, security breach, outage, corruption, or breaks prod/build/tests - nothing else | auth check skipped on a new endpoint; lock held across a network call on a hot path; migration that drops a column still read |
+| `warning` | Wrong behavior on a reachable path, or a risk the author should fix: a race, a missing guard, a deploy hazard, a failure-mode regression, changed logic with no test, a design or perf problem with a concrete cost | two jobs can run the same cleanup at once; retry on 4xx; new branch untested; a business rule enforced in one of two places |
+| `nit` | No behavior change: naming, style, comments, an optional refactor | rename for clarity; extract a helper; a docstring that repeats the code |
+
+A finding that changes behavior is never a `nit`, however small. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure between critical and warning → warning. Design and necessity findings cap at `warning`.
+
+**Pre-existing is a flag, not a severity.** A finding on a line this diff does not change keeps its severity and gets the `pre-existing` flag in its header. It is still reported - a serious bug the PR's context exposes stays serious - but listed last within its severity.
 
 ## Step 6a - Independent Review Lenses (skipped with --fast)
 
@@ -182,8 +192,8 @@ Each agent receives the **base context**: the diff, the changed file paths, the 
 5. **Operator** (`operator`) - *"You are an SRE who will be paged when this code breaks at 3am. For each changed function: what scripts, batch jobs, cron tasks, or bulk operations in this repo could trigger it? Grep the `scripts/` directory and any migration/backfill files for references to the module, class, or entry point being changed. If you find bulk callers, reason about the actual scale they operate at - does this code create write storms, hold locks, consume unbounded resources, or compound with concurrent invocations when those callers run? Are there operational knobs (throttling, batch size, feature flags) to control the blast radius? If nothing breaks at scale, say so - do not manufacture concerns."*
 
 **After all lenses complete:**
-- Merge findings. Deduplicate by `file:line` - if 2+ lenses flag the same location, promote one severity level, capped at `warning` (lens findings are `Inferred`; see Severity in Step 6).
-- Tag each as `[Tag · Inferred · lens:<name>]` (lens findings are always `Inferred` until Step 8's darkmoon verification upgrades them).
+- Merge findings. Deduplicate by `file:line`: 2+ lenses on the same location become one finding that names every lens that raised it. Agreement is evidence, not impact - it does not raise the severity.
+- Each lens finding goes into the output format of Step 9 like any other, `Inferred` until Step 8's darkmoon verification upgrades it; its verification line names the lens (`*Inferred - raised by the saboteur lens; ...*`).
 - **Lens severity is a floor.** The main review may promote a lens finding (nit → warning) but may NOT demote one. The main review is anchored by the PR body; debiased lenses are not. A debiased lens flagging a warning that the main review wants to downgrade is the system working as designed - the anchoring is exactly what the lens was meant to counteract. The floor binds the main review only: Step 8 darkmoon verdicts override it, since darkmoon is independent of the anchor.
 - A lens that returned no findings is noted in the output: *"<Lens>: no findings."*
 - The Saboteur's `reviewed_paths:` line is kept verbatim under its lens entry, so the reader sees what it did not read.
@@ -292,9 +302,9 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Integrate verdicts:**
 - **Refuted** → drop the finding from the findings list; it survives only as a count in the header's **Verified** line.
-- **Upheld** → keep as-is. Add `(verified)` to the tag.
-- **Weak** → downgrade: a `warning` becomes a `nit`; a `nit` is dropped. Add the skeptic's counter to the finding body.
-- **Can't-determine** → keep, but cap at `warning` and note what would settle it.
+- **Upheld** → keep as-is. End its verification line with `(verified)`.
+- **Weak** → keep its severity (Weak is about the evidence, not the impact), add the skeptic's counter to the finding body, and end the verification line with `(weak)`. A Weak `nit` is dropped.
+- **Can't-determine** → keep, but cap at `warning`, note what would settle it, and end the verification line with `(unresolved)`.
 
 **A Critical that darkmoon marks Weak or Can't-determine is downgraded to Warning.** Only Upheld findings may be Critical in verified output.
 
@@ -302,7 +312,7 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Quality rules (always apply, verified or not):**
 - **Confirm you actually loaded the repo `CLAUDE.md` (Step 4) and existing comments (Step 7).** If not, do it now - they change findings.
-- A finding referencing a line NOT in this diff is pre-existing - tag `pre-existing:nit`, not a warning.
+- A finding on a line this diff does not change gets the `pre-existing` flag in its header and keeps its severity (see Severity in Step 6).
 - Substance over cosmetics: one real null-deref/auth gap beats ten style notes.
 - State what's *wrong* and its consequence, not what the diff changed. No hedging.
 - If you decided something isn't a bug, delete it entirely - no withdrawn findings in the output.
@@ -312,7 +322,9 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Terminal-first formatting.** Output renders in a monospace terminal, not GitHub. Use **bold** for emphasis (renders in terminal), `---` for separators. Do NOT use `##`/`###` headings (render as literal `##` in terminal). Use markdown tables ONLY when all columns are short and similar width (≤3 columns, values under ~20 chars) - wide/uneven tables render broken in terminal; use bullet lists instead.
 
-**Order:** header, `---`, "What this PR does", findings summary, `---`, detailed findings **grouped by severity** (criticals first, then warnings, then nits), `---`, Independent Review Lenses (if run), `---`, Library Source Tracing (if run), `---`, Cross-Repo Analysis (if run), `---`, Summary. Omit empty sections.
+**The format is a contract.** `references/output-example.md` is a complete review in this format; `parse-findings.sh` checks it, and tools such as pr-watch read findings through it. Follow the example's finding headers, summary list and verification lines exactly.
+
+**Order:** header, `---`, "What this PR does", findings summary, `---`, detailed findings **grouped by severity** (criticals first, then warnings, then nits; pre-existing findings last within their severity), `---`, Independent Review Lenses (if run), `---`, Library Source Tracing (if run), `---`, Cross-Repo Analysis (if run), `---`, Summary. Omit empty sections.
 
 Header (5 lines + `---`):
 ```
@@ -326,23 +338,23 @@ Header (5 lines + `---`):
 The **Verified** counts come from Step 8's ledger and must sum to N; a review that ran Step 8 without this line is incomplete - the user should see verification happened without re-running `/darkmoon`.
 **What this PR does** - 1 sentence from YOUR reading of the diff, describing what the code changes actually do. Do NOT paraphrase the PR body - if your sentence resembles it, you're echoing. The PR body explains *why*; this sentence states *what changed* mechanically.
 
-**Findings summary** - two-line format per finding, severity-grouped. This is the at-a-glance triage list:
+**Findings summary** - two lines per finding, numbered like the detailed findings and severity-grouped. Every detailed finding has a line here and nothing else does. This is the at-a-glance triage list:
 ```
-⚠️  file.py:42
+🛑  #1  file.py:42
     Null pointer dereference on empty user input
 
-⚠️  indexing.py:128
+⚠️  #2  indexing.py:128
     update_by_query unbounded - one large tenant can match millions of docs
 
-💬  test_file.py:42
+✏️  #3  test_file.py:42 (pre-existing)
     Bare == without assert - dead assertion
 ```
 
-**Detailed findings** - each finding is self-contained. Separated by `---`.
+**Detailed findings** - each finding is self-contained. Separated by `---`. The header is always `<emoji>  **#N · <severity> · <Tag> · <path:line>**`, with ` · pre-existing` before the closing `**` for a finding outside this diff. The severity word is what tools read; the emoji is for people and must match it: 🛑 critical, ⚠️ warning, ✏️ nit.
 
 Critical and warning findings:
 ```
-⚠️  **#1 · Bug · file.py:42**
+⚠️  **#2 · warning · Bug · file.py:42**
 
 **Problem:** One-line statement of what's wrong.
 **Impact:** One-line statement of why it matters.
@@ -353,24 +365,26 @@ Critical and warning findings:
 # suggested fix code
 \```
 
-*Confirmed - [evidence: what was verified and how].*
+*Confirmed - [evidence: what was verified and how].* (verified)
 ```
 
 Nits:
 ```
-💬  **#3 · Naming · file.py:120**
+✏️  **#3 · nit · Naming · file.py:120**
 
 One-line suggestion.
+
+*Confirmed - [evidence].* (verified)
 ```
 
 Rules:
-- **Severity order.** Group by severity: criticals first (⚠️ with bold callout), then warnings (⚠️), then nits (💬). Within each group, sort by file order.
+- **Severity order.** Group by severity: criticals (🛑), then warnings (⚠️), then nits (✏️). Within each group, sort by file order, with pre-existing findings last.
 - **Problem/Impact split.** Every warning and critical separates the problem (what's wrong) from the impact (why it matters). Keep each to one line.
 - **Fix included.** Every warning and critical includes a concrete code suggestion. Nits may omit it if the fix is obvious.
 - **Inline comparisons.** When a finding compares options, flows, or behaviors: use a markdown table ONLY if ≤3 columns with short values. Otherwise use a bullet list:
   `- **Option A:** deterministic, no cost on old events`
   `- **Option B:** relies on re-delivery, full ES write on every old event`
-- **Verification note.** At the bottom of each finding (not in the heading). `*Confirmed - [evidence].*` or `*Inferred - [what would confirm it].*` When verification ran: add `(verified)`, `(weak)`, or `(unresolved)`.
+- **Verification note.** The last line of each finding, never the header: `*Confirmed - [evidence].*` or `*Inferred - [what would confirm it].*`. When verification ran, the line ends with darkmoon's verdict in parentheses: `(verified)` for Upheld, `(weak)` for Weak, `(unresolved)` for Can't-determine.
 
 **Finding synthesis** - before writing the summary, check whether 2+ findings undermine the same safety claim. If so, synthesize into one higher-order argument (e.g., "deployment gap + test checks code-vs-code only + conditional fields untested = claimed protection is illusory"). A synthesis that changes the recommendation is a finding in itself.
 
@@ -384,6 +398,14 @@ Rules:
 
 Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Request Changes (any `critical`). After the verdict block, add a `---` separator (blank line before it so markdown renders the rule), then the elapsed time on the next line: run `date +%s` and subtract the Step 1 start time - display as `**Time taken**: Xm Ys`.
 
+**Check the format before printing.** Pass the full draft review to the checker on stdin and fix every problem it prints, then re-run it until it prints `parse-findings: ok`:
+```bash
+bash ~/.claude/skills/aristarchus/parse-findings.sh --check <<'REVIEW'
+<the draft review>
+REVIEW
+```
+It checks each finding header, that the emoji matches the severity word, that the summary list and the detailed findings carry the same numbers, and that the `(verified)`/`(weak)` counts match the **Verified** line. Printing a review that fails the check is WRONG: tools read findings through it, and a malformed review posts nothing or the wrong thing.
+
 **Completion contract - the review is NOT done until:**
 1. Every finding has `file:line` + severity + `Confirmed`/`Inferred` note
 2. Conventions field shows what was loaded (or "none found")
@@ -393,6 +415,7 @@ Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Requ
 6. Library source tracing status is noted - ran (packages + finding count), skipped (reason), or N/A (no library calls detected)
 7. Cross-repo analysis status is noted - ran (repos checked + finding count), skipped (reason), or N/A (no related repos configured)
 8. JIRA field is filled - ticket fetched, supplied, none found, or failed
+9. `parse-findings.sh --check` printed `parse-findings: ok` on the final review
 
 ## Guard Rails
 
