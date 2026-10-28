@@ -26,11 +26,15 @@ CHECK=$check perl -CSD -0777 -ne '
     my %emoji = (critical => "\x{1F6D1}", warning => "\x{26A0}", nit => "\x{270F}");
     my (@f, @problems);
 
-    # Detailed findings: a header line, then everything up to the next header or a --- line
+    # Detailed findings: a header line, then everything up to the next header, a --- line outside a code
+    # fence (a YAML fix block has its own ---), or the next section of the review
     my @lines = split /\n/, $r, -1;
-    my $cur;
+    my ($cur, $fence) = (undef, 0);
     for my $line (@lines) {
-        if ($line =~ /\*\*#(\d+) \x{b7} /) {
+        if ($line =~ /^\s*(```|~~~)/) { $fence = !$fence; $cur->{text} .= "$line\n" if $cur; next }
+        if ($fence) { $cur->{text} .= "$line\n" if $cur; next }
+        if ($line =~ /^\*\*(Independent Review Lenses|Library Source Tracing|Cross-Repo Analysis|Summary|Recommendation|Finding synthesis)\b/) { undef $cur; next }
+        if ($line =~ /\*\*#\d+\s*\x{b7}/) {
             if ($line =~ /^(\S+)\s+\*\*#(\d+) \x{b7} (critical|warning|nit) \x{b7} ([^\x{b7}*]+?) \x{b7} ([^\x{b7}*]+?)( \x{b7} pre-existing)?\*\*\s*$/) {
                 $cur = {lead => $1, n => $2 + 0, severity => $3, tag => $4, where => $5,
                         pre_existing => ($6 ? \1 : \0), text => "$line\n"};
@@ -66,14 +70,26 @@ CHECK=$check perl -CSD -0777 -ne '
         } elsif (@f) {
             push @problems, "no **Findings summary** section before the detailed findings";
         }
-        # When darkmoon ran, every finding carries its verdict and the counts match the header line
-        if ($r =~ /\*\*Verified\*\*:?\s*(\d+) claims?\b[^\n]*?(\d+) upheld[^\n]*?(\d+) weak/) {
-            my ($upheld, $weak) = ($2, $3);
-            push @problems, "finding #$_->{n} has no (verified), (weak) or (unresolved) marker" for grep { $_->{verification} eq "none" } @f;
-            my $v = grep { $_->{verification} eq "verified" } @f;
-            my $w = grep { $_->{verification} eq "weak" } @f;
-            push @problems, "header says $upheld upheld but $v findings are marked (verified)" if $v != $upheld;
-            push @problems, "header says $weak weak but $w findings are marked (weak)" if $w != $weak;
+        # When darkmoon ran, every finding carries its verdict and the counts match the header line. A Verified
+        # line that does not read cleanly is itself a problem: skipping the count check would pass a broken review.
+        my ($vline) = $r =~ /^(\*\*Verified(?:\*\*:|:\*\*)[^\n]*)/m;
+        if (defined $vline && $vline !~ /skipped/i) {
+            my %count;
+            for my $label (qw(upheld weak refuted)) { ($count{$label}) = $vline =~ /(\d+) $label\b/ }
+            ($count{unresolved}) = $vline =~ /(\d+) can.t-determine\b/;
+            my @missing = grep { !defined $count{$_} } qw(upheld weak unresolved);
+            if (@missing) {
+                push @problems, "the Verified line does not give counts for: @missing (write \"N claims via darkmoon - U upheld, W weak, C can\x27t-determine, R refuted\")";
+            } else {
+                push @problems, "finding #$_->{n} has no (verified), (weak) or (unresolved) marker" for grep { $_->{verification} eq "none" } @f;
+                my %marked = (upheld => "verified", weak => "weak", unresolved => "unresolved");
+                for my $label (qw(upheld weak unresolved)) {
+                    my $n = grep { $_->{verification} eq $marked{$label} } @f;
+                    push @problems, "header says $count{$label} " . ($label eq "unresolved" ? "can\x27t-determine" : $label) . " but $n findings are marked ($marked{$label})" if $n != $count{$label};
+                }
+            }
+        } elsif (!defined $vline && @f) {
+            push @problems, "no **Verified** line in the header (write \"skipped (--fast)\" when darkmoon did not run)";
         }
         print "$_\n" for @problems;
         print "parse-findings: ok\n" unless @problems;

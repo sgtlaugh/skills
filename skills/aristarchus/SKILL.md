@@ -107,7 +107,7 @@ Filter out lock files, compiled (`*.min.js`, `dist/**`, `build/**`), generated (
 
 ## Step 6 - Analyze Changes
 
-**Stack traps** - codebase-specific gotchas a capable model won't infer from the diff. Apply only the traps whose language or framework appears in the diff; the list below comes from Python and TypeScript stacks, so a repo on another stack adds its own in its `CLAUDE.md`. A finding's **location** must be a `file:line` in this diff - findings about pre-existing code are tagged `pre-existing:nit`. Files outside the diff (scripts, callers, configs) are valid **evidence** for a finding but not its location. Skip anything `CLAUDE.md` (Step 4) or the linter already owns.
+**Stack traps** - codebase-specific gotchas a capable model won't infer from the diff. Apply only the traps whose language or framework appears in the diff; the list below comes from Python and TypeScript stacks, so a repo on another stack adds its own in its `CLAUDE.md`. A finding's **location** must be a `file:line` in this diff - a finding about code this diff does not change carries the `pre-existing` flag and keeps its severity (see Severity below). Files outside the diff (scripts, callers, configs) are valid **evidence** for a finding but not its location. Skip anything `CLAUDE.md` (Step 4) or the linter already owns.
 
 - **Concurrency**: read-modify-write on shared state without a lock/OCC - TOCTOU. Retried/redelivered work that isn't idempotent - Celery `acks_late`, a queue consumer with no dedup or exactly-once guard.
 - **Multi-tenancy**: cross-org leaks where route auth middleware doesn't run - Celery jobs, queue consumers, admin/open-api routes. Confirm org filtering.
@@ -133,7 +133,7 @@ For each file (or batch):
      - **Unjustified complexity**: did the diff introduce conditional skipping or mode-dependent behavior that makes the reader ask "why?" If the justification isn't obvious from the code or comments, it's a smell worth flagging.
      - Necessity findings cap at `warning`.
 
-**Tag every finding** `[Bug|Security|Perf|Design|Simplicity|Necessity|Refactor|Tests|Naming|Cross-service · Confirmed|Inferred]` at an exact `file:line`.
+**Tag every finding** with one of `Bug|Security|Perf|Design|Simplicity|Necessity|Refactor|Tests|Naming|Cross-service` at an exact `file:line`. The tag is the `<Tag>` field of the Step 9 header; `Confirmed`/`Inferred` and any source (`source:library`, `source:cross-repo`, `lens:<name>`) go in the finding's verification line, never the header.
 
 **Confirmed vs Inferred:** `Confirmed` means you verified *every link* in the chain in the code/docs AND showed the evidence (the grep output, the line read, the doc cited). **A finding without its shown evidence caps at Inferred, never Confirmed** - if you didn't show the verification, it's not verified regardless of how obvious it seems. If the finding rests on *assumed* behavior of a library, OS, runtime, or tool (pipe buffers, subprocess/threading semantics, framework internals) that you have **not** verified, it's `Inferred` - say what you'd need to check to confirm it. **Exception:** if Step 6b (library source tracing) ran and the agent traced the execution path through the unpacked library source with cited `file:line` evidence, the finding may be `Confirmed` - the library source IS the verification.
 
@@ -147,7 +147,7 @@ For each file (or batch):
 | `warning` | Wrong behavior on a reachable path, or a risk the author should fix: a race, a missing guard, a deploy hazard, a failure-mode regression, changed logic with no test, a design or perf problem with a concrete cost | two jobs can run the same cleanup at once; retry on 4xx; new branch untested; a business rule enforced in one of two places |
 | `nit` | No behavior change: naming, style, comments, an optional refactor | rename for clarity; extract a helper; a docstring that repeats the code |
 
-A finding that changes behavior is never a `nit`, however small. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure between critical and warning → warning. Design and necessity findings cap at `warning`.
+A finding that changes behavior is never a `nit`, however small. One exception the other way: a comment or docstring that misstates what the code or a library does is a `warning` - it misleads the next person who trusts it. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure between critical and warning → warning. Design and necessity findings cap at `warning`.
 
 **Pre-existing is a flag, not a severity.** A finding on a line this diff does not change keeps its severity and gets the `pre-existing` flag in its header. It is still reported - a serious bug the PR's context exposes stays serious - but listed last within its severity.
 
@@ -257,7 +257,7 @@ If no lockfile or no pin found, note `library tracing: version unknown, skipped`
 Pass the agent: the diff, the changed file paths, and the specific claims/config keys to trace. Include the worktree path so it can read the changed files.
 
 **After the agent completes:**
-- Merge findings into the main review. Tag each as `[Tag · Confirmed · source:library]` - these are evidence-grade because the agent read the actual source.
+- Merge findings into the main review. Each is `Confirmed` with `source:library` in its verification line - these are evidence-grade because the agent read the actual source.
 - Library-traced findings that contradict a diff comment are `warning` minimum (a comment lying about library behavior misleads future maintainers).
 - If the agent found no contradictions, note in the output: *"Library source tracing: no contradictions found in `<packages>`."*
 - If the agent failed (download error, network), note: *"Library source tracing: skipped (`<reason>`)."*
@@ -279,7 +279,7 @@ When the diff touches infra files (`charts/`, `deploy/`, `workers/`, `tasks/`, k
 >
 > *For each mismatch, cite `repo/path:line` and state what breaks. If no mismatches, say so."*
 
-Tag findings as `[Tag · Confirmed · source:cross-repo]`. Deployment mismatches are `warning` minimum.
+Each finding is `Confirmed` with `source:cross-repo` in its verification line. Deployment mismatches are `warning` minimum.
 
 ## Step 7 - Existing Comments
 
@@ -303,7 +303,7 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 **Integrate verdicts:**
 - **Refuted** → drop the finding from the findings list; it survives only as a count in the header's **Verified** line.
 - **Upheld** → keep as-is. End its verification line with `(verified)`.
-- **Weak** → keep its severity (Weak is about the evidence, not the impact), add the skeptic's counter to the finding body, and end the verification line with `(weak)`. A Weak `nit` is dropped.
+- **Weak** → keep its severity (Weak is about the evidence, not the impact), add the skeptic's counter to the finding body, and end the verification line with `(weak)`. A Weak `nit` is dropped and counted under refuted in the **Verified** line.
 - **Can't-determine** → keep, but cap at `warning`, note what would settle it, and end the verification line with `(unresolved)`.
 
 **A Critical that darkmoon marks Weak or Can't-determine is downgraded to Warning.** Only Upheld findings may be Critical in verified output.
@@ -332,10 +332,10 @@ Header (5 lines + `---`):
 **Author**: @user | **Base**: <base> <- <branch> | **Files**: N changed (+A, -D)
 **CI**: passing|failing|pending | **Reviewers**: names (parse `reviewRequests`: `__typename: User` → login, `__typename: Team` → name)
 **Filtered**: N files skipped (N sampled) | **Conventions**: <CLAUDE.md source> (N rules)|none | **Existing comments**: N fetched (M deduped) | **JIRA**: <ID> fetched|<ID> supplied|none found|failed
-**Verified**: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted (dropped) | skipped (--fast)
+**Verified**: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted (dropped, including Weak nits) | skipped (--fast)
 ---
 ```
-The **Verified** counts come from Step 8's ledger and must sum to N; a review that ran Step 8 without this line is incomplete - the user should see verification happened without re-running `/darkmoon`.
+The **Verified** counts come from Step 8's ledger and must sum to N, with a Weak nit (dropped from the findings) counted under refuted, so the `weak` count equals the findings marked `(weak)`; a review that ran Step 8 without this line is incomplete - the user should see verification happened without re-running `/darkmoon`.
 **What this PR does** - 1 sentence from YOUR reading of the diff, describing what the code changes actually do. Do NOT paraphrase the PR body - if your sentence resembles it, you're echoing. The PR body explains *why*; this sentence states *what changed* mechanically.
 
 **Findings summary** - two lines per finding, numbered like the detailed findings and severity-grouped. Every detailed finding has a line here and nothing else does. This is the at-a-glance triage list:

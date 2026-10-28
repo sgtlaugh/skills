@@ -40,6 +40,13 @@ check "a summary line with no detailed finding" 1 "#9 is in the summary list" "$
 check "a verified count that disagrees with the header" 1 "header says 3 upheld but 2" "$(mutate 's/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.* (unresolved)/')"
 check "a finding with no verdict while darkmoon ran" 1 "#2 has no (verified)" "$(mutate 's/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.*/')"
 check "the same number twice" 1 "appears twice" "$(mutate 's/#3 · warning · Bug · owl\/cache.py:14/#2 · warning · Bug · owl\/cache.py:14/')"
+check "a --- inside a fix block does not end the finding" 0 "parse-findings: ok" "$(mutate 's/phase = fetch_phase\(\)/---\nphase = fetch_phase()/')"
+check "a missing --- after the last finding: later sections cannot vote" 0 "parse-findings: ok" "$(mutate 's/\(verified\)\n\n---\n\n\*\*Independent Review Lenses:\*\* saboteur raised #1;/(verified)\n\n**Independent Review Lenses:** (unresolved) saboteur raised #1;/')"
+check "a header with extra spaces is reported, not skipped" 1 "not in the format" "$(mutate 's/\*\*#2 · warning/**#2  ·  warning/')"
+check "a Verified line with the colon inside the bold still counts" 1 "header says 3 upheld but 2" "$(mutate 's/\*\*Verified\*\*: /**Verified:** /; s/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.* (unresolved)/')"
+check "Verified counts in another order still count" 1 "header says 3 upheld but 2" "$(mutate 's/3 upheld, 1 weak, 0 can.t-determine/0 can\x27t-determine, 1 weak, 3 upheld/; s/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.* (unresolved)/')"
+check "an unreadable Verified line is a problem" 1 "does not give counts for" "$(mutate 's/3 upheld, 1 weak, 0 can.t-determine, 1 refuted/all good/')"
+check "can't-determine is checked against (unresolved)" 1 "can't-determine but 1" "$(mutate 's/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.* (unresolved)/; s/3 upheld/2 upheld/')"
 check "no verification run, no markers needed" 0 "parse-findings: ok" "$(mutate 's/\*\*Verified\*\*: [^\n]*/**Verified**: skipped (--fast)/; s/ \((verified|weak)\)//g')"
 
 echo "  --- $pass passed, $fail failed ---"
