@@ -132,7 +132,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 
 **`/lordvessel`** - is the ticket done?
 
-    /lordvessel <TICKET-ID>       # coverage per requirement, open threads, CI, status note
+    /lordvessel <TICKET-ID>       # coverage per requirement, over-built code, open threads, CI, status note
     /lordvessel <jira-url>        # same, by URL
     /lordvessel <TICKET-ID> --fast  # skip the darkmoon pass
 

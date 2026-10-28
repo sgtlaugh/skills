@@ -72,7 +72,7 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every fla
 | [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM and alert history |
 | [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release, and checks whether a deploy fixed it |
 | [`/triage`](skills/triage/SKILL.md) | Takes a ticket to a proven root cause, with a note ready to post |
-| [`/lordvessel`](skills/lordvessel/SKILL.md) | Checks a ticket against its PRs: each requirement traced to code or marked missing, open questions and threads, a status note ready to post |
+| [`/lordvessel`](skills/lordvessel/SKILL.md) | Checks a ticket against its PRs: each requirement traced to code or marked missing, code no requirement asked for (with a simpler alternative), open questions and threads, a status note ready to post |
 | [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets, and reads Confluence pages |
 
 ### About skills themselves
