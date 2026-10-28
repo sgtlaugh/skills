@@ -43,6 +43,8 @@ Read the title/body, each commit message to understand intent. **A mismatch betw
 
 Extract a ticket ID (`[A-Z]+-\d+`) from `headRefName` + `title`. If found, fetch it with the **`/jira` skill** (`/jira <TICKET-ID>`) - don't hand-roll auth. Capture summary, description, acceptance criteria, comments, and **linked issues** (`issuelinks`, outside `/jira`'s default fields). This is the *why* behind the change. Keep essentials only; don't retain raw JSON. If none found or it fails, continue - the header's `JIRA` field records which.
 
+**Ticket supplied by the caller.** When the invocation includes a `Ticket context:` block, use it as the fetched ticket and skip `/jira`. pr-watch fetches the ticket outside the review session so the Jira token never reaches it; the block carries the same fields listed above. The header's `JIRA` field reads `<ID> supplied`.
+
 ## Step 3 - Worktree Setup
 
 Repo name from the URL (e.g. `owl-api`). If `$WORKSPACE/<repo>` is missing, **stop with an error** - tell the user to clone the repo. Do NOT fall back to diff-only.
@@ -317,7 +319,7 @@ Header (5 lines + `---`):
 **Review: PR #<n> - <title>**
 **Author**: @user | **Base**: <base> <- <branch> | **Files**: N changed (+A, -D)
 **CI**: passing|failing|pending | **Reviewers**: names (parse `reviewRequests`: `__typename: User` → login, `__typename: Team` → name)
-**Filtered**: N files skipped (N sampled) | **Conventions**: <CLAUDE.md source> (N rules)|none | **Existing comments**: N fetched (M deduped) | **JIRA**: <ID> fetched|none found|failed
+**Filtered**: N files skipped (N sampled) | **Conventions**: <CLAUDE.md source> (N rules)|none | **Existing comments**: N fetched (M deduped) | **JIRA**: <ID> fetched|<ID> supplied|none found|failed
 **Verified**: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted (dropped) | skipped (--fast)
 ---
 ```
@@ -390,7 +392,7 @@ Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Requ
 5. Summary states **what was NOT examined** (e.g., "scripts/ not grepped", "sampled 30 of 55 files") - a clean review with unstated scope gives false confidence
 6. Library source tracing status is noted - ran (packages + finding count), skipped (reason), or N/A (no library calls detected)
 7. Cross-repo analysis status is noted - ran (repos checked + finding count), skipped (reason), or N/A (no related repos configured)
-8. JIRA field is filled - ticket fetched, none found, or failed
+8. JIRA field is filled - ticket fetched, supplied, none found, or failed
 
 ## Guard Rails
 
