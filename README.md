@@ -174,7 +174,7 @@ Linux and macOS, bash 3.2 or newer.
 bash tests/run.sh
 ```
 
-Covers `/darkmoon`'s extractor and hook, `/velka`'s scripts, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
+Covers `/darkmoon`'s extractor and hook, `/velka`'s scripts, `/humanize`'s voice gate, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
 
 ### `/darkmoon` eval
 
@@ -187,6 +187,17 @@ Runs claims with known answers against a fixture repo full of traps, and scores 
 - **Manual, not CI:** it calls headless Claude, about $2 a pass.
 - **When:** before and after any change to the skeptic.
 - **Watch SOFT, not just FAIL:** a rule that softens real evidence into "argument, not proof" shows up there first.
+
+### Review eval
+
+```bash
+evals/review/run.sh -n 2
+```
+
+Applies planted diffs to a small fixture repo and runs `/occam` and `/aristarchus`'s Saboteur lens on each. A case lists what the review must find, the false positives it must avoid, and how many times one defect may be reported.
+
+- **Manual, not CI:** about $4-5 a pass.
+- **When:** before and after any change to occam's reviewer brief or the aristarchus lenses. The Saboteur brief is read from the skill at run time.
 
 The skills themselves are prompts. `/kiln` checks their structure; `/jury` checks their consistency.
 
