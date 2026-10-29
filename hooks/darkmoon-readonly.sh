@@ -56,8 +56,16 @@ while read -r seg; do
                 case "$1" in -C) shift 2 ;; --no-pager|-P) shift ;; *) break ;; esac
             done
             case "${1:-}" in log|show|diff|blame|status|grep|rev-parse|ls-files|cat-file|shortlog|describe) ;; *) block "git ${1:-} (read subcommands only)" ;; esac
-            [[ " $* " =~ [[:space:]]--output ]] && block "git --output writes a file"
-            [ "$1" = grep ] && [[ " $* " =~ [[:space:]](-O|--open-files-in-pager) ]] && block "git grep -O runs a command" ;;
+            # git takes bundled short flags (-iO<cmd>) and any unambiguous prefix of a long option (--outp=,
+            # --open-f=), so each argument is checked for both, not matched against the full spelling
+            for a in "${@:2}"; do
+                case "$a" in
+                    --*) n="${a%%=*}"
+                        [ ${#n} -ge 4 ] && [[ "--output" == "$n"* ]] && block "git --output writes a file"
+                        [ "$1" = grep ] && [ ${#n} -ge 4 ] && [[ "--open-files-in-pager" == "$n"* ]] && block "git grep -O runs a command" ;;
+                    -?*) [ "$1" = grep ] && [[ "$a" == *O* ]] && block "git grep -O runs a command" ;;
+                esac
+            done ;;
         gh)
             case "${words[1]:-} ${words[2]:-}" in
                 "pr view"|"pr diff"|"pr checks"|"issue view"|"repo view"|search\ *) ;;
