@@ -13,7 +13,7 @@
 #   verification     a closing line ending in (verified), (weak) or (unresolved) when darkmoon ran
 #   findings list    <emoji>  #N  <path:line>   in the findings summary, one per detailed finding
 #   header line      **Verified**: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted
-# aristarchus runs --check on its own draft before printing it; pr-watch reads the JSON.
+# aristarchus runs --check on its own draft before printing it; an automated reviewer reads the JSON.
 
 check=false
 [ "${1:-}" = --check ] && { check=true; shift; }

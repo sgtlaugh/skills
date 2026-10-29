@@ -43,7 +43,7 @@ Read the title/body, each commit message to understand intent. **A mismatch betw
 
 Extract a ticket ID (`[A-Z]+-\d+`) from `headRefName` + `title`. If found, fetch it with the **`/jira` skill** (`/jira <TICKET-ID>`) - don't hand-roll auth. Capture summary, description, acceptance criteria, comments, and **linked issues** (`issuelinks`, outside `/jira`'s default fields). This is the *why* behind the change. Keep essentials only; don't retain raw JSON. If none found or it fails, continue - the header's `JIRA` field records which.
 
-**Ticket supplied by the caller.** When the invocation includes a `Ticket context:` block, use it as the fetched ticket and skip `/jira`. pr-watch fetches the ticket outside the review session so the Jira token never reaches it; the block carries the same fields listed above. The header's `JIRA` field reads `<ID> supplied`.
+**Ticket supplied by the caller.** When the invocation includes a `Ticket context:` block, use it as the fetched ticket and skip `/jira`. A caller such as an automated reviewer fetches the ticket outside the review session so the Jira token never reaches it; the block carries the same fields listed above. The header's `JIRA` field reads `<ID> supplied`.
 
 ## Step 3 - Worktree Setup
 
@@ -322,7 +322,7 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Terminal-first formatting.** Output renders in a monospace terminal, not GitHub. Use **bold** for emphasis (renders in terminal), `---` for separators. Do NOT use `##`/`###` headings (render as literal `##` in terminal). Use markdown tables ONLY when all columns are short and similar width (≤3 columns, values under ~20 chars) - wide/uneven tables render broken in terminal; use bullet lists instead.
 
-**The format is a contract.** `references/output-example.md` is a complete review in this format; `parse-findings.sh` checks it, and tools such as pr-watch read findings through it. Follow the example's finding headers, summary list and verification lines exactly.
+**The format is a contract.** `references/output-example.md` is a complete review in this format; `parse-findings.sh` checks it, and tools such as an automated reviewer read findings through it. Follow the example's finding headers, summary list and verification lines exactly.
 
 **Order:** header, `---`, "What this PR does", findings summary, `---`, detailed findings **grouped by severity** (criticals first, then warnings, then nits; pre-existing findings last within their severity), `---`, Independent Review Lenses (if run), `---`, Library Source Tracing (if run), `---`, Cross-Repo Analysis (if run), `---`, Summary. Omit empty sections.
 
