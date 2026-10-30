@@ -8,7 +8,8 @@ input=$(cat "${1:-/dev/stdin}") || exit 2
 jq -e 'type == "array"' <<<"$input" >/dev/null 2>&1 || { echo "quote-check: input must be a JSON array of {session, quote}" >&2; exit 2; }
 
 bad=0
-while IFS=$'\t' read -r sid quote; do
+# Records split by NUL and fields by \x1f, not @tsv: @tsv escapes a backslash as \\, which read keeps
+while IFS=$'\x1f' read -r -d '' sid quote; do
     if [ ${#sid} -lt 8 ] || [ ${#quote} -lt 10 ]; then
         echo "FAIL $sid: session id needs 8+ characters and the quote 10+"; bad=1; continue
     fi
@@ -31,5 +32,5 @@ while IFS=$'\t' read -r sid quote; do
     else
         echo "FAIL $sid: not in any human turn: \"$quote\""; bad=1
     fi
-done < <(jq -r '.[] | [(.session // ""), (.quote // "" | gsub("[\t\n]"; " "))] | @tsv' <<<"$input")
+done < <(jq -j '.[] | (.session // "" | gsub("[\u001f\u0000]"; "")) + "\u001f" + (.quote // "" | gsub("[\u001f\u0000]"; " ")) + "\u0000"' <<<"$input")
 exit $bad

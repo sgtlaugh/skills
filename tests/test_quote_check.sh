@@ -27,6 +27,8 @@ check "ambiguous prefix fails" 1 "2 transcripts match" '[{"session":"owl-blocks"
 check "unknown session fails" 1 "0 transcripts match" '[{"session":"hoot-hoot-404","quote":"never squash my commits"}]'
 check "short id fails" 1 "8+ characters" '[{"session":"owl","quote":"never squash my commits"}]'
 check "one bad quote fails the batch" 1 "PASS owl-blocks-0001" '[{"session":"owl-blocks-0001","quote":"never squash my commits"},{"session":"owl-blocks-0002","quote":"made up words here"}]'
+jq -nc '{type: "user", message: {content: "grep for a\\.b in the owl logs"}}' > "$ROOT/proj/owl-escape-0003.jsonl"
+check "a quote with a backslash passes" 0 "PASS" '[{"session":"owl-escape-0003","quote":"grep for a\\.b in the owl logs"}]'
 check "non-array input is a usage error" 2 "JSON array" '{"session":"owl-blocks-0001"}'
 
 rm -rf "$ROOT"
