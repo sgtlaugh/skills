@@ -86,7 +86,28 @@ check "sort --compress-program" 2 'sort --compress-program=sh /tmp/owl.txt'
 check "GIT_EXTERNAL_DIFF assignment" 2 "GIT_EXTERNAL_DIFF='touch /tmp/x' git diff"
 check "PAGER assignment" 2 'PAGER=touch git log'
 check "LC_ALL assignment allowed" 0 'LC_ALL=C sort /tmp/owl.txt'
-# ponytail: known ceiling, not blocked - sed w/e commands, uniq's output-file arg, mktemp -p.
+check "an escaped double quote can't hide a redirect" 2 'echo \" > /home/owl/.bashrc \"'
+check "an escaped single quote can't hide a command" 2 "echo \' ; touch /home/owl/pwned ; echo \'"
+check "an apostrophe inside double quotes is a plain character" 2 "echo \"a'b\" | tee /home/owl/x 'y'"
+check "grep for can't, then a quoted argument, stays a read" 0 "grep -n \"can't\" README.md | grep -c 'owl'"
+check "git -C with no path does not hang" 2 'git -C'
+check "a here-string is not a heredoc" 2 $'cat <<<word\ntouch /home/owl/pwned'
+check "a heredoc delimiter with a digit ends at the whole word" 2 $'cat <<E1\nhi\nE1\ntouch /home/owl/pwned'
+check "gh api bundled -iXPOST" 2 'gh api -iXPOST repos/acme/owl/issues'
+check "gh api bundled -if" 2 'gh api -if title=x repos/acme/owl/issues'
+check "sed --in (a prefix of --in-place)" 2 'sed --in s/a/Z/ README.md'
+check "sort --out= (a prefix of --output)" 2 'sort --out=/home/owl/o /tmp/owl.txt'
+check "sort --compress-prog=" 2 'sort --compress-prog=sh /tmp/owl.txt'
+check ">&2x is a redirect to a file named 2x" 2 'echo hi >&2x'
+check ">&2 stays allowed" 0 'echo hi >&2'
+check "mktemp outside /tmp" 2 'mktemp /home/owl/xXXXX'
+check "mktemp -p outside /tmp" 2 'mktemp -p /home/owl'
+check "mktemp in /tmp stays allowed" 0 'mktemp /tmp/owl.XXXX'
+check "file -C compiles a magic file" 2 'file -C -m /tmp/owl.magic'
+check "awk piping to a shell" 2 "awk '{ print | \"sh\" }' /tmp/owl.txt"
+check "awk getline from a command" 2 "awk 'BEGIN { \"id\" | getline x }'"
+check "awk with a comparison stays a read" 0 "awk '\$3 > 5 { print \$1 }' /tmp/owl.txt"
+# ponytail: known ceiling, not blocked - sed w/e commands, uniq's output-file arg, jq writes.
 # Closing them means dropping sed/uniq from the allowlist or parsing their args; a read-only container is the upgrade.
 
 echo "  --- $pass passed, $fail failed ---"

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # darkmoon-readonly.sh - PreToolUse hook for the darkmoon-skeptic agent: allow read-only Bash only.
 # Exit 2 blocks the call; stderr is shown to the agent as the reason.
-# An allowlist tripwire, not a sandbox - writes hidden inside quoted awk/jq programs,
-# sed w/e commands, uniq's output-file arg, and mktemp -p are not caught.
+# An allowlist tripwire, not a sandbox - writes hidden inside quoted jq programs, sed w/e commands and
+# uniq's output-file arg are not caught; nor are awk writes or commands it runs (print > or | to a
+# string, getline) when they don't take the plain forms blocked below.
 # Upgrade path: run the skeptic in a read-only container.
 
 set -uo pipefail
@@ -11,20 +12,43 @@ cmd=$(jq -r '.tool_input.command // empty')
 [ -n "$cmd" ] || exit 0
 
 block() { echo "Blocked by darkmoon read-only hook: $1" >&2; exit 2; }
+# long <option> <min-length>: an argument of this command is the option or an unambiguous prefix of it (GNU
+# tools take --in for --in-place), with or without =value
+long() { local a n; for a in "${words[@]:1}"; do n="${a%%=*}"; [[ "$n" == --* ]] && [ ${#n} -ge "$2" ] && [[ "$1" == "$n"* ]] && return 0; done; return 1; }
 
 case "$cmd" in *'$('*|*'`'*) block "command substitution" ;; esac
 case "$cmd" in *'system('*) block "awk system()" ;; esac
+# awk's own redirects and pipes live inside its quoted program, where the redirect check below can't see them
+if grep -qE '(^|[^[:alnum:]_])awk([[:space:]]|$)' <<<"$cmd" && grep -qE '[>|][[:space:]]*"|getline' <<<"$cmd"; then
+    block "awk writing to a file or running a command"
+fi
 
-# Drop heredoc bodies, then quoted strings, so data (fixture JSON, grep patterns like "a|b")
-# can't be mistaken for commands or redirects.
+# Drop heredoc bodies, then quoted strings, so data (fixture JSON, grep patterns like "a|b") can't be
+# mistaken for commands or redirects. A here-string (<<<) is not a heredoc, and a delimiter is the whole
+# word (E1, not E). Quotes are read the way the shell reads them: a backslash escapes outside single
+# quotes, and a ' inside "..." is a plain character - a naive pairing would swallow real commands.
 stripped=$(printf '%s\n' "$cmd" | awk '
-    delim != "" { if ($0 ~ "^[[:space:]]*" delim "[[:space:]]*$") delim = ""; next }
+    delim != "" { line = $0; sub(/^\t+/, "", line); if (line == delim) delim = ""; next }
     {
-        if (match($0, /<<-?[[:space:]]*["'\'']?[A-Za-z_]+/)) {
-            d = substr($0, RSTART, RLENGTH); gsub(/<<-?[[:space:]]*["'\'']?/, "", d); delim = d
+        probe = $0; gsub(/<<</, "", probe)
+        if (match(probe, /<<-?[[:space:]]*["'\'']?[A-Za-z0-9_-]+/)) {
+            d = substr(probe, RSTART, RLENGTH); gsub(/<<-?[[:space:]]*["'\'']?/, "", d); delim = d
         }
         print
-    }' | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g; s/[0-9]*>&[0-9]//g")
+    }' | awk '
+    { text = text (NR > 1 ? "\n" : "") $0 }
+    END {
+        q = ""; out = ""
+        for (i = 1; i <= length(text); i++) {
+            c = substr(text, i, 1)
+            if (q == "\x27") { if (c == "\x27") q = ""; continue }
+            if (c == "\\") { i++; if (q == "") out = out "_"; continue }
+            if (q == "\"") { if (c == "\"") q = ""; continue }
+            if (c == "\x27" || c == "\"") { q = c; continue }
+            out = out c
+        }
+        print out
+    }' | sed -E 's/[0-9]*>&([0-9]+|-)([[:space:]|;&]|$)/\2/g')
 
 # Checked after stripping: quoted <( is a grep pattern, not a process substitution.
 case "$stripped" in *'<('*|*'>('*) block "process substitution" ;; esac
@@ -45,15 +69,27 @@ while read -r seg; do
     [ ${#words[@]} -gt 0 ] || continue
     w="${words[0]}"; rest=" ${words[*]:1} "
     case "$w" in
-        grep|egrep|jq|cat|head|tail|wc|ls|echo|printf|uniq|cut|tr|diff|stat|file|basename|dirname|realpath|readlink|pwd|cd|test|'['|true|false|date|mktemp|nl|column|awk) ;;
+        grep|egrep|jq|cat|head|tail|wc|ls|echo|printf|uniq|cut|tr|diff|stat|basename|dirname|realpath|readlink|pwd|cd|test|'['|true|false|date|nl|column|awk) ;;
         rg) [[ "$rest" =~ [[:space:]]--pre[=[:space:]] ]] && block "rg --pre runs a command" ;;
-        sort) [[ "$rest" =~ [[:space:]](-[a-zA-Z]*o|--output|--compress-program) ]] && block "sort output file or compress program" ;;
-        sed) [[ "$rest" =~ [[:space:]](-[a-zA-Z]*i|--in-place) ]] && block "sed in-place edit" ;;
+        sort) [[ "$rest" =~ [[:space:]]-[a-zA-Z]*o ]] && block "sort output file"
+            long "--output" 5 && block "sort output file"; long "--compress-program" 4 && block "sort compress program" ;;
+        sed) [[ "$rest" =~ [[:space:]]-[a-zA-Z]*i ]] && block "sed in-place edit"; long "--in-place" 4 && block "sed in-place edit" ;;
+        file) [[ "$rest" =~ [[:space:]]-[a-zA-Z]*C ]] && block "file -C writes a compiled magic file"; long "--compile" 5 && block "file --compile writes a file" ;;
+        mktemp)
+            set -- "${words[@]:1}"
+            while [ $# -gt 0 ]; do
+                case "$1" in
+                    -p|--tmpdir) [[ "${2:-}" == /tmp* ]] || block "mktemp outside /tmp"; shift 2 ;;
+                    --tmpdir=*) [[ "${1#*=}" == /tmp* ]] || block "mktemp outside /tmp"; shift ;;
+                    -*) shift ;;
+                    *) [[ "$1" != */* || "$1" == /tmp/* ]] || block "mktemp outside /tmp"; shift ;;
+                esac
+            done ;;
         find) [[ "$rest" =~ [[:space:]]-(delete|exec|execdir|ok|okdir|fprint|fprint0|fprintf|fls)[[:space:]] ]] && block "find -${BASH_REMATCH[1]}" ;;
         git)
             set -- "${words[@]:1}"
             while [ $# -gt 0 ]; do
-                case "$1" in -C) shift 2 ;; --no-pager|-P) shift ;; *) break ;; esac
+                case "$1" in -C) [ $# -ge 2 ] || block "git -C without a path"; shift 2 ;; --no-pager|-P) shift ;; *) break ;; esac
             done
             case "${1:-}" in log|show|diff|blame|status|grep|rev-parse|ls-files|cat-file|shortlog|describe) ;; *) block "git ${1:-} (read subcommands only)" ;; esac
             # git takes bundled short flags (-iO<cmd>) and any unambiguous prefix of a long option (--outp=,
@@ -70,7 +106,8 @@ while read -r seg; do
             case "${words[1]:-} ${words[2]:-}" in
                 "pr view"|"pr diff"|"pr checks"|"issue view"|"repo view"|search\ *) ;;
                 # Short flags take attached values (-XPOST, -fbody=x), long ones take =value
-                api\ *) [[ "$rest" =~ [[:space:]](-X|-f|-F|--method[=[:space:]]|--field[=[:space:]]|--raw-field[=[:space:]]|--input[=[:space:]]) ]] && block "gh api write flags" ;;
+                # Bundled short flags count too: -iXPOST and -if title=x both POST
+                api\ *) [[ "$rest" =~ [[:space:]](-[a-zA-Z]*[XfF]|--method[=[:space:]]|--field[=[:space:]]|--raw-field[=[:space:]]|--input[=[:space:]]) ]] && block "gh api write flags" ;;
                 *) block "gh ${words[1]:-} ${words[2]:-} (read subcommands only)" ;;
             esac ;;
         *) block "'$w' is not in the read-only allowlist" ;;
