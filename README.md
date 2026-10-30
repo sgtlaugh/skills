@@ -153,6 +153,8 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 
 **`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. `/sentry`, `/triage` and `/firewatch` read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
 
+**`work.json`** is optional and not created by `install.sh`. `/nicepr` reads `{"reviewers": ["<login>", ...]}` from it: with `--create` and no `--reviewers`, a PR that is not a draft asks those people to review (never you).
+
 ## Requirements
 
 | Tool | Needed for |

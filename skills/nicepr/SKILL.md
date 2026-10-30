@@ -2,7 +2,7 @@
 name: nicepr
 description: Generate short, human PR titles and descriptions from branch diff and JIRA context
 trigger: /nicepr
-allowed-tools: Read, Write, Edit, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checkout:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*), Bash(head:*)
+allowed-tools: Read, Write, Edit, Skill, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checkout:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*), Bash(head:*)
 ---
 
 # /nicepr - Generate PR Description
@@ -17,7 +17,7 @@ Generate a clean PR title + description from current branch changes and JIRA con
 /nicepr --humanize --concise           # same + cut length ~50%
 /nicepr --create                       # push branch + create PR on GitHub
 /nicepr --create --draft               # push branch + create draft PR
-/nicepr --create --reviewers acme/backend  # create + assign reviewers (users or org/team); default: work.json "reviewers"
+/nicepr --create --reviewers acme/backend  # create + assign reviewers (users or org/team); default: work.json "reviewers", none on a draft
 /nicepr --update                       # regenerate description for existing PR
 ```
 
@@ -306,9 +306,9 @@ gh pr create --repo $ORG_REPO --base $BASE --head $GH_USER:$BRANCH \
 
 **Default reviewers.** Without `--reviewers` and without `--draft`, read the reviewer list from the local work settings file, and leave yourself out (GitHub refuses a review request from the PR's author):
 ```bash
-jq -r --arg me <GH_USER login> '.reviewers // [] | map(select(. != $me)) | join(",")' ~/.config/claude-skills/work.json 2>/dev/null
+jq -r --arg me <GH_USER login> '.reviewers // [] | if type == "string" then split(",") else . end | map(select(type == "string") | gsub("\\s"; "") | select(. != "" and ascii_downcase != ($me | ascii_downcase))) | join(",")' ~/.config/claude-skills/work.json
 ```
-Non-empty output → add `--reviewer <output>` and name the reviewers in the reply. A missing file or empty output → no reviewer flag. A draft gets no default reviewers: they are asked for when the PR is marked ready, outside this skill.
+Non-empty output → add `--reviewer <output>` and name the reviewers in the reply. Empty output, or `Could not open file` (no work.json) → no reviewer flag. Any other jq error (the file is not valid JSON) → no reviewer flag, and say in the reply that `work.json` could not be read. A draft gets no default reviewers: they are asked for when the PR is marked ready, outside this skill.
 
 ## Step 5 - Update PR (only with --update)
 
