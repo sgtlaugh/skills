@@ -128,7 +128,7 @@ flowchart LR
     class darkmoon,skeptic verifier
 ```
 
-`/darkmoon` runs its skeptic agent in a fresh context. A hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) blocks any command outside a read-only allowlist. It's a tripwire, not a sandbox.
+`/darkmoon` runs its skeptic agent in a fresh context. A hook ([`hooks/darkmoon-readonly.sh`](hooks/darkmoon-readonly.sh)) blocks any command outside a read-only allowlist. It's a tripwire, not a sandbox. A caller can vouch for one read-only lookup script with `DARKMOON_ALLOW_SCRIPT=<absolute path>`, so the skeptic can run `bash <path> ...` and nothing else under bash.
 
 ## Configuration
 

@@ -107,6 +107,16 @@ check "file -C compiles a magic file" 2 'file -C -m /tmp/owl.magic'
 check "awk piping to a shell" 2 "awk '{ print | \"sh\" }' /tmp/owl.txt"
 check "awk getline from a command" 2 "awk 'BEGIN { \"id\" | getline x }'"
 check "awk with a comparison stays a read" 0 "awk '\$3 > 5 { print \$1 }' /tmp/owl.txt"
+check "bash is blocked without an allowed script" 2 'bash /opt/owl/query.sh logs-ppl x'
+export DARKMOON_ALLOW_SCRIPT=/opt/owl/query.sh
+check "the one allowed script runs under bash" 0 "bash /opt/owl/query.sh logs-ppl 'source=owl | head 5'"
+check "another script stays blocked" 2 'bash /opt/owl/other.sh x'
+check "the allowed script cannot hide a second command" 2 'bash /opt/owl/query.sh x; touch /home/owl/pwned'
+check "the allowed script cannot write through a redirect" 2 'bash /opt/owl/query.sh x > /home/owl/out'
+check "bash -c is not the allowed script" 2 'bash -c /opt/owl/query.sh'
+export DARKMOON_ALLOW_SCRIPT=query.sh
+check "a relative allowed path is ignored" 2 'bash query.sh x'
+unset DARKMOON_ALLOW_SCRIPT
 # ponytail: known ceiling, not blocked - sed w/e commands, uniq's output-file arg, jq writes.
 # Closing them means dropping sed/uniq from the allowlist or parsing their args; a read-only container is the upgrade.
 

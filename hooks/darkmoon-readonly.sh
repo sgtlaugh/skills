@@ -5,6 +5,8 @@
 # uniq's output-file arg are not caught; nor are awk writes or commands it runs (print > or | to a
 # string, getline) when they don't take the plain forms blocked below.
 # Upgrade path: run the skeptic in a read-only container.
+# DARKMOON_ALLOW_SCRIPT=<absolute path>: the one script a caller vouches for as read-only (a credentialed lookup
+# tool that checks its own arguments) may run as `bash <path> ...`; nothing else under bash or sh does.
 
 set -uo pipefail
 
@@ -110,6 +112,9 @@ while read -r seg; do
                 api\ *) [[ "$rest" =~ [[:space:]](-[a-zA-Z]*[XfF]|--method[=[:space:]]|--field[=[:space:]]|--raw-field[=[:space:]]|--input[=[:space:]]) ]] && block "gh api write flags" ;;
                 *) block "gh ${words[1]:-} ${words[2]:-} (read subcommands only)" ;;
             esac ;;
+        bash|sh)
+            [ -n "${DARKMOON_ALLOW_SCRIPT:-}" ] && [[ "$DARKMOON_ALLOW_SCRIPT" == /* ]] && [ "${words[1]:-}" = "$DARKMOON_ALLOW_SCRIPT" ] \
+                || block "'$w' is not in the read-only allowlist" ;;
         *) block "'$w' is not in the read-only allowlist" ;;
     esac
 done < <(printf '%s\n' "$stripped" | awk '{ gsub(/\|\||&&|[|;&]/, "\n"); print }')
