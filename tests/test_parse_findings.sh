@@ -33,6 +33,7 @@ assert "pre-existing is its own flag, not a severity" "4" "$(jq -r 'map(select(.
 assert "a finding's text stops at the next ---" "0" "$(jq -r '.[0].text' <<<"$json" | grep -c 'retry predicate')"
 
 check "an unknown severity word" 1 "not in the format" "$(mutate 's/#2 · warning · Bug/#2 · major · Bug/')"
+check "a sub-numbered finding is reported, not dropped" 1 "not in the format" "$(mutate 's/#2 · warning · Bug/#2a · warning · Bug/')"
 check "an old-style header without the severity" 1 "not in the format" "$(mutate 's/#2 · warning · Bug ·/#2 · Bug ·/')"
 check "emoji that contradicts the severity" 1 "leads with" "$(mutate 's/⚠️  \*\*#2/🛑  **#2/')"
 check "a finding missing from the summary list" 1 "#3 has no line in the summary list" "$(mutate 's/⚠️  #3  owl\/cache.py:14\n[^\n]*\n//')"

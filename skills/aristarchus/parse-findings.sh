@@ -34,7 +34,8 @@ CHECK=$check perl -CSD -0777 -ne '
         if ($line =~ /^\s*(```|~~~)/) { $fence = !$fence; $cur->{text} .= "$line\n" if $cur; next }
         if ($fence) { $cur->{text} .= "$line\n" if $cur; next }
         if ($line =~ /^\*\*(Independent Review Lenses|Library Source Tracing|Cross-Repo Analysis|Summary|Recommendation|Finding synthesis)\b/) { undef $cur; next }
-        if ($line =~ /\*\*#\d+\s*\x{b7}/) {
+        # Any #N-like header (#4a, #4.1) reaches the strict match, so a variant is reported, not skipped
+        if ($line =~ /\*\*#\d+\S*\s*\x{b7}/) {
             if ($line =~ /^(\S+)\s+\*\*#(\d+) \x{b7} (critical|warning|nit) \x{b7} ([^\x{b7}*]+?) \x{b7} ([^\x{b7}*]+?)( \x{b7} pre-existing)?\*\*\s*$/) {
                 $cur = {lead => $1, n => $2 + 0, severity => $3, tag => $4, where => $5,
                         pre_existing => ($6 ? \1 : \0), text => "$line\n"};
@@ -63,9 +64,9 @@ CHECK=$check perl -CSD -0777 -ne '
         # The findings summary lists every detailed finding by number, and nothing else
         my ($summary) = $r =~ /\*\*Findings summary\*\*(.*?)(?=\n---\s*\n)/s;
         if (defined $summary) {
-            my %listed = map { $_ => 1 } $summary =~ /^\S+\s+#(\d+)\b/mg;
+            my %listed = map { $_ => 1 } $summary =~ /^\S+\s+#(\d+\w*)/mg;
             my %detailed = map { $_->{n} => 1 } @f;
-            push @problems, "finding #$_ is in the summary list but has no detailed finding" for grep { !$detailed{$_} } sort { $a <=> $b } keys %listed;
+            push @problems, "finding #$_ is in the summary list but has no detailed finding" for grep { !$detailed{$_} } sort keys %listed;
             push @problems, "finding #$_ has no line in the summary list" for grep { !$listed{$_} } sort { $a <=> $b } keys %detailed;
         } elsif (@f) {
             push @problems, "no **Findings summary** section before the detailed findings";
