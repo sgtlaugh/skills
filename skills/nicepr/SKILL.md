@@ -17,7 +17,7 @@ Generate a clean PR title + description from current branch changes and JIRA con
 /nicepr --humanize --concise           # same + cut length ~50%
 /nicepr --create                       # push branch + create PR on GitHub
 /nicepr --create --draft               # push branch + create draft PR
-/nicepr --create --reviewers acme/backend  # create + assign reviewers (users or org/team)
+/nicepr --create --reviewers acme/backend  # create + assign reviewers (users or org/team); default: work.json "reviewers"
 /nicepr --update                       # regenerate description for existing PR
 ```
 
@@ -303,6 +303,12 @@ gh pr create --repo $ORG_REPO --base $BASE --head $GH_USER:$BRANCH \
 ```
 
 `--draft` implies `--create`. If `--draft`: add `--draft`. If `--reviewers`: add `--reviewer <teams-or-users>`.
+
+**Default reviewers.** Without `--reviewers` and without `--draft`, read the reviewer list from the local work settings file, and leave yourself out (GitHub refuses a review request from the PR's author):
+```bash
+jq -r --arg me <GH_USER login> '.reviewers // [] | map(select(. != $me)) | join(",")' ~/.config/claude-skills/work.json 2>/dev/null
+```
+Non-empty output → add `--reviewer <output>` and name the reviewers in the reply. A missing file or empty output → no reviewer flag. A draft gets no default reviewers: they are asked for when the PR is marked ready, outside this skill.
 
 ## Step 5 - Update PR (only with --update)
 
