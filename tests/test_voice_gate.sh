@@ -56,6 +56,11 @@ check "a long paragraph is split" 1 "split it, or turn its parallel facts into b
 check "four short sentences are fine" 0 "" "Looks good. Logs help. I did not test. Merge on Sunday."
 check "a bulleted list is not a paragraph" 0 "" "$(printf 'Hops:\n\n'; for i in 1 2 3 4 5 6; do printf -- '- The owl hoots at three in the morning and wakes the nest number %s.\n' $i; done)"
 check "six comments in a review" 1 "6 inline comments" '[{"body":"a"},{"body":"b"},{"body":"c"},{"body":"d"},{"body":"e"},{"body":"f"}]'
+check "a word the list offers as one alternative is not banned alone" 0 "" "Did you consider caching the token here?"
+check "both alternatives of note/consider are banned" 1 "It's important to consider" "It's important to consider the cache."
+check "a bracketed choice matches any words" 1 "In today's [...] landscape" "In today's rapidly evolving landscape we ship."
+check "a phrase from a bracket's list is not banned alone" 0 "" "A fast-paced migration."
+check "a JSON array of strings is refused, not passed" 2 "must hold objects" '["It is important to consider this."]'
 check "per-comment numbering in JSON" 1 "comment 2: em dash" "[{\"body\":\"fine\"},{\"body\":\"hoot ${EM} hoot\"}]"
 
 echo "  --- $pass passed, $fail failed ---"

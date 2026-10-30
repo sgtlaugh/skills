@@ -21,7 +21,12 @@ banned="$(dirname "$0")/references/banned-list.md"
 [ -r "$banned" ] || { echo "voice-gate: can't read $banned" >&2; exit 2; }
 
 json=false; count=1
-if jq -e 'type == "array"' <<<"$input" >/dev/null 2>&1; then json=true; count=$(jq length <<<"$input"); fi
+if jq -e 'type == "array"' <<<"$input" >/dev/null 2>&1; then
+    # Strings, or objects without a body, would gate nothing and pass as clean
+    jq -e 'all(.[]; type == "object" and (.body | type) == "string")' <<<"$input" >/dev/null 2>&1 \
+        || { echo "voice-gate: a JSON array must hold objects with a \"body\" string" >&2; exit 2; }
+    json=true; count=$(jq length <<<"$input")
+fi
 
 # NUL-separated bodies; a shell variable can't hold NUL, so this streams straight into perl
 emit() {
@@ -37,12 +42,24 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
         while (<$fh>) {
             $section = $1 if /^## (.+)/;
             next unless $section =~ /^(Phrases to delete|Self-narration)/ && /^"/;
-            for my $p (split m{\s*/\s*}) {
-                $p =~ s/^"|"$//g; $p =~ s/\.\.\.$//; $p =~ s/\s*\(.*?\)\s*$//;
-                $p =~ s/^\s+|\s+$//g;
+            # Each quoted phrase on the line is one entry ("A..." / "B..." lists alternatives). Inside a phrase,
+            # [a/b/c] stands for any words, and a/b outside brackets is either word: "note/consider" is "note"
+            # or "consider", never a phrase "consider" of its own
+            for my $p (/"([^"]*)"/g) {
+                $p =~ s/\.\.\.$//; $p =~ s/^\s+|\s+$//g;
                 next unless length $p;
-                my $re = join "\\S*(?:\\s+\\S+)*?\\s+", map { quotemeta } grep { length } split /\s*\[[^\]]*\]\s*/, $p;
-                push @phrases, [$p, qr/(?<![\w])$re(?![\w])/i];
+                (my $shape = $p) =~ s/\s*\[[^\]]*\]\s*/ \x00 /g;
+                my @variants = ([]);
+                for my $w (split /\s+/, $shape) {
+                    my @alts = $w eq "\x00" ? ($w) : split m{/}, $w;
+                    @variants = map { my $v = $_; map { [@$v, $_] } @alts } @variants;
+                }
+                for my $v (@variants) {
+                    my $name = join " ", map { $_ eq "\x00" ? "[...]" : $_ } @$v;
+                    my $re = join "\\S*(?:\\s+\\S+)*?\\s+", map { quotemeta } grep { length }
+                        split /\s*\x00\s*/, join " ", @$v;
+                    push @phrases, [$name, qr/(?<![\w])$re(?![\w])/i];
+                }
             }
         }
         our $n = 0; our $bad = 0;
