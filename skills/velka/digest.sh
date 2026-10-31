@@ -5,13 +5,6 @@
 set -euo pipefail
 f="$1"
 
-# Slash-invoked skills/commands live as <command-name>/x</command-name> in user lines,
-# a DISJOINT source from the Skill tool_use path - capture both, union in the analyzer.
-slash=$(grep -oE '<command-name>/[^<]+</command-name>' "$f" 2>/dev/null \
-  | sed -E 's|<command-name>/([^<]+)</command-name>|\1|' \
-  | jq -R . | jq -cs . 2>/dev/null || true)
-[ -z "${slash:-}" ] && slash='[]'
-
 # Notes live mostly in bash comments; jq 1.6 does accept full-line # comments inside the program.
 # Schema: id, project, start/end, assistant_msgs, user_str/arr, tokens{in,out,cache_read,cache_create},
 # tools{}, files_edited{}, files_read{}, bash{total,git_commit,git_revert,test_run,grep},
@@ -19,7 +12,7 @@ slash=$(grep -oE '<command-name>/[^<]+</command-name>' "$f" 2>/dev/null \
 # corrections[] ({ts, text} human turns that push back), hook_blocks{} (hook or "deny-rule" -> count).
 # A line cut off by a crash mid-write is skipped instead of sinking the whole session.
 
-jq -cR 'fromjson? // empty' "$f" | jq -s --argjson slash "$slash" '
+jq -cR 'fromjson? // empty' "$f" | jq -s '
   (map(select(type=="object"))) as $L
   | ($L | map(select(.type=="assistant" and .message.id != null))
     | group_by(.message.id) | map(max_by(.timestamp)) | sort_by(.timestamp)) as $a
@@ -72,7 +65,12 @@ jq -cR 'fromjson? // empty' "$f" | jq -s --argjson slash "$slash" '
         grep:       ($cmds | map(select(test("(^| )(grep|rg|ag) ")))                          | length)
       },
       skill_tooluse: ($t | map(select(.name=="Skill") | .input.skill // empty)),
-      slash: $slash,
+      # Slash-invoked skills live as <command-name>/x</command-name> in the text of user lines, a DISJOINT source
+      # from the Skill tool_use path (the analyzer unions both). Only user text counts: the same tag in a tool
+      # result (a grep of a transcript, a skill doc) is not an invocation
+      slash: [$L[] | select(.type=="user") | .message.content
+              | if type=="string" then . elif type=="array" then (.[]? | select(.type=="text") | .text // "") else empty end
+              | scan("<command-name>/([^<]+)</command-name>")[0]],
       first_prompt: ($human | map(.text) | .[0:3] | map(.[0:200]) | join(" | ") | .[0:500]),
       # Pushback is the raw material for CLAUDE.md proposals; velka --propose judges which ones recur
       corrections: ($human

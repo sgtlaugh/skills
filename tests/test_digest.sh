@@ -95,5 +95,11 @@ assert_exit "a cut-off last line is skipped, not fatal" 0 "$rc"
 assert_exit "the rest of a cut-off session is still digested" 0 \
     "$([ "$(jq -r '.assistant_msgs' <<<"$truncated")" = "$(jq -r '.assistant_msgs' <<<"$out")" ] && echo 0 || echo 1)"
 
+# A slash tag inside a tool result (a grep of a transcript) is not an invocation
+toolout=$(mktemp)
+jq -nc '{type: "user", message: {content: [{type: "tool_result", tool_use_id: "t1", content: "<command-name>/darkmoon</command-name>"}]}, timestamp: "2025-07-12T09:00:00Z"}' > "$toolout"
+assert_jq "a slash tag in tool output does not count" ".slash | length" "0" "$(bash "$SCRIPT" "$toolout" 2>/dev/null)"
+rm -f "$toolout"
+
 echo "  --- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]
