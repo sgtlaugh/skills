@@ -33,6 +33,8 @@ assert "pre-existing is its own flag, not a severity" "4" "$(jq -r 'map(select(.
 assert "a finding's text stops at the next ---" "0" "$(jq -r '.[0].text' <<<"$json" | grep -c 'retry predicate')"
 
 check "an unknown severity word" 1 "not in the format" "$(mutate 's/#2 · warning · Bug/#2 · major · Bug/')"
+err=$(mutate 's/#2 · warning · Bug/#2a · warning · Bug/' | bash "$P" 2>&1 >/dev/null); rc=$?
+assert "JSON mode names a finding it could not parse on stderr, and fails" "1:1" "$rc:$(grep -c 'not in the format' <<<"$err")"
 check "a sub-numbered finding is reported, not dropped" 1 "not in the format" "$(mutate 's/#2 · warning · Bug/#2a · warning · Bug/')"
 check "an old-style header without the severity" 1 "not in the format" "$(mutate 's/#2 · warning · Bug ·/#2 · Bug ·/')"
 check "emoji that contradicts the severity" 1 "leads with" "$(mutate 's/⚠️  \*\*#2/🛑  **#2/')"

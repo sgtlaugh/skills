@@ -103,5 +103,8 @@ CHECK=$check perl -CSD -0777 -ne '
         sprintf "{\"n\":%d,\"severity\":%s,\"tag\":%s,\"where\":%s,\"pre_existing\":%s,\"verification\":%s,\"text\":%s}",
             $_->{n}, js($_->{severity}), js($_->{tag}), js($_->{where}), (${$_->{pre_existing}} ? "true" : "false"), js($_->{verification}), js($_->{text})
     } @f), "]\n";
+    # A finding that did not parse is missing from the JSON: say which on stderr, so a caller never reads a short
+    # list as the whole review
+    print STDERR "parse-findings: $_\n" for @problems;
     exit(@problems ? 1 : 0);
 ' <<<"$review"
