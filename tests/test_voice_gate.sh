@@ -61,6 +61,14 @@ check "both alternatives of note/consider are banned" 1 "It's important to consi
 check "a bracketed choice matches any words" 1 "In today's [...] landscape" "In today's rapidly evolving landscape we ship."
 check "a phrase from a bracket's list is not banned alone" 0 "" "A fast-paced migration."
 check "a JSON array of strings is refused, not passed" 2 "must hold objects" '["It is important to consider this."]'
+check "a host:port is not a file reference" 0 "" 'The pool talks to `db.owlpost.io:5432` now.'
+check "ratios and times are not file references" 0 "" "Contrast is 16.9:1 at 10.30:15."
+check "iOS and macOS are words, not identifiers" 0 "" "Does this work on iOS and macOS?"
+check "a real file:line still needs its link" 1 'file reference "owl.py:12"' "See owl.py:12 for it."
+out=$(echo "hi" | timeout 5 bash "$GATE" --max-chars 2>&1); rc=$?
+if [ "$rc" = 2 ] && grep -q 'needs a number' <<<"$out"; then echo "  PASS: --max-chars with no value is a usage error, not a hang"; pass=$((pass+1)); else echo "  FAIL: --max-chars with no value (rc $rc)"; fail=$((fail+1)); fi
+out=$(printf -- '- The owl hoots twice at night.\n%.0s' $(seq 30) | bash "$GATE" --max-chars=2000 2>&1); rc=$?
+if [ "$rc" = 0 ]; then echo "  PASS: --max-chars=N raises the limit"; pass=$((pass+1)); else echo "  FAIL: --max-chars=N (rc $rc: $out)"; fail=$((fail+1)); fi
 check "per-comment numbering in JSON" 1 "comment 2: em dash" "[{\"body\":\"fine\"},{\"body\":\"hoot ${EM} hoot\"}]"
 
 echo "  --- $pass passed, $fail failed ---"

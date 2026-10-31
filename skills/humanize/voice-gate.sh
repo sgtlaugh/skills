@@ -9,7 +9,8 @@
 max=600
 while [ $# -gt 0 ]; do
     case "$1" in
-        --max-chars) max="$2"; shift 2 ;;
+        --max-chars) [ $# -ge 2 ] || { echo "voice-gate: --max-chars needs a number" >&2; exit 2; }; max="$2"; shift 2 ;;
+        --max-chars=*) max="${1#*=}"; shift ;;
         -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
         *) break ;;
     esac
@@ -111,14 +112,21 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "severity tag \"$1\" (only **Minor nit:** is used)" if $text =~ /(\[(?:critical|warning|blocker|major|minor|nit|info|suggestion)\]|\*\*(?:critical|warning|blocker|major|severity)[^*]*\*\*)/i;
     push @v, "praise filler \"$1\"" if $text =~ /\b(great (?:job|work|catch|question|pr|change)|nice (?:job|work|catch)|well done|kudos|awesome work|excellent work)\b/i;
     push @v, "contrast framing \"$1\"" if $text =~ /\b(it.?s not\b[^.\n]{1,80}?[,;.]\s*it.?s\b|not (?:just|only)\b[^.\n]{1,80}?\bbut\b)/i;
+    # Product names spelled in camel case (iOS, macOS, eBay) are words, not identifiers
     for my $id ($text =~ /(?<![\w.\/-])([a-z][a-z0-9]*_[a-z0-9_]+|[a-z]+[A-Z][A-Za-z0-9]*|\w+\(\)|[\w\/-]+\.(?:py|ts|tsx|js|go|rb|sh|md|json|ya?ml|toml|sql))(?![\w\/-])/g) {
+        next if $id =~ /^(?:iOS|macOS|iPadOS|watchOS|tvOS|visionOS|iPhone|iPad|iPod|iCloud|iTunes|iMessage|eBay|eCommerce|jQuery|gRPC|pH)$/;
         push @v, "identifier \"$id\" outside backticks";
     }
     # References must be clickable: a file:line as a link to the blob, a PR in another repo as owner/repo#N
     # (GitHub autolinks only that form). Code spans count here: `a.py:12` in backticks is still not a link.
     (my $unlinked = $prose) =~ s/\[[^\]\n]*\]\([^)\s]*\)//g;
     $unlinked =~ s{https?://\S+}{}g;
-    push @v, "file reference \"$1\" is not a link - link it to the blob at a commit SHA" while $unlinked =~ /(?<![\w\/.-])([\w\/.-]+\.[A-Za-z0-9]{1,6}:L?\d+(?:-L?\d+)?)\b/g;
+    # A file extension starts with a letter (so 16.9:1 and 10.30:15 are not files), and a host:port is not a file
+    while ($unlinked =~ /(?<![\w\/.-])([\w\/.-]+\.[A-Za-z][A-Za-z0-9]{0,5}):(L?\d+(?:-L?\d+)?)\b/g) {
+        my ($f, $l) = ($1, $2);
+        next if $f !~ m{/} && $f =~ /\.(?:com|io|net|org|dev|app|cloud|internal|local|ai|co)$/i;
+        push @v, "file reference \"$f:$l\" is not a link - link it to the blob at a commit SHA";
+    }
     (my $refs = $unlinked) =~ s/`[^`\n]+`//g;
     push @v, "reference \"$1\" needs its owner (owner/$1) to link" while $refs =~ /(?<![\w\/.-])((?!(?:PR|pr|issue|Issue)#)[A-Za-z][\w.-]*#\d+)\b/g;
     for my $p (our @phrases) { push @v, "banned phrase \"$p->[0]\"" if $text =~ $p->[1] }
