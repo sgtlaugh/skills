@@ -208,4 +208,4 @@ Verdict, first match wins:
 
 - **READ ONLY.** GET requests only - no resolve/ignore/assign/comment. Issue writes are blocked by the token's scopes; `curl` and `gh api` are GET-only by this rule (no `-X`, `-d`, `-f`).
 - **Production data** - events carry user IDs, URLs, IPs. Summarize; don't dump raw events or `request.headers`/`user` objects.
-- **`git`/`gh` read deployed code only** - `git show`/`git grep`/`git log`/`git cat-file`, `gh api .../contents`. No checkout, fetch, or writes (same rule as `/triage`).
+- **`git`/`gh` read deployed code only** - `git show`/`git grep`/`git log`/`git cat-file`, `gh api .../contents`. No checkout, fetch, or writes (same rule as `/triage`). Backstop: `Bash(git -C:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them (`permissions.deny`: `git -C` with `checkout`, `fetch`, `commit` or `push`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`).

@@ -50,12 +50,12 @@ grep -nE "[Ss]ee (the )?[A-Z]" "<resolved SKILL.md>"   # case-sensitive: a capit
 - Each directional ref ("above"/"below"/"Step N"/"see X") must resolve to a section that still exists *in that direction*. Flag stale ones (common after a restructure - e.g. "Step 7" when sections were renamed).
 - Cross-read the `MUST`/`ALWAYS`/`NEVER` rules for mutual conflict (real example: *"MUST use the excludes block"* vs *"overview uses an include-list"*). **Fix:** repoint refs to named sections; reconcile conflicts by scoping one or stating precedence.
 
-### D. Matt's failure modes (with our cautions)
+### D. The writing-for-agents failure modes (with our cautions)
 - **Premature completion** - a step whose completion criterion is vague ("investigate", "check it") lets the model stop early. Flag steps lacking a **checkable** criterion. (Make it checkable first; split only if needed.)
 - **Duplication** - same rule in N places. **Caution:** distinguish *deliberate repeat-for-adherence* (a critical rule echoed in the contract AND the body - fine, often necessary) from *accidental drift* (two copies that can diverge on edit). Flag only drift-risk, not intentional reinforcement.
 - **Sediment** - stale leftover layers from past edits (orphaned examples, refs to removed features/flags).
 - **Sprawl** - too long. **CAUTION (do NOT flag length alone):** flag **dead content** (unreferenced, never-fires, pure restated-default) - NOT validated teeth. Specificity is function, not fat: a concrete deterrent + its example number IS the binding mechanism. Cutting it regresses behavior.
-- **No-op** - a line the model "already obeys by default." **CAUTION - departs from Matt's "delete failing sentences":** you **cannot reliably judge a no-op statically.** A line that reads like rationale can be load-bearing teeth (a count rule's two-number example looked trimmable; cutting it regressed the count). **Flag as "candidate no-op - verify by running with/without before deleting", NEVER "delete".** For behavioral skills, prove it's inert empirically first.
+- **No-op** - a line the model "already obeys by default." **CAUTION - departs from writing-for-agents' "delete failing sentences":** you **cannot reliably judge a no-op statically.** A line that reads like rationale can be load-bearing teeth (a count rule's two-number example looked trimmable; cutting it regressed the count). **Flag as "candidate no-op - verify by running with/without before deleting", NEVER "delete".** For behavioral skills, prove it's inert empirically first.
 
 ### E. Frontmatter & description
 - **Description** front-loads the leading word; one trigger per behavior-branch; no identity already restated in the body.

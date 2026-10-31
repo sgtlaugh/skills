@@ -56,7 +56,7 @@ done
 
 echo "Config in ~/.config/claude-skills:"
 mkdir -p "$CONFIG_DIR"
-seed "$REPO/services.example.md" "$CONFIG_DIR/services.md" " - fill it in for sentry, triage and firewatch"
+seed "$REPO/services.example.md" "$CONFIG_DIR/services.md" " - fill it in for sentry, triage, firewatch and lordvessel"
 seed "$REPO/credentials.example.json" "$CONFIG_DIR/credentials.json" " (mode 600)"
 if [ -e "$CONFIG_DIR/credentials.json" ]; then
     if unset_count=$(jq '[.[] | select(. == null)] | length' "$CONFIG_DIR/credentials.json" 2>/dev/null); then

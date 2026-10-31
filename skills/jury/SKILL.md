@@ -2,7 +2,7 @@
 name: jury
 description: Run another skill N times in parallel and merge the outputs into a frequency ledger - surfaces non-determinism and unions findings across runs. For high-stakes reviews and experiments.
 trigger: /jury
-allowed-tools: Agent, Read, Write, Grep, Glob, Bash(mkdir:*), Bash(mktemp:*), Bash(date:*), Bash(seq:*), Bash(claude -p:*), Bash(jq:*), Bash(ps:*), Bash(echo:*), Bash(wait:*)
+allowed-tools: Agent, Read, Write, Grep, Glob, Bash(mkdir:*), Bash(mktemp:*), Bash(date:*), Bash(seq:*), Bash(claude -p:*), Bash(jq:*), Bash(ps:*), Bash(echo:*), Bash(wait:*), Bash(cp:*)
 ---
 
 # /jury - Repeat a skill N times, merge into a ledger

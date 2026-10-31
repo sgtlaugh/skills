@@ -1,6 +1,6 @@
 # Service catalog
 
-Facts about your systems, read by the ops skills (sentry, triage, firewatch) from
+Facts about your systems, read by the ops skills (sentry, triage, firewatch, lordvessel) from
 `~/.config/claude-skills/services.md` - `install.sh` copies this template there; fill it in.
 No secrets here - tokens live in `~/.config/claude-skills/credentials.json`.
 A skill that needs a value missing from this file asks; it never guesses a host, repo or org.

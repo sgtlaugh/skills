@@ -33,7 +33,7 @@ BRANCH=$(git branch --show-current) && GH_USER=$(gh api user --jq .login 2>/dev/
 **Step 0b: Detect fork and upstream remotes**
 
 From `git remote -v` output:
-- **Fork remote**: remote name matching `$GH_USER` (your GitHub login, e.g. `octocat`)
+- **Fork remote**: the remote whose URL's owner is `$GH_USER` (your GitHub login, e.g. `github.com:octocat/<repo>`), whatever its name - `gh repo fork --clone` names your fork `origin`
 - **Upstream remote**: the org repo. Detect in priority order:
   1. If fork remote exists, query `gh api "repos/$FORK_REPO" --jq '.parent.full_name'` for parent, match to a remote
   2. If `origin` exists AND points to an org repo (not a personal fork), use it

@@ -28,7 +28,7 @@ If the user gave instructions about voice, audience, or format, honor those alon
 
 **Required format beats these style rules.** On another skill's output (e.g. `/nicepr --humanize`), keep the structure it requires - headings and their fixed emoji (`### ✅ QA Steps`), `**Lead-in:**` bold labels with a colon, Title Case titles, `- [ ]` checkboxes, code blocks, permalinks - and rewrite only the prose inside it. In PR text, nicepr's format requires bold lead-ins with a colon and Title Case PR titles; stripping those from a PR is WRONG. Outside PRs the banned list's bold and casing rules apply as written.
 
-**Text headed for GitHub** (a review comment, PR reply or status note): also follow `references/github-voice.md`, then run `bash ~/.claude/skills/humanize/voice-gate.sh <file>` on the rewrite and fix every line it prints until it prints `voice-gate: clean`.
+**Text headed for GitHub** (a review comment, PR reply or status note): also follow `references/github-voice.md`, then pipe the rewrite into the gate on stdin (`bash ~/.claude/skills/humanize/voice-gate.sh <<'EOF'` ... `EOF`, so no file has to be written) and fix every line it prints until it prints `voice-gate: clean`.
 
 ### Step 1b: Concise mode (only with --concise)
 

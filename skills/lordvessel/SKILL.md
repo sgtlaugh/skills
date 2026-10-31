@@ -129,7 +129,9 @@ Draft a note for the ticket or the PR, in the voice of `~/.claude/skills/humaniz
 
 Write it to a file and run the gate:
 ```bash
-bash ~/.claude/skills/humanize/voice-gate.sh --max-chars 1000 <file>
+bash ~/.claude/skills/humanize/voice-gate.sh --max-chars 1000 <<'EOF'
+<the draft note>
+EOF
 ```
 Every violation is fixed and the gate re-run until it prints `voice-gate: clean`. Show the note and `voice-gate: clean`. A note shown without a clean gate run is WRONG.
 
