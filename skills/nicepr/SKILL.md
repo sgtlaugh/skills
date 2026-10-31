@@ -287,7 +287,7 @@ Creating a PR because the preview was approved, without `--create`/`--draft` or 
 
 Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `GH_USER`, `UPSTREAM`, `ORG_REPO`, `BASE`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls.
 
-Error if `FORK_REMOTE` is empty - never push to `origin` or upstream.
+Error if `FORK_REMOTE` is empty - never push to `$UPSTREAM` (the org's repo), whatever its remote is named.
 
 Before pushing, check for merge conflicts with base. Three-argument `merge-tree` prints conflict markers with a leading `+` (`+<<<<<<< .our`), so the pattern allows it:
 ```bash
@@ -329,7 +329,7 @@ gh pr edit $BRANCH --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FIL
 ## Guard Rails
 
 - **Preview first.** Always show title + body before creating. Never auto-create.
-- **Never push to upstream or origin.** Always push to fork remote.
+- **Never push to upstream (the org's repo).** Always push to the fork remote, found by its URL's owner, even when it is named `origin`.
 - **Never force push.** If push fails, show error and ask.
 - **No empty PRs.** If no commits ahead of base, error out.
 - **JIRA link format.** Always `<JIRA_URL>/browse/<ID>`, where `JIRA_URL` is the `jiraBaseUrl` the `/jira` skill resolves in its Setup - never a guessed or hardcoded site.
