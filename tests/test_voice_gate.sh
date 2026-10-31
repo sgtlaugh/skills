@@ -49,6 +49,10 @@ check "a chatbot closer" 1 "banned phrase \"Let me know if you have any [...] qu
 check "an empty offer to help" 1 "banned phrase \"Feel free to reach out\"" "The owl roosts at dusk. Feel free to reach out."
 check "feel free with a real action is how people write" 0 "" "@barn-owl, feel free to merge if the format looks good to you."
 check "absolutely inside a sentence is a word, not an opener" 0 "" "The roost is absolutely full by dusk."
+check "a leaked note about the drafting" 1 "note about drafting" "Can we leave the cache out of this PR?
+
+voice-gate.sh ran on this draft, but run it once more before posting."
+check "a draft PR is code, not a drafting note" 0 "" "This draft PR still needs the migration from acme/owl#12."
 check "an empty trailing participle" 1 "trailing \"ensuring\" clause" "The cron retries on 503, ensuring the owls are always fed."
 check "a participle that carries a fact is fine" 0 "" "The cron retries on 503, making it safe to restart the barn."
 check "a quoted question is the asker's words: their phrases and dashes are not yours" 0 "" "> Does the barn close at dusk ${EM} or later? Hope this helps!

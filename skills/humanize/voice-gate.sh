@@ -111,6 +111,9 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "emoji \"$1\"" if $text =~ /([\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B50}\x{2B06}\x{2934}\x{2935}\x{3030}\x{FE0F}])/;
     push @v, "severity tag \"$1\" (only **Minor nit:** is used)" if $text =~ /(\[(?:critical|warning|blocker|major|minor|nit|info|suggestion)\]|\*\*(?:critical|warning|blocker|major|severity)[^*]*\*\*)/i;
     push @v, "praise filler \"$1\"" if $text =~ /\b(great (?:job|work|catch|question|pr|change)|nice (?:job|work|catch)|well done|kudos|awesome work|excellent work)\b/i;
+    # A drafting session can leave a note about its own process in the text (seen live: a line saying the gate
+    # ran on "this draft"); posted under your name, it gives the whole comment away
+    push @v, "note about drafting \"$1\" (delete the line: it talks about the draft, not the code)" if $text =~ /\b(voice[- ]gate(?:\.sh)?|before posting|as an AI\b|language model|(?:this|the) draft (?:comment|reply|note|review)|run it once more)/i;
     # Instruction-tuned models tack a present participle onto a clause 2-5x as often as people do (PNAS 2025);
     # only the empty ones are flagged, since ", making it" or ", using" often carry a real fact
     push @v, "trailing \"$1\" clause (say what it does in its own sentence)" if $text =~ /,\s+((?:thereby\s+)?(?:ensuring|highlighting|underscoring|reflecting|showcasing|emphasizing|fostering|solidifying)\b)/i;
