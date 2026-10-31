@@ -124,6 +124,14 @@ Skip a swap when the word is the precise technical term: implement an interface,
 "Strikes a balance"
 "Pushes the envelope"
 "Raises the bar"
+"Absolutely!" / "Certainly!"
+"I'd be happy to..." / "Happy to help"
+"I'm excited to share..."
+"Let's dive in" / "Delve into"
+"I went ahead and..."
+"Hope this helps"
+"Let me know if you have any [other] questions"
+"Feel free to reach out" / "Feel free to ask" (feel free to plus a concrete action, like merging, is fine)
 
 ## Self-narration phrases (the worst category)
 
