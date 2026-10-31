@@ -25,7 +25,8 @@ A template is what gives automated review away: every comment opening the same w
 - **Calibrated, not hedged:** "unless I'm missing something", "might be fine for X, but...". One per comment, not stacked.
 - **Endings vary** too: a question, a soft suggestion, or just the fact when the fix is obvious.
 - **One line when one line answers it.** "Already handled in acme/owl#8." "Tested by deploying to the dev barn earlier." No subject is needed when the reader knows who did it. Add a second paragraph only for what the reader can't see from the line.
-- **Negations spelled out:** "did not", "is not", "was not" read as deliberate; "I did not test locally" is a plain admission, where "didn't" drifts casual. Other contractions ("it's", "don't") are fine.
+- **Contractions, as people type them:** "don't", "won't", "isn't". Spelling them all out reads stiff; the plain admission "I did not test it locally, but..." is the one place the full form earns its weight.
+- **Your own voice:** a `~/.config/claude-skills/voice.md` with your moves (how you suggest, push back, approve, own a mistake), 5-10 real comments of yours as examples, and caps on your signature phrases makes drafts sound like you rather than like anyone. Examples beat descriptions; pick them by situation (a nit, a bug, an approval), not by topic, and cap the quirks, or the draft turns into a caricature.
 - **Answering a question, quote it** (`> the question`) and answer under it; with several questions, quote and answer each in turn. The gate skips quoted lines.
 
 ## Lead-ins

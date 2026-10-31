@@ -111,6 +111,9 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "emoji \"$1\"" if $text =~ /([\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B50}\x{2B06}\x{2934}\x{2935}\x{3030}\x{FE0F}])/;
     push @v, "severity tag \"$1\" (only **Minor nit:** is used)" if $text =~ /(\[(?:critical|warning|blocker|major|minor|nit|info|suggestion)\]|\*\*(?:critical|warning|blocker|major|severity)[^*]*\*\*)/i;
     push @v, "praise filler \"$1\"" if $text =~ /\b(great (?:job|work|catch|question|pr|change)|nice (?:job|work|catch)|well done|kudos|awesome work|excellent work)\b/i;
+    # Instruction-tuned models tack a present participle onto a clause 2-5x as often as people do (PNAS 2025);
+    # only the empty ones are flagged, since ", making it" or ", using" often carry a real fact
+    push @v, "trailing \"$1\" clause (say what it does in its own sentence)" if $text =~ /,\s+((?:thereby\s+)?(?:ensuring|highlighting|underscoring|reflecting|showcasing|emphasizing|fostering|solidifying)\b)/i;
     push @v, "contrast framing \"$1\"" if $text =~ /\b(it.?s not\b[^.\n]{1,80}?[,;.]\s*it.?s\b|not (?:just|only)\b[^.\n]{1,80}?\bbut\b)/i;
     # Product names spelled in camel case (iOS, macOS, eBay) are words, not identifiers
     for my $id ($text =~ /(?<![\w.\/-])([a-z][a-z0-9]*_[a-z0-9_]+|[a-z]+[A-Z][A-Za-z0-9]*|\w+\(\)|[\w\/-]+\.(?:py|ts|tsx|js|go|rb|sh|md|json|ya?ml|toml|sql))(?![\w\/-])/g) {

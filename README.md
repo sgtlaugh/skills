@@ -153,6 +153,8 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 
 **`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. `/sentry`, `/triage`, `/firewatch` and `/lordvessel` read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
 
+**`voice.md`** is optional and not created by `install.sh`. With it, `/humanize` drafts GitHub text in *your* voice: how you suggest, push back and approve, 5-10 of your real comments as examples, and caps on your signature phrases. [`github-voice.md`](skills/humanize/references/github-voice.md) says what goes in it.
+
 **`work.json`** is optional and not created by `install.sh`. `/nicepr` reads `{"reviewers": ["<login>", ...]}` from it: with `--create` and no `--reviewers`, a PR that is not a draft asks those people to review (never you).
 
 ## Requirements
