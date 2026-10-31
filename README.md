@@ -151,7 +151,7 @@ Two files live in `~/.config/claude-skills/`. `install.sh` creates both if they'
 
 Skills that call `/jira` or `/sentry` use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
 
-**`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. `/sentry`, `/triage` and `/firewatch` read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
+**`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. `/sentry`, `/triage`, `/firewatch` and `/lordvessel` read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
 
 **`work.json`** is optional and not created by `install.sh`. `/nicepr` reads `{"reviewers": ["<login>", ...]}` from it: with `--create` and no `--reviewers`, a PR that is not a draft asks those people to review (never you).
 
