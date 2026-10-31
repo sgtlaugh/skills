@@ -24,6 +24,9 @@ A template is what gives automated review away: every comment opening the same w
 - **One interjection at most, and only when it means something:** "Hmm," for a real doubt, "Ah," when a chain of cause clicks, "Oh," for a surprising effect. Used everywhere, they become the new tell. Never "Well," as an opener: it reads as talking down.
 - **Calibrated, not hedged:** "unless I'm missing something", "might be fine for X, but...". One per comment, not stacked.
 - **Endings vary** too: a question, a soft suggestion, or just the fact when the fix is obvious.
+- **One line when one line answers it.** "Already handled in acme/owl#8." "Tested by deploying to the dev barn earlier." No subject is needed when the reader knows who did it. Add a second paragraph only for what the reader can't see from the line.
+- **Negations spelled out:** "did not", "is not", "was not" read as deliberate; "I did not test locally" is a plain admission, where "didn't" drifts casual. Other contractions ("it's", "don't") are fine.
+- **Answering a question, quote it** (`> the question`) and answer under it; with several questions, quote and answer each in turn. The gate skips quoted lines.
 
 ## Lead-ins
 

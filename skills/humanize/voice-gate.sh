@@ -89,11 +89,14 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
         }
         $details++ if $line =~ /<details>/i;
         $details-- if $line =~ m{</details>}i && $details > 0;
+        # A quoted line holds the words of whoever asked (a reply quotes the question, then answers): none of
+        # the rules for the writer apply to it, and it counts toward no length
+        next if $line =~ /^\s*>/;
         $prose .= "$line\n";
     }
     push @v, "unclosed code fence" if $in;
 
-    push @v, "em dash (use a hyphen)" if $body =~ /\x{2014}/;
+    push @v, "em dash (use a hyphen)" if join("\n", grep { !/^\s*>/ } split /\n/, $body) =~ /\x{2014}/;
     push @v, "permalink pinned to \"$_\", not a commit SHA" for grep { !/^[0-9a-f]{7,40}$/ } $body =~ m{github\.com/[^/\s]+/[^/\s]+/(?:blob|tree)/([^/\s#)]+)}g;
 
     (my $text = $prose) =~ s/`[^`\n]+`//g;

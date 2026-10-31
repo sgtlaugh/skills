@@ -49,6 +49,15 @@ check "a chatbot closer" 1 "banned phrase \"Let me know if you have any [...] qu
 check "an empty offer to help" 1 "banned phrase \"Feel free to reach out\"" "The owl roosts at dusk. Feel free to reach out."
 check "feel free with a real action is how people write" 0 "" "@barn-owl, feel free to merge if the format looks good to you."
 check "absolutely inside a sentence is a word, not an opener" 0 "" "The roost is absolutely full by dusk."
+check "a quoted question is the asker's words: their phrases and dashes are not yours" 0 "" "> Does the barn close at dusk ${EM} or later? Hope this helps!
+
+Yes, at dusk. The night owls use the side door."
+check "the reply under a quote is still checked" 1 "banned phrase \"Hope this helps\"" "> Does the barn close at dusk?
+
+Yes, at dusk. Hope this helps."
+check "a long quote does not count toward the reply's length" 0 "" "> $(printf 'The barn door sticks every evening and the owls complain. %.0s' $(seq 12))
+
+Fixed the hinge."
 check "file:line in backticks is not a link" 1 "is not a link" "Every delete calls \`delay()\` (\`rendition_type.py:128\`)."
 check "file:line linked to a SHA blob" 0 "" "Every delete calls \`delay()\` ([\`rendition_type.py:128\`](https://github.com/acme/owl/blob/$SHA/app/rendition_type.py#L128))."
 check "cross-repo PR without owner" 1 "needs its owner" "With nest-config#16394 this runs twice."

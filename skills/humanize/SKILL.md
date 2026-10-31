@@ -66,7 +66,7 @@ Output the rewritten text directly. No preamble ("here's the rewrite!"). If the 
 3. **No contrast framing.** Never "It's not X, it's Y" or the escalation version. Just say what it is.
 4. **No staccato bursts.** Don't string three+ short sentences for drama. Vary length.
 5. **No rhetorical transition questions.** Delete "The catch?" "But here's the thing."
-6. **No "let's" openers.** "Let's dive in" sounds like a YouTube intro.
+6. **No "let's" that announces instead of acting.** "Let's dive in", "let's break it down", "let's explore" sound like a YouTube intro. A "let's" that proposes a concrete step stays: "Let's do the actual run on Sunday", "let's merge this and open a follow-up".
 7. **No fake naming.** Don't capitalize ordinary ideas into "The 5-Step Method."
 8. **No self-narration.** Delete "this highlights," "the key takeaway is," "here's why that matters." If the point landed, narration is dead weight.
 
