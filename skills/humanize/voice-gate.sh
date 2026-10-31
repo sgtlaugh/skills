@@ -31,7 +31,7 @@ fi
 
 # NUL-separated bodies; a shell variable can't hold NUL, so this streams straight into perl
 emit() {
-    if $json; then jq -j '.[] | (.body // "") + "\u0000"' <<<"$input"; else printf '%s\0' "$input"; fi
+    if $json; then jq -j '.[] | .body + "\u0000"' <<<"$input"; else printf '%s\0' "$input"; fi
 }
 
 emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
@@ -94,10 +94,7 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "unclosed code fence" if $in;
 
     push @v, "em dash (use a hyphen)" if $body =~ /\x{2014}/;
-    if ($body =~ m{github\.com/[^/\s]+/[^/\s]+/(?:blob|tree)/([^/\s#)]+)}) {
-        my @refs = $body =~ m{github\.com/[^/\s]+/[^/\s]+/(?:blob|tree)/([^/\s#)]+)}g;
-        push @v, "permalink pinned to \"$_\", not a commit SHA" for grep { !/^[0-9a-f]{7,40}$/ } @refs;
-    }
+    push @v, "permalink pinned to \"$_\", not a commit SHA" for grep { !/^[0-9a-f]{7,40}$/ } $body =~ m{github\.com/[^/\s]+/[^/\s]+/(?:blob|tree)/([^/\s#)]+)}g;
 
     (my $text = $prose) =~ s/`[^`\n]+`//g;
     $text =~ s{<summary>.*?</summary>}{}gis;
