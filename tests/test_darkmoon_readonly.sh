@@ -117,6 +117,28 @@ check "bash -c is not the allowed script" 2 'bash -c /opt/owl/query.sh'
 export DARKMOON_ALLOW_SCRIPT=query.sh
 check "a relative allowed path is ignored" 2 'bash query.sh x'
 unset DARKMOON_ALLOW_SCRIPT
+# Quotes hide nothing: a quoted command or flag is still that command or flag
+check "a quoted command name is still the command" 2 '"touch" "/home/owl/pwned"'
+check "a quoted interpreter after a read" 2 'ls; "python3" "-c" "import os"'
+check "a quoted gh api write flag" 2 'gh api repos/acme/owl/issues "-ftitle=pwn"'
+check "a quoted sed -i" 2 'sed "-i" s/a/b/ README.md'
+check "a quoted sort -o" 2 'sort "-o" /home/owl/x /tmp/owl.txt'
+check "a quoted find -delete" 2 'find . "-delete"'
+check "a quoted git --output" 2 'git log "--output=/home/owl/x"'
+check "a quoted rg --pre" 2 'rg "--pre=sh" x'
+check "a quoted .. in a redirect target" 2 'echo hi >/tmp/"../home/owl/x"'
+check "a heredoc marker inside quotes is not a heredoc" 2 $'echo "<<EOF"\ntouch /home/owl/x\nEOF'
+check "a quote inside a comment can't swallow the next line" 2 $'ls #\'\ntouch /home/owl/x\n#\''
+check "ANSI-C quoting is refused" 2 "echo \$'\\''; touch /home/owl/x #'"
+check "awk -f runs a program file" 2 'awk -f /tmp/p.awk /tmp/owl.txt'
+check "sed -f runs a script file" 2 'sed -f /tmp/s.sed README.md'
+check "mktemp through /tmp/.. leaves /tmp" 2 'mktemp /tmp/../home/owl/x.XXXX'
+check "mktemp -p /tmp/.. leaves /tmp" 2 'mktemp -p /tmp/../home/owl'
+check "a grep pattern with a quoted pipe and semicolon stays a read" 0 'grep -rnE "moonlit|grove; rm" .'
+check "a comment after a read is fine" 0 'ls -la # list the nest'
+# Input that can't be read is refused, never let through
+out=$(printf 'not json' | bash "$HOOK" 2>/dev/null; echo $?)
+if [ "$out" = 2 ]; then echo "  PASS: input that is not JSON is refused"; pass=$((pass+1)); else echo "  FAIL: input that is not JSON is refused (got $out)"; fail=$((fail+1)); fi
 # ponytail: known ceiling, not blocked - sed w/e commands, uniq's output-file arg, jq writes.
 # Closing them means dropping sed/uniq from the allowlist or parsing their args; a read-only container is the upgrade.
 
