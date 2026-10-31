@@ -24,8 +24,8 @@ The GitHub org comes from `~/.config/claude-skills/services.md` (`GitHub org`); 
 1. **Header** - key, title, status, assignee, and every PR found with its state (`open`/`draft`/`merged`/`closed`) and where it was found (`dev-status`, `search` or both), plus the count per source (`dev-status: 0, search: 6`).
 2. **Coverage table** - one row per requirement from Step 2: the ticket's list items, or, with no list, derived rows plus one `(derived from <repo>#<n>)` row per linked PR; `R<n>`, the requirement verbatim, `Covered` / `Covered (pre-existing)` / `Partial` / `Not addressed` / `Dropped` / `Can't-determine`, the test level (`endpoint test` / `unit test only` / `no test`), and the evidence (Step 4's rules).
 3. **Unanswered questions** - each with who asked, where (link) and when; or `none found`.
-4. **Unresolved review threads** - per PR, each current thread opened by a person: `path:line`, who opened it, its first line (trimmed to ~120 characters), and its link; then one line counting the rest (`+12 outdated, 9 from bots`); or `none`. Outdated and bot threads are counted, never listed - they bury the threads someone still has to answer.
-5. **CI** - per open PR, the head SHA's rollup state and the names of failing checks; or `no open PRs`.
+4. **Unresolved review threads** - per PR, each current thread opened by a person: `path:line`, who opened it, its first line (trimmed to ~120 characters), and its link; then one line counting the rest (`+12 outdated, 9 current from bots`); or `none`. Outdated and bot threads are counted, never listed - they bury the threads someone still has to answer.
+5. **CI** - per open PR, the head SHA's rollup state and the names of failing checks, or `no checks` when the head has no rollup; or `no open PRs`.
 6. **Contradictions** - each with both sides cited; or `none found`.
 7. **Proportionality** (Step 4b) - the changed-file classification with additions per class (`traced` / `support` / `untraced`), then up to 3 findings, each naming the requirement it goes beyond and showing the simpler alternative; or `nothing beyond the requirements`.
 8. **Verification line** - `Verified: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted` or `skipped (--fast)`.
@@ -40,7 +40,7 @@ Run in parallel:
 - Every spec or design doc the description links (Confluence via `/jira confluence <url>`) and the ticket it was split from or belongs to (`parent`, `issuelinks`) - a requirement like "Option B from the tech spec" can't be judged without the spec.
 - `gh search prs --owner <github-org> "<KEY>" --json url,state,title,isDraft` - dev-status misses PRs whose branch and title don't carry the key the way the integration expects, and a search catches them.
 
-Union the two lists by URL. dev-status often succeeds and returns nothing while the search finds every PR - report both counts; neither source alone is trusted. A failed dev-status call (`curl: (N)`) leaves the search result as the only source - say so in the header; it is not "no PRs". A closed, unmerged PR is listed but is never evidence for coverage. No PRs from either source → the coverage table is all `Not addressed`, and the status note says no work is linked.
+Union the two lists by URL. dev-status often succeeds and returns nothing while the search finds every PR - report both counts; neither source alone is trusted. A failed dev-status call (`curl: (N)`) leaves the search result as the only source - say so in the header; it is not "no PRs". A closed, unmerged PR is listed but is never evidence for coverage. No PRs found and dev-status succeeded → `Not addressed`, unless already satisfied at the default branch (`Covered (pre-existing)`). dev-status failed and search found 0 → `Can't-determine`, naming the failed call. Either way the status note says no work is linked.
 
 ### Step 2 - Requirements
 
@@ -66,8 +66,9 @@ jq -r '.data.repository.pullRequest.reviewThreads.nodes | map(select(.isResolved
      | "\(.path):\(.line // .originalLine)\t\(.comments.nodes[0].author.login)\t\(.comments.nodes[0].body | split("\n")[0] | .[0:120])\t\(.comments.nodes[0].url)"),
     "+\([$t[] | select(.isOutdated)] | length) outdated, \([$t[] | select((.isOutdated | not) and bot)] | length) current from bots"' /tmp/lordvessel-<repo>-<n>.json
 jq -r '.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup
-  | "\(.state)\t" + ([.contexts.nodes[] | select((.conclusion // .state) | IN("FAILURE","ERROR","TIMED_OUT","CANCELLED")) | .name // .context] | join(", "))' /tmp/lordvessel-<repo>-<n>.json
+  | if . == null then "NO_CHECKS" else "\(.state)\t" + ([.contexts.nodes[] | select((.conclusion // .state) | IN("FAILURE","ERROR","TIMED_OUT","CANCELLED")) | .name // .context] | join(", ")) end' /tmp/lordvessel-<repo>-<n>.json
 ```
+Every connection is one fixed-size page. One whose `pageInfo.hasNextPage` is true is reported as `(truncated at <n>)`, never `none` or a bare count.
 Check the size first with `gh pr view <n> --repo <owner>/<repo> --json additions,deletions`. Over ~3000 changed lines → skip `gh pr diff`; list the files with `gh api "repos/<owner>/<repo>/pulls/<n>/files" --paginate --jq '.[].filename'` and read each one Step 4 needs at the head SHA with `gh api -H "Accept: application/vnd.github.raw" "repos/<owner>/<repo>/contents/<path>?ref=<headRefOid>"`.
 
 ### Step 4 - Trace coverage
@@ -102,7 +103,7 @@ Step 4 asks whether every requirement has code. This step asks the reverse: does
 
 ### Step 5 - Questions and contradictions
 
-**Unanswered question:** a comment containing `?` on this ticket or its PRs (ticket comment, PR conversation, review body or review thread; a parent or split-from ticket's open question gets one context line, never the status note) with no later reply from a different person in the same place. Strip URLs before looking for `?` (a link's `?query` is not a question), and skip bot authors (a login ending in `[bot]`, Copilot, CI). A resolved thread counts as answered. Rhetorical asides don't count. Give the asker, link and date.
+**Unanswered question:** a comment containing `?` on this ticket or its PRs (ticket comment, PR conversation, review body or review thread; a parent or split-from ticket's open question gets one context line, never the status note) with no later reply from a different person in the same place. Strip URLs before looking for `?` (a link's `?query` is not a question), and skip bot authors (the `bot` regex in Step 3's thread query). A resolved thread counts as answered. Rhetorical asides don't count. Give the asker, link and date.
 
 **Contradiction:** two sources that cannot both hold, each cited:
 - the ticket requires X, the code does Y;
@@ -112,22 +113,24 @@ Step 4 asks whether every requirement has code. This step asks the reverse: does
 
 ### Step 6 - Verify (skipped with --fast)
 
-Invoke `/darkmoon --claims` (always with `--claims`) with every `Covered` and `Partial` row, every `Dropped (spec: ...)` row (as *"The spec line <quote> excludes R<n>"*), and every contradiction, each as *"In `<permalink>`, <what the code does>, which satisfies R<n>: <requirement>."*, and every proportionality finding, one claim per removable piece (a finding about two things is two claims), as *"In `<permalink>`, <the code> serves no requirement beyond R<n>, and <the alternative> would do the same."* Integrate the verdicts:
+Invoke `/darkmoon --claims` (always with `--claims`) with every `Covered` and `Partial` row as *"In `<permalink>`, <what the code does>, which satisfies R<n>: <requirement>."*, every `Dropped (spec: ...)` row as *"The spec line <quote> excludes R<n>"*, every contradiction as *"`<source A permalink>` requires X while `<code permalink>` does Y; both cannot hold."*, and every proportionality finding, one claim per removable piece (a finding about two things is two claims), as *"In `<permalink>`, <the code> serves no requirement beyond R<n>, and <the alternative> would do the same."* Integrate the verdicts:
 - **Refuted** → `Not addressed`, or `Partial` when part survives.
 - **Weak** → `Partial`, with the skeptic's counter as the missing piece.
 - **Can't-determine** → keep the status, add the skeptic's open question to the row.
 - **Upheld** → mark `(verified)`.
 - **Dropped rows:** Refuted → back to `Partial` or `Not addressed`, with the skeptic's counter.
-- **Proportionality findings,** per piece: Refuted → drop the piece; Weak → keep it as a question marked `(weak)` with the skeptic's counter - Weak means the evidence is thin, not that it is wrong, and the reader decides; Can't-determine → keep it with the skeptic's open point; Upheld → `(verified)`. A finding whose pieces were all refuted is gone. Under `--fast` they are marked `(unverified)`.
+- **Contradictions:** Refuted → drop it; Weak → keep, marked `(weak)` with the counter; Can't-determine → keep with the open point; Upheld → `(verified)`.
+- **Proportionality findings,** per piece: Refuted → drop the piece; Weak → keep it as a question marked `(weak)` with the skeptic's counter - Weak means the evidence is thin, not that it is wrong, and the reader decides; Can't-determine → keep it with the skeptic's open point; Upheld → `(verified)`. A finding whose pieces were all refuted is gone.
+- Under `--fast`, every `Covered`, `Partial` and `Dropped (spec)` row, every contradiction and every proportionality finding is marked `(unverified)`.
 
 ### Step 7 - Status note
 
 Draft a note for the ticket or the PR, in the voice of `~/.claude/skills/humanize/references/github-voice.md` (read it first):
-- First line: where the work stands - `<covered> of <N> requirements covered`, where N excludes Dropped rows and the dropped ones are named (`2 of 2 requirements covered, R2 dropped by the spec` - never `2 of 3`), and one of: ready for review, blocked, waiting on someone, or done with items still open.
+- First line: where the work stands - `<covered> of <N> requirements covered`, where covered = `Covered` + `Covered (pre-existing)` (`Partial` and `Can't-determine` are listed as open), N excludes Dropped rows and the dropped ones are named (`2 of 2 requirements covered, R2 dropped by the spec` - never `2 of 3`), and one of: ready for review, blocked, waiting on someone, or done with items still open.
 - Then only what is open, as a list: each not-addressed or partial requirement, each contradiction, each unanswered question (who it waits on), unresolved threads, failing CI. Each item carries its link. Five or fewer unresolved threads on a PR are listed one by one; more become one line per PR with the count and the PR link.
 - Nothing else: no praise, no restating covered work, no darkmoon detail.
 
-Write it to a file and run the gate:
+Run the gate on the draft:
 ```bash
 bash ~/.claude/skills/humanize/voice-gate.sh --max-chars 1000 <<'EOF'
 <the draft note>

@@ -1,6 +1,6 @@
 ---
 name: humanize
-description: Strip AI patterns from text and rewrite for human voice. Use when text sounds robotic, AI-generated, or needs de-AI-ing.
+description: Strip AI patterns from text and rewrite it for a human voice. Use when text sounds AI-generated. For GitHub review comments, PR replies and status notes it also applies github-voice and runs voice-gate; --concise halves length.
 trigger: /humanize
 allowed-tools: Read, Bash(bash ~/.claude/skills/humanize/voice-gate.sh:*)
 ---
@@ -18,6 +18,8 @@ Remove the patterns that mark text as AI-generated, then tighten for clarity.
 /humanize --concise ...   # any of the above, and cut length roughly in half
 ```
 
+If the argument is an existing path, Read it; otherwise treat it as text.
+
 ## Workflow
 
 ### Step 1: Scan for tells
@@ -28,16 +30,7 @@ If the user gave instructions about voice, audience, or format, honor those alon
 
 **Required format beats these style rules.** On another skill's output (e.g. `/nicepr --humanize`), keep the structure it requires - headings and their fixed emoji (`### ✅ QA Steps`), `**Lead-in:**` bold labels with a colon, Title Case titles, `- [ ]` checkboxes, code blocks, permalinks - and rewrite only the prose inside it. In PR text, nicepr's format requires bold lead-ins with a colon and Title Case PR titles; stripping those from a PR is WRONG. Outside PRs the banned list's bold and casing rules apply as written.
 
-**Text headed for GitHub** (a review comment, PR reply or status note): also follow `references/github-voice.md`, then pipe the rewrite into the gate on stdin (`bash ~/.claude/skills/humanize/voice-gate.sh <<'EOF'` ... `EOF`, so no file has to be written) and fix every line it prints until it prints `voice-gate: clean`.
-
-### Step 1b: Concise mode (only with --concise)
-
-Also cut length by ~50% after stripping patterns:
-- Every paragraph that can be one sentence, make it one sentence
-- Every sentence that can lose a clause without losing meaning, cut the clause
-- Collapse implementation details into a single bullet or `<details>` block
-- If a table says it, don't also say it in prose above/below the table
-- Target: the reader gets the full picture in under 2 minutes
+**Text headed for GitHub** (a review comment, PR reply or status note): also follow `references/github-voice.md`, then pipe the rewrite into the gate on stdin (`bash ~/.claude/skills/humanize/voice-gate.sh <<'EOF'` ... `EOF`, so no file has to be written) and fix every line it prints until it prints `voice-gate: clean`. Review summaries and status notes over 600 chars need `--max-chars N`. The gate also accepts a JSON array of review comments (objects with a `"body"` string), checked per comment plus a 5-comment cap. A hit you believe is a false positive is reported verbatim with the reason, never silently skipped.
 
 ### Step 2: Apply the rules
 
@@ -47,13 +40,22 @@ Two passes:
 
 Read `references/banned-list.md` before the first pass: the completion contract checks against it.
 
+### Step 2b: Concise mode (only with --concise)
+
+Also cut length by ~50% after stripping patterns:
+- Every paragraph that can be one sentence, make it one sentence, as long as that sentence has at most one dependent clause (the clause rule still applies)
+- Every sentence that can lose a clause without losing meaning, cut the clause
+- Collapse implementation details into a single bullet or `<details>` block
+- If a table says it, don't also say it in prose above/below the table
+- Target: the reader gets the full picture in under 2 minutes
+
 ### Step 3: Self-check
 
-Scan the output for surviving patterns. Search for em dashes, "let's," "leverage," "underscore," any "it's not X, it's Y" construction. Check: did three short sentences land in a row? Is there a rule-of-three list?
+Walk the completion contract item by item; for the banned-phrases item, make one pass per section heading of banned-list.md.
 
 ### Step 4: Deliver
 
-Output the rewritten text directly. No preamble ("here's the rewrite!"). If the user asked for a comparison, provide it after the text.
+Output the rewritten text directly. No preamble ("here's the rewrite!"). If the user asked for a comparison, provide it after the text. For GitHub text, end with the gate's final output line after the rewrite.
 
 ---
 
@@ -80,11 +82,13 @@ Output the rewritten text directly. No preamble ("here's the rewrite!"). If the 
 
 **Verbs:** leverage - use; harness - use; unlock (figurative) - enable; delve - look at; navigate (figurative) - handle; underscore - show; foster - build; streamline - simplify; craft (figurative) - write or make; spearhead - lead; demystify - explain; utilize - use; facilitate - help; optimize - improve; augment - add to.
 
+Skip a swap when the word is the precise technical term: implement an interface, optimize a query, a feature flag.
+
 **Adjectives to cut:** seamless, robust, cutting-edge, innovative, transformative, comprehensive, holistic, dynamic, scalable, groundbreaking, pivotal, unprecedented.
 
 **Transitions to cut:** moreover, furthermore, however (as opener), nevertheless, nonetheless, thus, hence, indeed, notably, additionally, consequently.
 
-For the complete list, read `references/banned-list.md`.
+The complete list is `references/banned-list.md`, required reading per Step 2.
 
 ### Style fixes
 
@@ -110,7 +114,7 @@ After stripping patterns, apply these for technical/PR/doc contexts:
 
 ## Example
 
-**Before (AI-generated PR description):**
+**Before (AI-generated, a free-form PR description, not nicepr output):**
 
 > ## Overview
 >
@@ -133,7 +137,7 @@ After stripping patterns, apply these for technical/PR/doc contexts:
 > - Raise `ArchiveCopyError` on exhausted retries instead of logging and continuing
 > - Cover the retry and failure paths in `test_archive_tasks.py`
 
-What changed: "comprehensive improvements" gone, "additionally" gone, "robust" gone, parenthetical aside gone, self-narration ("the changes also update") gone. What replaced it: the actual bug in one sentence, verb-led bullets for what changed.
+What changed: "comprehensive improvements" gone, "additionally" gone, "robust" gone, parenthetical aside gone, filler ("the changes also update") gone. What replaced it: the actual bug in one sentence, verb-led bullets for what changed.
 
 ---
 
@@ -148,6 +152,8 @@ The output is NOT done until:
 6. No surviving banned phrases from the reference list
 7. The required structure from Step 1 is intact: headings and their fixed emoji, `**Lead-in:**` labels, Title Case PR titles, checkboxes, code blocks
 8. No three short sentences in a row (Hard rule 4)
+9. Each of Hard rules 1-8 holds, checked by number
+10. Text headed for GitHub: the last gate run printed `voice-gate: clean`
 
 ## Reference files
 

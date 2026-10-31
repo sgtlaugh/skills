@@ -1,8 +1,8 @@
 ---
 name: nicepr
-description: Generate short, human PR titles and descriptions from branch diff and JIRA context
+description: Generate short, human PR titles and descriptions from branch diff and JIRA context; with --create or --update, pushes to your fork and opens or edits the PR
 trigger: /nicepr
-allowed-tools: Read, Write, Edit, Skill, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(gh pr checkout:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*), Bash(head:*)
+allowed-tools: Read, Write, Edit, Skill, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*)
 ---
 
 # /nicepr - Generate PR Description
@@ -63,9 +63,11 @@ git diff --stat $UPSTREAM/$BASE...HEAD
 git diff $UPSTREAM/$BASE...HEAD
 ```
 
+Empty `git log` output -> stop with 'No commits ahead of $UPSTREAM/$BASE'; generating a body is NOT valid.
+
 Record the detected `BASE` as a literal alongside the Step 0b values.
 
-Always read full diff - needed for accurate What changed bullets. For very large diffs (500+ lines), focus on the most impactful changes and summarize the rest.
+Always read full diff - needed for accurate Changes bullets. For very large diffs (500+ lines), focus on the most impactful changes and summarize the rest.
 
 Extract JIRA ticket ID from branch name (pattern `[A-Z]+-\d+`). If found, invoke the `/jira` skill to fetch the ticket (e.g., `/jira PROJ-1234`) for summary, description, and linked issues. Treat any of these as a failed fetch: stderr contains `unset in the credentials file`, `Could not open file` or any `curl: (N)`, empty output, `.errorMessages` in the response, or no `.fields.summary`. On a failed fetch, skip JIRA and generate from commits only - stopping to ask for credentials or editing the credentials file is NOT valid.
 
@@ -104,7 +106,8 @@ Short, clean, scannable. Write like a human talking to a teammate, not a report.
 
 - Blank line between bullets when each bullet has substantial text (more than a short phrase). For short, one-line bullets, no blank line needed.
 
-### Related Issues  (optional - only when there are linked Sentry/JIRA/GitHub references)
+### Related Issues
+<!-- optional - only when there are linked Sentry/JIRA/GitHub references -->
 
 **Sentry issues:**
 - [ISSUE-ID](url) - N events, description
@@ -123,7 +126,7 @@ Short, clean, scannable. Write like a human talking to a teammate, not a report.
 Adapt to PR size:
 - **Most PRs**: Why + Changes, plus QA only when a reviewer has a manual check to run before merge (see QA quality).
 - **Large PRs**: use the large-PR house style below (badges, emoji sections, callouts, tables, mermaid) when each piece earns its space.
-- **Risk or open questions**: add only when genuinely needed.
+- **Risk or open questions**: add a Risk line only when the diff changes a migration, a public API or a default; otherwise omit.
 - **Reproduction**: skip when QA steps already cover it. Only add as a separate section when repro steps are complex and distinct from QA.
 
 ### Writing style
@@ -137,6 +140,7 @@ Humor is welcome when it fits naturally - a witty commit reference, a self-depre
 - Imperative mood - "Fix N+1 query" not "Fixed" or "Fixes"
 - One fact per bullet. If a bullet needs two sentences, split it.
 - Be specific: "Fix N+1 query in add_items loop" not "Optimize database performance"
+- Every number in Why (and event counts in Related Issues) must appear in the diff, commits, the JIRA ticket or a linked Sentry issue. With no source, leave the number out; an invented figure is WRONG.
 
 **Kill these (AI tells):**
 - "This PR introduces/ensures/implements/adds support for". Just state what changed.
@@ -185,14 +189,14 @@ Each QA item names a concrete action + expected result. "Verify it works" is NOT
 
 ### Bullet granularity
 
-What changed bullets should roughly match commit granularity. 3 commits = ~3 bullets, not 8 bullets expanding every file touched. The diff shows file-level details; bullets tell the story.
+Changes bullets should roughly match commit granularity. 3 commits = ~3 bullets, not 8 bullets expanding every file touched. The diff shows file-level details; bullets tell the story.
 
 ### House style - focused PRs (most PRs: a fix, a hardening, a feature slice)
 
 - **Why leads with the cause and a hard number.** When the cause differs from the symptom, open with the one-line `**Root Cause:**` naming the mechanism and the limit or error: "CSV export runs inside the request and hits the 30-second gateway timeout." Then 1-2 sentences sizing it with real figures - counts, ratios, worst case: "Exports stream ~4,000 rows a second. Anything over ~120k rows fails; the largest tenant has 2.1M." Numbers beat adjectives.
 - **Each Changes bullet is one sentence: verb → mechanism → visible effect.** "Move CSV export to a background job that emails a link, so 2M-row exports finish." Identifiers in backticks. A tracked-issue reference is the one allowed second sentence: `Fixes [ISSUE-ID](url).`
-- **Related Issues say how each one relates,** not just that it exists. Group by source with bold sub-heads (**Sentry issues:**, **JIRA:**, **GitHub:**); each item is link - impact (event count) - where (function/endpoint) - symptom. Name the relation: same problem with a different fix, related but not covered here, or "Supersedes #N - that one retries; this one removes the cause".
-- **QA always covers the triggering input and the behavior that must stay unchanged:** "Export a 2M-row report - a link arrives, no 504." and "Export a 50-row report - same file as before." Add a step per variant surface - another view, mode or entry point - when the change reaches it.
+- **Related Issues say how each one relates,** not just that it exists. Group by source with bold sub-heads (**Sentry issues:**, **JIRA:**, **GitHub:**); each item is link - impact (event count) - where (function/endpoint) - symptom. Name the relation: same problem with a different fix, related but not covered here, or "Supersedes #N. That one retries; this one removes the cause."
+- **QA always covers the triggering input and the behavior that must stay unchanged:** "Export a 2M-row report. A link arrives and there is no 504." and "Export a 50-row report. The file matches the old output." Add a step per variant surface - another view, mode or entry point - when the change reaches it.
 
 ### House style - large PRs (new scripts, pipelines, migrations, performance work)
 
@@ -253,6 +257,8 @@ The PR body is NOT done until:
 6. No walls of text (max 3 sentences per block)
 7. Bullet spacing: blank lines between bullets when each has substantial text; no blank lines for short one-liners
 8. Zero private details - no customer org IDs/names/domains, user IDs, or local branch names/paths
+9. Title under 70 chars, Title Case, `<TICKET-ID>: ` prefix when the branch has one
+10. The reply shows the title, the full body as direct text, and the BODY_FILE path
 
 ## Step 2b - Humanize (only with --humanize)
 
@@ -273,7 +279,7 @@ After every edit the user requests, re-save the file before showing the new prev
 
 Show the title separately above the body. Ask: "Look good? Edit anything?"
 
-Wait for user feedback before proceeding. Without `--create`/`--draft`, the run ends at the approved preview - "looks good" approves the text, it does NOT ask for a PR.
+Wait for user feedback before proceeding. Without `--create`/`--draft`, the run ends at the approved preview - "looks good" approves the text, it does NOT ask for a PR, unless the user then explicitly says to create it.
 
 **Hard rules for preview:**
 - QA items MUST use `- [ ]` checkbox syntax. A QA item without `- [ ]` is WRONG. Self-check before showing.
@@ -312,17 +318,21 @@ Non-empty output → add `--reviewer <output>` and name the reviewers in the rep
 
 ## Step 5 - Update PR (only with --update)
 
-Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `ORG_REPO`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls.
+Run Step 0 first (it detects FORK_REMOTE, ORG_REPO, BASE). Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `ORG_REPO`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls.
 
 ```bash
 gh pr view $BRANCH --repo $ORG_REPO --json number,title,body,url
 ```
 
-If no PR found, error out. Push new commits first if any unpushed, then run Steps 0-2. Treat existing description as baseline - preserve manual edits, merge new changes in. Save the new body with the Step 3 save block, show the diff, confirm before updating.
+If no PR found, error out. Check for unpushed commits with `git log $FORK_REMOTE/$BRANCH..HEAD --oneline`; non-empty output → push them:
 
 ```bash
 git push $FORK_REMOTE $BRANCH
+```
 
+Then run Steps 1-3. Treat existing description as baseline - preserve manual edits, merge new changes in. Save the new body with the Step 3 save block, write the old PR body to `${BODY_FILE%.md}.old.md`, show the diff with `git diff --no-index "${BODY_FILE%.md}.old.md" "$BODY_FILE"`, confirm before updating.
+
+```bash
 gh pr edit $BRANCH --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FILE"
 ```
 
@@ -331,6 +341,7 @@ gh pr edit $BRANCH --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FIL
 - **Preview first.** Always show title + body before creating. Never auto-create.
 - **Never push to upstream (the org's repo).** Always push to the fork remote, found by its URL's owner, even when it is named `origin`.
 - **Never force push.** If push fails, show error and ask.
+- These two hold by instruction only: `Bash(git push:*)` matches `--force` and any remote. A settings deny rule for `git push*--force*` and `git push* -f*` is the backstop for force pushes.
 - **No empty PRs.** If no commits ahead of base, error out.
 - **JIRA link format.** Always `<JIRA_URL>/browse/<ID>`, where `JIRA_URL` is the `jiraBaseUrl` the `/jira` skill resolves in its Setup - never a guessed or hardcoded site.
 - **QA items always use checkboxes** (the section itself is conditional - see QA quality). Every QA item uses `- [ ]`. A QA line starting with `- ` without `[ ]` is WRONG - the whole point is a clickable checklist on GitHub. Self-check: scan the QA section for bare `- ` before presenting.

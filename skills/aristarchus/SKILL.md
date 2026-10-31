@@ -2,7 +2,7 @@
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(wc:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -41,7 +41,7 @@ gh pr view <url> --json title,body,author,baseRefName,headRefName,additions,dele
 ```
 Read the title/body, each commit message to understand intent. **A mismatch between stated intent and actual changes is itself a finding.** When the PR body makes verifiable claims about the code's behavior (ordering, flow, error handling), spot-check each against the actual code. Claims about production data or incidents are unverifiable from code - note them as accepted context, not confirmed facts.
 
-Extract a ticket ID (`[A-Z]+-\d+`) from `headRefName` + `title`. If found, fetch it with the **`/jira` skill** (`/jira <TICKET-ID>`) - don't hand-roll auth. Capture summary, description, acceptance criteria, comments, and **linked issues** (`issuelinks`, outside `/jira`'s default fields). This is the *why* behind the change. Keep essentials only; don't retain raw JSON. If none found or it fails, continue - the header's `JIRA` field records which.
+Extract a ticket ID (`[A-Z]+-\d+`) from `headRefName` + `title`. If found, fetch it with the **`/jira` skill** (`/jira <TICKET-ID>`) - don't hand-roll auth. Capture summary, description, acceptance criteria, comments, and **linked issues** (`issuelinks`). This is the *why* behind the change. Keep essentials only; don't retain raw JSON. If none found or it fails, continue - the header's `JIRA` field records which.
 
 **Ticket supplied by the caller.** When the invocation includes a `Ticket context:` block, use it as the fetched ticket and skip `/jira`. A caller such as an automated reviewer fetches the ticket outside the review session so the Jira token never reaches it; the block carries the same fields listed above. The header's `JIRA` field reads `<ID> supplied`.
 
@@ -75,7 +75,7 @@ Detect whether the diff touches configuration or infrastructure settings. Do not
 >
 > *Produce a comparison table of ALL documented options for this setting with columns: Option | Behavior on [relevant edge case] | When to use | Risk. Cite sources. Do NOT recommend one option - present the facts for a human to decide."*
 
-Step 3b is complete when the research agent returns a comparison table with **≥2 options** and **≥1 cited source**. If the agent fails or returns no table, note `config research: failed` in the review header and proceed without - do not block the review.
+Step 3b is complete when the research agent returns a comparison table with **≥2 options** and **≥1 cited source**. If the agent fails or returns no table, note `config research: failed` in the Summary's not-examined sentence and proceed without - do not block the review.
 
 The research output (the comparison table + sources) is stored and passed verbatim to ALL debiased lens agents as additional context under the heading **"Config research (from official docs):"**.
 
@@ -220,7 +220,7 @@ grep -m1 -iE "^<package>(\[[^]]*\])?==" ./requirements.txt | cut -d= -f3 | cut -
 # Node - .packages is lockfile v2/v3, .dependencies is v1
 jq -r --arg p "<package>" '(.packages["node_modules/" + $p].version) // (.dependencies[$p].version) // empty' ./package-lock.json
 ```
-If no lockfile or no pin found, note `library tracing: version unknown, skipped` and proceed without.
+If no lockfile or no pin found, note `library tracing: version unknown, skipped` in the Summary's not-examined sentence and proceed without.
 
 **Getting the source:** download and unpack, never install. Python: the wheel (or source tarball) from PyPI's JSON API. Node: `npm pack`, which runs no scripts for a registry package. Installing a source package executes its build code, and the version comes from the PR under review. The agent handles this internally - aristarchus's own `allowed-tools` does not need expanding because `Agent` subagents have full tool access.
 
@@ -257,10 +257,10 @@ If no lockfile or no pin found, note `library tracing: version unknown, skipped`
 Pass the agent: the diff, the changed file paths, and the specific claims/config keys to trace. Include the worktree path so it can read the changed files.
 
 **After the agent completes:**
-- Merge findings into the main review. Each is `Confirmed` with `source:library` in its verification line - these are evidence-grade because the agent read the actual source.
+- Merge findings into the main review. Each carries `source:library` in its verification line. `Confirmed` only when the finding's verification line quotes the agent's cited `path:line`; otherwise `Inferred`.
 - Library-traced findings that contradict a diff comment are `warning` minimum (a comment lying about library behavior misleads future maintainers).
 - If the agent found no contradictions, note in the output: *"Library source tracing: no contradictions found in `<packages>`."*
-- If the agent failed (download error, network), note: *"Library source tracing: skipped (`<reason>`)."*
+- If the agent failed (download error, network), note in the Summary's not-examined sentence: *"Library source tracing: skipped (`<reason>`)."*
 
 ## Step 6c - Cross-Repo Check (skipped with --fast)
 
@@ -268,7 +268,7 @@ When the diff touches infra files (`charts/`, `deploy/`, `workers/`, `tasks/`, k
 
 **Which repos:** the ones the target repo's `CLAUDE.md` names; else the `$WORKSPACE` repos whose name contains `config`, `infra`, `deploy`, `ops`, `terraform` or `helm` (`ls "$WORKSPACE"`).
 
-**Timing:** Background `Agent`, launched alongside 6a/6b. If no such repo exists on disk, skip and note: *"Cross-repo check: no infra/config repo found, skipped."*
+**Timing:** Background `Agent`, launched alongside 6a/6b. If no such repo exists on disk, skip and note in the Summary's not-examined sentence: *"Cross-repo check: no infra/config repo found, skipped."*
 
 **Agent prompt:**
 
@@ -279,7 +279,7 @@ When the diff touches infra files (`charts/`, `deploy/`, `workers/`, `tasks/`, k
 >
 > *For each mismatch, cite `repo/path:line` and state what breaks. If no mismatches, say so."*
 
-Each finding is `Confirmed` with `source:cross-repo` in its verification line. Deployment mismatches are `warning` minimum.
+Each finding carries `source:cross-repo` in its verification line; `Confirmed` follows the same rule as Step 6b. Deployment mismatches are `warning` minimum.
 
 ## Step 7 - Existing Comments
 
@@ -302,8 +302,8 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Integrate verdicts:**
 - **Refuted** → drop the finding from the findings list; it survives only as a count in the header's **Verified** line.
-- **Upheld** → keep as-is. End its verification line with `(verified)`.
-- **Weak** → keep its severity (Weak is about the evidence, not the impact), add the skeptic's counter to the finding body, and end the verification line with `(weak)`. A Weak `nit` is dropped and counted under refuted in the **Verified** line.
+- **Upheld** → an `Inferred` finding becomes `Confirmed` (darkmoon's verdict is the evidence); end its verification line with `(verified)`.
+- **Weak** → keep its severity, since Weak is about the evidence, not the impact (a critical still drops to warning, below), add the skeptic's counter to the finding body, and end the verification line with `(weak)`. A Weak `nit` is dropped and counted under refuted in the **Verified** line.
 - **Can't-determine** → keep, but cap at `warning`, note what would settle it, and end the verification line with `(unresolved)`.
 
 **A Critical that darkmoon marks Weak or Can't-determine is downgraded to Warning.** Only Upheld findings may be Critical in verified output.
@@ -411,15 +411,17 @@ It checks each finding header, that the emoji matches the severity word, that th
 2. Conventions field shows what was loaded (or "none found")
 3. Existing comments field is filled - count fetched + deduped
 4. Summary includes Confidence + Recommendation
-5. Summary states **what was NOT examined** (e.g., "scripts/ not grepped", "sampled 30 of 55 files") - a clean review with unstated scope gives false confidence
+5. Summary states **what was NOT examined** (e.g., "scripts/ not grepped", "sampled 30 of 55 files") - a clean review with unstated scope gives false confidence. Status notes from skipped or failed steps (config research, library tracing, cross-repo check) go in this sentence
 6. Library source tracing status is noted - ran (packages + finding count), skipped (reason), or N/A (no library calls detected)
 7. Cross-repo analysis status is noted - ran (repos checked + finding count), skipped (reason), or N/A (no related repos configured)
 8. JIRA field is filled - ticket fetched, supplied, none found, or failed
 9. `parse-findings.sh --check` printed `parse-findings: ok` on the final review
+10. `ExitWorktree` ran with `action: "remove"`
+11. Every lens that ran appears in the lens section, with findings or `<Lens>: no findings`
 
 ## Guard Rails
 
-- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only.
+- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only. Lens, tracer and cross-repo subagents have full tool access; for them the read-only guarantee is prompt-only unless deny rules cover Edit/Write in `$WORKSPACE`.
 - **Always use `EnterWorktree`** - never raw `git worktree add`. The worktree is disposable and read-only.
 - **`gh` auth required** - if `gh auth status` fails, stop and tell the user to run `gh auth login`.
 - **Always clean up the worktree** via `ExitWorktree`, even if interrupted.

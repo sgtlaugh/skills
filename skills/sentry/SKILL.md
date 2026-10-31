@@ -45,7 +45,7 @@ For every required item: show the real artifact, OR write `Can't-determine` + th
 - **Source location** as `repo path:line @ <release>`, found at the release SHA. For a project the catalog marks **compiled**, say the frame line is compiled and give the source line you located.
 - **Next steps block** (see Hand off) with the real `request_id`, log service and repo filled in from the catalog.
 
-**Is It Fixed? also:** the release's `firstEvent`/`lastEvent`, this issue's event count on that release (0 when absent from the release list), the issue's pre-fix daily rate and the events expected since the release went live, and the verdict - `Fixed (evidence)` / `Not fixed` / `Too early` / `Can't-determine` - with the numbers that decide it.
+**Is It Fixed? also:** the release's `firstEvent`/`lastEvent`, this issue's event count on that release (0 when absent from the release list), the issue's pre-fix daily rate and the events expected since the release went live, and the verdict - `Fixed (evidence)` / `Not fixed` / `Too early` / `Rollout in progress` / `Can't-determine` - with the numbers that decide it.
 
 **Empty result is a valid report** - state it with the scope line that proves where you looked.
 
@@ -108,7 +108,7 @@ curl -sS --fail-with-body "$S/issues/$I/events/latest/" -H "Authorization: Beare
                   msg: ((.message // ((.data.method // .data["http.method"] // "") + " " + ((.data.url // "") | sub("\\?.*$"; "")) + " " + ((.data.status_code // "") | tostring))) | .[0:120])}][-10:]}}'
 curl -sS --fail-with-body "$S/issues/$I/tags/release/" -H "Authorization: Bearer $SENTRY_TOKEN" | tr -d '\000-\010\013\014\016-\037' \
   | jq '[.topValues[:5][] | {release: .value, events: .count, firstSeen, lastSeen}]'
-curl -sS --fail-with-body "$S/issues/$I/tags/<spread-tag>/" -H "Authorization: Bearer $SENTRY_TOKEN" \
+curl -sS --fail-with-body "$S/issues/$I/tags/<spread-tag>/" -H "Authorization: Bearer $SENTRY_TOKEN" | tr -d '\000-\010\013\014\016-\037' \
   | jq '.totalValues as $t | {tag: .key, unique: .uniqueValues, total: $t,
          top: [.topValues[:3][] | {value, count, sharePct: (if $t > 0 then (.count * 100 / $t | floor) else null end)}]}'
 ```
@@ -171,13 +171,14 @@ Same request with `query=is:unresolved firstSeen:-$PERIOD` and `sort=new`. `firs
 
 ## Search
 
-Free text matches title and message; quote multi-word phrases. Exact exception class: `error.type:<Type>`.
+Free text matches title and message; quote multi-word phrases. Exact exception class: `error.type:<Type>`. Search defaults to `90d` (duplicate checks need history); other commands default to `24h`.
 ```bash
 curl -sS --fail-with-body -G "$S/issues/" -H "Authorization: Bearer $SENTRY_TOKEN" \
   --data-urlencode 'query="cannot be refunded"' --data-urlencode "project=-1" --data-urlencode "statsPeriod=90d" --data-urlencode "limit=10" \
   | tr -d '\000-\010\013\014\016-\037' \
   | jq -r '.[] | [.shortId, .status, .count, .metadata.type, (.metadata.value // "")[:80], .project.slug, .permalink] | @tsv'
 ```
+Present a table: Short ID (linked to its permalink), Status, Events (period), Type, Value, Project.
 Swap the query for `error.type:TimeoutError` to match an exception class exactly. `metadata.type`/`metadata.value` are the exception type and message - compare those, not the title.
 Search covers resolved issues too unless the query adds `is:unresolved`. Show `status` per row - for duplicate checks, a resolved issue that recurs is a regression, not a new bug. Free text is fuzzy: confirm a match by comparing the exception `type` + `value`, never the title alone.
 
@@ -188,9 +189,9 @@ Did the deploy of `<release>` stop this issue? `<release>` must be the version s
 I=API-511 R=edce648713
 curl -sS --fail-with-body "$S/issues/$I/" -H "Authorization: Bearer $SENTRY_TOKEN" | tr -d '\000-\010\013\014\016-\037' \
   | jq '{status, lastSeen, daily30d: [.stats["30d"][] | {day: (.[0] | todate[:10]), events: .[1]}]}'
-curl -sS --fail-with-body "$S/releases/$R/" -H "Authorization: Bearer $SENTRY_TOKEN" \
+curl -sS --fail-with-body "$S/releases/$R/" -H "Authorization: Bearer $SENTRY_TOKEN" | tr -d '\000-\010\013\014\016-\037' \
   | jq '{version, dateCreated, firstEvent, lastEvent}'
-curl -sS --fail-with-body "$S/issues/$I/tags/release/values/" -H "Authorization: Bearer $SENTRY_TOKEN" \
+curl -sS --fail-with-body "$S/issues/$I/tags/release/values/" -H "Authorization: Bearer $SENTRY_TOKEN" | tr -d '\000-\010\013\014\016-\037' \
   | jq --arg r "$R" '{onRelease: ([.[] | select(.value == $r) | {count, firstSeen, lastSeen}][0] // "absent"),
                       oldestListed: (map(.lastSeen) | min),
                       otherReleases: [.[] | select(.value != $r) | {value, count, lastSeen}][0:5]}'
@@ -201,11 +202,12 @@ Verdict, first match wins:
 1. **`Can't-determine`** - the release call failed (`curl: (22)`: Sentry never saw that version - check the format), or the release is older than `oldestListed` - judged by `firstEvent`, or by `dateCreated` when `firstEvent` is null (an old release's events expire, so null there means "aged out", not "never ran"). Outside the list, absence proves nothing.
 2. **`Too early`** - a recent release (`dateCreated` after `oldestListed`) whose `firstEvent` is null (not deployed or no traffic yet), or the events expected since it went live are under 5: expected = the issue's average daily count over the `daily30d` days before `firstEvent` × days since `firstEvent`. Say when it would reach 5.
 3. **`Not fixed`** - `onRelease` has a count: show it with its first/last seen.
-4. **`Fixed (evidence)`** - `onRelease` is absent, ~5+ events were expected, and the issue's `lastSeen` is before the release's `firstEvent`. Report "0 events on `<release>` where ~N were expected".
+4. **`Fixed (evidence)`** - `onRelease` is absent, 5 or more events were expected, and the issue's `lastSeen` is before the release's `firstEvent`. Report "0 events on `<release>` where ~N were expected".
 5. **`Rollout in progress`** - absent on `<release>`, but `otherReleases` show events after its `firstEvent`: older pods are still serving. Re-check once the rollout finishes.
+6. **`Can't-determine`** - none of the above matched; show `lastSeen`, `firstEvent` and `otherReleases`.
 
 ## Rules
 
-- **READ ONLY.** GET requests only - no resolve/ignore/assign/comment. Issue writes are blocked by the token's scopes; `curl` and `gh api` are GET-only by this rule (no `-X`, `-d`, `-f`).
+- **READ ONLY.** GET requests only - no resolve/ignore/assign/comment. Issue writes are blocked by the token's scopes, but release writes are not (`project:releases`); `curl` and `gh api` are GET-only by this rule (no `-X`, `-d`, `-f`).
 - **Production data** - events carry user IDs, URLs, IPs. Summarize; don't dump raw events or `request.headers`/`user` objects.
-- **`git`/`gh` read deployed code only** - `git show`/`git grep`/`git log`/`git cat-file`, `gh api .../contents`. No checkout, fetch, or writes (same rule as `/triage`). Backstop: `Bash(git -C:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them (`permissions.deny`: `git -C` with `checkout`, `fetch`, `commit` or `push`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`).
+- **`git`/`gh` read deployed code only** - `git show`/`git grep`/`git log`/`git cat-file`, `gh api .../contents`. No checkout, fetch, or writes (same rule as `/triage`). Backstop: `Bash(git -C:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them (`permissions.deny`: `git -C` with `checkout`, `fetch`, `commit` or `push`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`, and `curl` with `-X`, `--request`, `-d`, `--data*`, `-F` or `-T`).

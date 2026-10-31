@@ -27,14 +27,14 @@ Points at an existing skill and reports structural flaws + concrete fixes. It **
 - Note the skill's own shape: frontmatter, command/step structure, whether it has an output contract.
 
 ## Step 2 - Run the checks
-Grep where a pattern decides it; reason for the rest. Each finding needs a `line` + a concrete fix.
+Grep where a pattern decides it; reason for the rest. Each finding quotes the offending text verbatim beside its `line`, plus a concrete fix; a finding with no quote is invalid.
 
 ### A. Binding - vague rules don't change behavior (the #1 check)
 The hardest-won truth: **advisory prose doesn't bind; concrete fixed-outcome rules do.** Find the weak ones:
 ```
 grep -niE "try to|consider|if unclear|should( probably)?|when possible|ideally|aim to|attempt to|make sure( to)?|be careful" "<resolved SKILL.md>"
 ```
-**Discard false positives first:** a hit inside a ``` ``` code fence (query DSL - OpenSearch bool `should`/`must`; example commands) or inside a regex/grep pattern string is **syntax/example, not an advisory rule** - skip it. (kiln's own check pattern + bool-query `should` trip this; don't self-flag.)
+**Discard false positives first:** a hit inside a ``` ``` code fence (query DSL - OpenSearch bool `should`/`must`; example commands) or inside a regex/grep pattern string, or a quoted example phrase in prose, is **syntax/example, not an advisory rule** - skip it. (kiln's own check pattern + bool-query `should` trip this; don't self-flag.)
 
 For each surviving hit: does it give the model a **fixed outcome**, or just nudge? A rule that *gates behavior on judgment* ("if unclear, escalate"; "try to be thorough") won't fire under pressure. **Fix shape:** rewrite to a fixed outcome - *"<giving up> is NOT a valid stop until you tried A, B, C"* / *"the headline is the exact <artifact>, never <tempting-wrong-value>"*. The give-up must be explicitly invalid; the desired result must be fixed.
 
@@ -58,7 +58,7 @@ grep -nE "[Ss]ee (the )?[A-Z]" "<resolved SKILL.md>"   # case-sensitive: a capit
 - **No-op** - a line the model "already obeys by default." **CAUTION - departs from writing-for-agents' "delete failing sentences":** you **cannot reliably judge a no-op statically.** A line that reads like rationale can be load-bearing teeth (a count rule's two-number example looked trimmable; cutting it regressed the count). **Flag as "candidate no-op - verify by running with/without before deleting", NEVER "delete".** For behavioral skills, prove it's inert empirically first.
 
 ### E. Frontmatter & description
-- **Description** front-loads the leading word; one trigger per behavior-branch; no identity already restated in the body.
+- **Description** opens with the verb or trigger phrase a user would type (e.g. "Lint a skill"); one trigger per behavior-branch; no identity already restated in the body.
 - **allowed-tools = pre-approve the expected tools; unexpected ones still prompt (a least-privilege tripwire).** In normal/interactive mode this is real value: list the tools the body actually uses (grep it) -> they run without friction, and anything UNLISTED falls to the ask-default -> you get **prompted -> you catch unexpected tool use.** Not a hard block (the tool isn't disabled, it just asks) - but the prompt IS the security signal. **Moot only under `--dangerously-skip-permissions`** (bypass pre-approves everything; only deny/ask rules survive). So: **missing allowed-tools on an interactive skill = should-fix** (friction + no tripwire); declare what the body uses; **over-broad lists mildly weaken the tripwire** (pre-approve only what's needed).
   - **Check both directions - and never say "drop X" without grepping for a pipeline.** (a) **Gap:** a tool the body uses but isn't listed prompts every run - and this **includes the dedicated `Grep`/`Glob`/`Read` the system prompt tells the model to *prefer* over bash `grep`/`find`/`cat`**; if the body greps/globs/reads, those dedicated tools should be granted (else the *preferred* tool is the one that prompts while the redundant bash variant is pre-approved - backwards). (b) **A bash variant is NOT droppable just because a dedicated tool "covers" it - if it runs inside a pipeline or loop** (`pandoc … | head`, `… | grep`, a `for … find` loop) the dedicated tool **can't** substitute inside a shell pipe. **Before recommending "drop `Bash(cat:*)`/`Bash(head:*)`/`Bash(grep:*)`, covered by Read/Grep", grep the body for that command in a pipe/loop; if it's there, KEEP it.** Only call a bash variant droppable when it's used standalone *and* a dedicated tool fully replaces it.
 - **name / trigger consistent** with the file/dir and how it's invoked.
@@ -78,22 +78,25 @@ If a claim and a grant capable of breaking it coexist → **must-fix contradicti
 ## kiln - <skill> (<N findings>)
 Scope: structure only - a clean pass != correct output (run it to verify behavior).
 
+Checks: A <n hits, m discarded> | B contract <yes|no> | C <n refs, m stale> | D | E | F claim-vs-grant: <claim> vs <grants> -> ok|contradiction
+
 Must-fix:
-- [Binding|Contract|Contradiction] `line` - <issue> -> <concrete fix>. <high|med confidence>
+- [Binding|Contract|Contradiction] `line` "<quoted text>" - <issue> -> <concrete fix>. <high|med confidence>
 
 Should-fix:
-- [Premature|Sediment|Frontmatter|Anchoring|Enforceability] `line` - <issue> -> <fix>.
+- [Premature|Sediment|Frontmatter|Anchoring|Enforceability] `line` "<quoted text>" - <issue> -> <fix>.
 
 Nits:
-- [Wording|Duplication] `line` - <issue> -> <fix>.
+- [Wording|Duplication|Sprawl] `line` "<quoted text>" - <issue> -> <fix>.
 
 Candidates (verify, don't blind-cut):
-- [No-op?|Dead?] `line` - <why suspected> -> TEST with/without before trimming (specificity may be teeth).
+- [No-op?|Dead?] `line` "<quoted text>" - <why suspected> -> TEST with/without before trimming (specificity may be teeth).
 
 Solid: <what's already well-built> ✓
 ```
-- Severity by **impact**: binding / missing-contract / contradiction, including a claim-vs-grant contradiction (F) = **Must-fix** (these change whether the skill works). Premature-completion / sediment / frontmatter = Should-fix. Wording / sprawl = Nit. Suspected no-ops = Candidate (never auto-cut).
-- **No findings -> say "Solid ✓" and stop. Do NOT manufacture nits** - a well-built skill is the success case.
+- The `Checks:` line is required: it shows every check ran, so a skipped claim-vs-grant check can't pass for a clean one.
+- Severity by **impact**: binding / missing-contract / contradiction, including a claim-vs-grant contradiction (F) = **Must-fix** (these change whether the skill works). Premature-completion / sediment / frontmatter / anchoring / enforceability = Should-fix. Wording / duplication / sprawl = Nit. Suspected no-ops = Candidate (never auto-cut).
+- **No findings -> say "Solid ✓" (with the `Checks:` line); with `--fire`, continue to the `--fire` section, otherwise stop. Do NOT manufacture nits** - a well-built skill is the success case.
 
 ## `--fire` - adversarial test generation (the grill; GENERATES, never runs)
 A second pass after the static lint: **imagine the inputs that would break this skill**, so you can run them later. `--fire` does NOT execute the skill - it emits a list of candidate test cases. Cheap (one reasoning pass).
@@ -119,8 +122,8 @@ Emit each case as **plain markdown - NOT a fenced code block** (a fenced YAML bl
 ## Guard rails
 - **Read-only.** kiln reports; it never edits, deletes, or runs the target skill.
 - **`--fire` generates test cases, it does NOT run them.** Running them is yours (by hand, or `/jury`). The boundary is hard: kiln analyzes (lint + generate), never executes.
-- **One skill per run.** kiln lints a single target. To audit a whole collection, loop it in the shell - "all" is orchestration, not lint, and a per-skill tool composes cleanly with a future empirical (`--fire`) tier.
-- **Mass-flag = convention, not defect.** If you're linting several skills and a finding repeats across most of them (e.g. they all omit `allowed-tools`), that's a **convention** - raise it once as a collection decision, don't ding each skill. (If you'd flag it everywhere, it's a preference, not a bug.)
+- **One skill per run.** kiln lints a single target. To audit a whole collection, loop it in the shell - "all" is orchestration, not lint, and a per-skill tool composes cleanly with an empirical run tier (`/jury`).
+- **Mass-flag = convention, not defect.** When one session lints several skills (a loop of single runs) and a finding repeats across most of them (e.g. they all omit `allowed-tools`), that's a **convention** - raise it once as a collection decision, don't ding each skill. (If you'd flag it everywhere, it's a preference, not a bug.)
 - **Structure, not correctness.** Always scope the verdict this way - a clean lint is not a behavior guarantee. Verifying behavior is a separate, expensive step (run the skill on real inputs).
 - **Don't flag teeth as bloat; suspected no-ops are TEST-not-DELETE.** Length and specificity are not defects; dead content is.
 - **Cheap by design** - one read + grep. Never invoke the target skill (that's the empirical tier, out of scope here).

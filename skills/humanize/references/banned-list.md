@@ -1,8 +1,6 @@
 # Comprehensive banned list
 
-This is the full reference for AI patterns to remove. Use it when SKILL.md's shorter list
-isn't enough, when the input is dense with patterns from a particular category, or when
-you want to do a top-to-bottom scrub.
+The full list the completion contract checks against. Read it before every rewrite.
 
 ## Transition words to avoid
 

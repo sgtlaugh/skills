@@ -2,7 +2,7 @@
 name: triage
 description: Triage a JIRA ticket to a proven root cause - ticket, Sentry, logs, live data and the code at the deployed SHA, competing causes decided by running their checks, load-bearing claims independently verified by darkmoon, and a ready-to-post ticket note. --fast skips the verification pass.
 trigger: /triage
-allowed-tools: Read, Grep, Glob, Skill, Bash(git log:*), Bash(git blame:*), Bash(git show:*), Bash(git grep:*), Bash(git cat-file:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(gh search:*), Bash(gh api:*), Bash(find:*), Bash(grep:*), Bash(ls:*), Bash(date:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git log:*), Bash(git blame:*), Bash(git show:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(gh search:*), Bash(gh api:*), Bash(find:*), Bash(grep:*), Bash(ls:*), Bash(date:*)
 ---
 
 # /triage - JIRA Ticket Triage
@@ -23,12 +23,14 @@ Investigate a JIRA ticket end-to-end: fetch context, search logs, trace through 
 
 1. **TL;DR** - three plain-language lines: what broke, why, the fix.
 2. **Verdict and confidence** - `Confirmed` / `Likely` / `Can't-determine`, a confidence %, and `To reach certainty: <the one check> - ran it: <result>` or `- can't run here: <reason>`.
-3. **Trigger and root cause** as two separate lines (Step 4), each with a SHA-pinned permalink.
-4. **Evidence ledger** - every source from Step 4's list, each `checked: <result>` or `unavailable: <reason>`.
+3. **Trigger and root cause** as two separate lines (Step 4) - the root cause with a SHA-pinned permalink, the trigger with one when it is code.
+4. **Evidence ledger** - every source from Step 4's list, each `checked: <result>`, `not applicable` or `unavailable: <reason>`.
 5. **Competing causes** - the top cause plus the alternates, each with its deciding check and that check's result.
 6. **Verification line** - `Verified: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted` or `skipped (--fast)`.
 7. **Introduced by** - the commit, its PR and ticket, and whether the PR was reviewed (regressions), or `not a regression` / `not determined`.
-8. **Ticket note** (Step 7).
+8. **Emitting service** and its evidence (Sentry project / log service / bundle) - the Step 1c gate.
+9. **Reproduction hint** - or `none describable`.
+10. **Ticket note** (Step 7).
 
 ## Process
 
@@ -89,14 +91,14 @@ Search `$WORKSPACE` for the code path. Run `ls "$WORKSPACE"` first to see availa
 2. **Trace the call chain** - follow function calls upstream and downstream
 3. **Find the boundary** - where does the request cross service boundaries? (API calls, message queues, shared DBs)
 4. **Check error handling** - how are errors caught, transformed, propagated? This is often where bugs hide (e.g. 404 wrapped as 500)
-5. **Check recent changes** - `git -C "$WORKSPACE/<repo>" log --oneline -10 -- <relevant-files>` for recent modifications. With a Sentry `firstRelease`, list the commits leading up to that deploy: `git -C "$WORKSPACE/<repo>" log --oneline -15 <firstRelease> -- <relevant-files>`. SHA not local → `gh api "repos/<github-org>/<repo>/commits?sha=<firstRelease>&path=<file>&per_page=15"` (GitHub org from the catalog) - never `git fetch`. If the bug looks like it should've been caught already, check `git log --grep="<error-name>"` for prior fixes - could be a regression.
+5. **Check recent changes** - `git -C "$WORKSPACE/<repo>" log --oneline -10 -- <relevant-files>` for recent modifications. With a Sentry `firstRelease`, list the commits leading up to that deploy: `git -C "$WORKSPACE/<repo>" log --oneline -15 <firstRelease> -- <relevant-files>`. SHA not local → `gh api "repos/<github-org>/<repo>/commits?sha=<firstRelease>&path=<file>&per_page=15"` (GitHub org from the catalog) - never `git fetch`. When `firstRelease` is null or the Sentry status is resolved, always run `git log --grep="<error-name>"` for prior fixes - could be a regression.
 6. **Check git blame** - `git -C "$WORKSPACE/<repo>" blame <file> -L <start>,<end>` on suspicious lines (error handlers, status code mappings) to understand when and why they were written
 7. **Check recent related work** - merged PRs from the last ~14 days that touch the same files or mention the error, across the org: `gh search prs --owner <github-org> --merged --merged-at ">$(date -d '14 days ago' +%F 2>/dev/null || date -v-14d +%F)" "<error fragment or function>"` (the `-v` form is macOS), plus the ticket's linked PRs from Step 1. A fix for a sibling error landed yesterday is either the cause, the fix, or a pattern to copy - say which.
 8. **Introduced by (regressions)** - find the commit that introduced the faulty line (`git log -S '<code fragment>' -- <file>`, or blame), then its PR and review state: `gh api "repos/<github-org>/<repo>/commits/<sha>/pulls" --jq '.[0] | {number, title, merged_at}'` and `gh api "repos/<github-org>/<repo>/pulls/<number>/reviews" --jq '[.[].state]'`. Report the commit, PR, ticket key in its title, and whether it was approved - or that it went in with no PR.
 
-Use `grep -r` and `find` broadly across `$WORKSPACE`, not just the current project. Bugs cross service boundaries. This step is crucial, take your time and be thorough.
+Use `grep -r` and `find` broadly across `$WORKSPACE`, not just the current project. Bugs cross service boundaries. Step 3 is done when you have the throwing file:line at the analyzed SHA, the call chain to the service boundary, and the error handler on that path read; a missing item goes to Open Questions.
 
-**Do NOT checkout, fetch, pull, or modify any repo.** (Backstop: `Bash(git -C:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them: `git -C` with `checkout`, `fetch`, `commit` or `push`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`.) With a Sentry release SHA from Step 1b, that SHA is the truth - read files with `git show <sha>:<path>`. Without one, analyze whatever branch is currently checked out. If a repo is not on master/main, note it in the triage output (e.g., "Analyzed on branch `feature-x`, 3 commits ahead of master"). **And: the code that threw in prod may be a different deployed SHA than HEAD** - the error-time code is the truth, so if the analyzed code doesn't fit the symptom, suspect deployed≠HEAD and note it (don't trust HEAD as what ran).
+**Do NOT checkout, fetch, pull, or modify any repo.** (Backstop: `Bash(git -C:*)`, `Bash(find:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit, file deletion or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them: `git -C` with `checkout`, `fetch`, `commit` or `push`, `find` with `-delete`, `-exec` or `-execdir`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`.) With a Sentry release SHA from Step 1b, that SHA is the truth - read files with `git show <sha>:<path>`. Without one, analyze whatever branch is currently checked out and pin to its `git rev-parse HEAD`, which must exist on the remote. If a repo is not on master/main, note it in the triage output (e.g., "Analyzed on branch `feature-x`, 3 commits ahead of master"). **And: the code that threw in prod may be a different deployed SHA than HEAD** - the error-time code is the truth, so if the analyzed code doesn't fit the symptom, suspect deployed≠HEAD and note it (don't trust HEAD as what ran).
 
 ### Step 4 - Decide Between Causes
 
@@ -108,13 +110,13 @@ Use `grep -r` and `find` broadly across `$WORKSPACE`, not just the current proje
 
 **Separate trigger from root cause.** `Trigger:` is what the user or system did that surfaced it; `Root cause:` is why the code allows it. A fix that only blocks the trigger leaves the bug - name both.
 
-Be very thorough and critical, start reviewing your findings neutrally from another perspective now. If more than 50% of your root cause analysis is speculative, go back to step 3 and gather more evidence. If you can't get confirmation, say so honestly.
-
 Before writing the triage note, explicitly categorize every claim:
 
 - **Confirmed**: directly observed in logs, code, or error output
 - **Inferred**: logically follows from confirmed facts but not directly observed
 - **Speculative**: plausible but unverified
+
+Start reviewing your findings neutrally from another perspective now. If the root cause claim itself is Speculative, go back to Step 3. A second pass still Speculative -> `Can't-determine`.
 
 Then sanity check:
 - **Can I name a red-capable repro this cause predicts** - one request/command/test that would go red on exactly this bug and green once fixed? If I can't even *describe* one, it's a hypothesis, not a confirmed cause - **cap the confidence** accordingly (the Reproduction Hint below isn't decoration; it's the test of whether you actually understand the cause).
@@ -123,7 +125,7 @@ Then sanity check:
 - Is the error rate actually elevated, or is this normal baseline noise?
 - Am I sure about the service boundary? Check the catalog's service notes - e.g. a server-side BFF's logs are not browser errors, and two frontends can show the same symptom - could be wrong
 
-**Falsifier the top cause:** state *"this is wrong if `<X>`"* and check `<X>` - a targeted disproof of the *specific* cause, not just the general review above.
+**Falsify the top cause:** state *"this is wrong if `<X>`"* and check `<X>` - a targeted disproof of the *specific* cause, not just the general review above.
 
 **Confidence comes with its path to certainty:** `To reach certainty: <the one check>` - and if that check is runnable here, run it now (see "Run the deciding checks") instead of reporting the gap.
 
@@ -141,7 +143,7 @@ Re-state the confidence after verification. A `Confirmed` verdict needs its root
 
 ### Step 6 - Output Triage Note
 
-Include all necessary details, but make it concise. Every code/method/file link is a GitHub permalink pinned to a commit SHA (`https://github.com/<org>/<repo>/blob/<sha>/<path>#L<n>` - the Sentry release SHA when known, else the current `master`/`main` SHA from `git rev-parse`); a branch-name link (`/blob/master/`) rots and is WRONG. When sharing code snippets, make sure to format it with code blocks properly.
+Include all necessary details, but make it concise. Every code/method/file link is a GitHub permalink pinned to a commit SHA (`https://github.com/<org>/<repo>/blob/<sha>/<path>#L<n>` - the SHA actually read: the Sentry release SHA when known, else `git rev-parse HEAD` of the analyzed checkout, which must exist on the remote); a branch-name link (`/blob/master/`) rots and is WRONG. Snippets go in fenced code blocks with a language tag.
 
 Format:
 
@@ -177,7 +179,7 @@ Introduced by: <commit + PR + ticket, approved or not> | not a regression | not 
 | Sentry | checked: <...> / unavailable: <reason> |
 | Logs | checked: <...> / unavailable: <reason> |
 | Live record state | checked: <...> / not applicable / unavailable: <reason> |
-| Code at deployed SHA | checked: <sha> |
+| Code at deployed SHA | checked: <sha> (deployed / HEAD of <branch>, deployed unknown) |
 | Recent changes + related PRs | checked: <...> |
 
 ### Affected Services
@@ -204,7 +206,7 @@ Introduced by: <commit + PR + ticket, approved or not> | not a regression | not 
 ### Step 7 - Ticket Note (always)
 
 After the triage note, draft a short comment for the Jira ticket - what a teammate reads, not the full analysis:
-- **Facts only:** Confirmed root cause (or `Can't-determine` + what would settle it), impact (Sentry counts / error rate), the fix location. No alternate causes, no speculation, no debugging walkthrough.
+- **Facts only:** lead with the verdict word - `Confirmed` -> the root cause; `Likely` -> the cause labeled Likely plus the one open check; `Can't-determine` -> what would settle it. Then impact (Sentry counts / error rate), the fix location. No alternate causes, no speculation, no debugging walkthrough.
 - **SHA-pinned permalinks** for every code reference (same rule as Step 6).
 - **5-10 lines**, plain hyphens, no headings beyond one bold lead-in per item.
 
@@ -213,7 +215,7 @@ Show it and stop. Posting it is a separate, explicit user request (then use `/ji
 ## Rules
 
 - **NEVER fake confidence.** If you're not sure, say "I don't know" with what you'd need to verify.
-- **READ ONLY** Do not modify any codes, write comments in JIRA, resolve or assign Sentry issues, or anything except for fetching, thinking and analyzing.
+- **READ ONLY** (prefix grants scoped as in Step 3's backstop) Do not modify any code, write comments in JIRA, resolve or assign Sentry issues, or anything except for fetching, thinking and analyzing.
 - **Search broadly.** Don't assume the bug is in one service. Cross-service bugs are common.
 - **Check error handlers.** Error transformation (wrapping, re-throwing, status code mapping) is the #1 source of misleading errors.
 - **Time matters.** Ticket filed 3 months ago? Current logs may not reflect the original bug. Say so.
