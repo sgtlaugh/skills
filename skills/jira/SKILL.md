@@ -126,8 +126,20 @@ Descriptions and comments are Atlassian Document Format: a tree of nodes. **Mark
 - **Lists** → `bulletList`/`orderedList` → `listItem` → `paragraph`. A `listItem` holding bare `text` is rejected.
 - **Build the body with `jq -n --arg`** (or a Python dict) so quotes and newlines in code are escaped - hand-built JSON strings break on the first `"` in a snippet.
 
+### Mentions
+A name typed as text (`@Ada Owl`) notifies nobody. A real mention is a `mention` node carrying the person's account ID, placed in a paragraph's `content` like a `text` node:
+```json
+{"type": "mention", "attrs": {"id": "ACCOUNT_ID", "text": "@Ada Owl"}}
+```
+Find the ID among the ticket's own people first - they are who a comment usually tags:
+```bash
+curl -sS --fail-with-body "$JIRA_URL/rest/api/3/issue/PROJ-123?fields=reporter,assignee,comment" -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" \
+  | jq -r '[.fields.reporter, .fields.assignee, .fields.comment.comments[].author] | map(select(. != null)) | unique_by(.accountId)[] | "\(.displayName)\t\(.accountId)"'
+```
+Someone not on the ticket: `curl -sS --fail-with-body "$JIRA_URL/rest/api/3/user/search?query=<name>" ... | jq -r '.[] | "\(.displayName)\t\(.accountId)"'`. Use an ID only when exactly one person's display name matches the name you were given; none or several -> ask which person, since a wrong ID notifies a stranger. The preview shows each mention as `@Name` and lists who will be notified.
+
 ### Add Comment
-Uses the same ADF format (see Formatting above).
+Uses the same ADF format (see Formatting above), with Mentions for every person the comment tags.
 ```bash
 curl -sS --fail-with-body -X POST "$JIRA_URL/rest/api/3/issue/PROJ-123/comment" -H "Authorization: Basic $JIRA_B64" -H "Content-Type: application/json" \
   -d '{"body": {"type": "doc", "version": 1, "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Comment text"}]}]}}'

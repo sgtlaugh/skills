@@ -1,13 +1,13 @@
 ---
 name: triage
-description: Triage a JIRA ticket to a proven root cause - ticket, Sentry, logs, live data and the code at the deployed SHA, competing causes decided by running their checks, load-bearing claims independently verified by darkmoon, and a ready-to-post ticket note. --fast skips the verification pass.
+description: Triage a JIRA ticket - a bug to a proven root cause (Sentry, logs, live data, code at the deployed SHA, competing causes decided by running their checks), or a question ticket to a short answer per ask. Bottom line first, load-bearing claims verified by darkmoon, facts only a person can see asked for before answering, and a ready-to-post ticket note. --fast skips the verification pass.
 trigger: /triage
-allowed-tools: Read, Grep, Glob, Skill, Bash(git log:*), Bash(git blame:*), Bash(git show:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(gh search:*), Bash(gh api:*), Bash(find:*), Bash(grep:*), Bash(ls:*), Bash(date:*)
+allowed-tools: Read, Grep, Glob, Skill, Bash(git log:*), Bash(git blame:*), Bash(git show:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(gh search:*), Bash(gh api:*), Bash(find:*), Bash(grep:*), Bash(ls:*), Bash(date:*), Bash(wc:*)
 ---
 
 # /triage - JIRA Ticket Triage
 
-Investigate a JIRA ticket end-to-end: fetch context, search logs, trace through code, decide between competing causes by running the checks that separate them, verify the conclusion independently, and produce a triage note plus a short ticket comment.
+Investigate a JIRA ticket end-to-end and answer what it asks: a bug gets a proven root cause, a question gets an answer per ask. Either way the reader sees the answer first, and the evidence after.
 
 ## Usage
 
@@ -21,30 +21,37 @@ Investigate a JIRA ticket end-to-end: fetch context, search logs, trace through 
 
 ## Output contract - the triage is NOT done until it shows
 
-1. **TL;DR** - three plain-language lines: what broke, why, the fix.
-2. **Verdict and confidence** - `Confirmed` / `Likely` / `Can't-determine`, a confidence %, and `To reach certainty: <the one check> - ran it: <result>` or `- can't run here: <reason>`.
-3. **Trigger and root cause** as two separate lines (Step 4) - the root cause with a SHA-pinned permalink, the trigger with one when it is code.
-4. **Evidence ledger** - every source from Step 4's list, each `checked: <result>`, `not applicable` or `unavailable: <reason>`.
-5. **Competing causes** - the top cause plus the alternates, each with its deciding check and that check's result.
-6. **Verification line** - `Verified: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted` or `skipped (--fast)`.
-7. **Introduced by** - the commit, its PR and ticket, and whether the PR was reviewed (regressions), or `not a regression` / `not determined`.
-8. **Emitting service** and its evidence (Sentry project / log service / bundle) - the Step 1c gate.
-9. **Reproduction hint** - or `none describable`.
-10. **Ticket note** (Step 7).
+The order is fixed: the answer first, the evidence last ("bottom line up front"). Everything above `Details` fits on one screen: **at most 15 lines before the ticket note** - count them before showing; more is WRONG, and the excess moves under Details. A table cell holds at most 15 words; anything longer is a bullet, since a long cell wraps into an unreadable block in a terminal.
+
+**Both shapes, top to bottom:**
+1. **Head** - the shape's head block (bug: TL;DR + verdict; question: the ask + the answer table), Step 6.
+2. **Needs you** - facts only a person can get (Step 4's gate) and decisions that are yours (policy, owner, priority). `none` when empty.
+3. **Ticket note** (Step 7), passing its word count.
+4. **Details** - the rest, below a `### Details` heading: the evidence ledger (every Step 4 source as `checked: <result>`, `not applicable` or `unavailable: <reason>`), the verification line (`Verified: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted` or `skipped (--fast)`), and the open questions. Details is the last section: nothing follows it.
+
+**Bug shape adds, under Details:** trigger and root cause as two lines (root cause with a SHA-pinned permalink), competing causes with each deciding check and its result, introduced-by (commit, PR, ticket, reviewed or not - or `not a regression` / `not determined`), the emitting service with its evidence (Step 1c), and a reproduction hint (or `none describable`).
+
+**Question shape adds, under Details:** per ask, the evidence behind its answer (permalink, doc link, command and output).
 
 ## Process
 
 ### Step 1 - Intake
 
-Run these independent reads **in one message**: the service catalog, and the ticket via the `/jira` skill (its Get Ticket fields include linked issues and the parent; also run its **Linked PRs** lookup - an earlier fix attempt is evidence). Extract:
+Run these independent reads **in one message**: the service catalog, and the ticket via the `/jira` skill with its comments (its Get Ticket fields include linked issues and the parent; also run its **Linked PRs** lookup - an earlier fix attempt is evidence). Extract:
 - **Error message** (summary, description, Sentry links)
 - **Service hints** (which service/component is mentioned)
 - **Stack trace** (file paths, line numbers, function names)
-- **Time context** (when reported, when last occurred)
-- **Reporter comments** (often contain reproduction steps or additional context)
+- **Time context** (when reported, when last occurred, any deadline)
+- **The asks** - every question still open: who asked it, of whom, and when. An ask answered later in the thread is not open.
 - **Linked work** - linked tickets and PRs, with their state
 
-Summarize ticket in 3-4 lines before proceeding.
+**Pick the shape** and say which in one line:
+- **Bug** - the ticket reports something broken: an error, a stack trace, a Sentry link, a wrong result. Run every step.
+- **Question** - the ticket asks how something works, whether it is supported, or what to do, with no failure to explain. Steps 1b, 1c and 2 run only for an ask that is about an error; Step 3 grounds each ask in the code instead of tracing a stack. Root cause, competing causes, introduced-by and a reproduction hint do not apply - forcing them onto a question is WRONG.
+
+A ticket that reports a failure AND carries open asks gets the question head, since the asks are what someone is waiting on: the failure's cause is answered as one of the asks, every step still runs, and the bug-shape fields (trigger, root cause, introduced-by, reproduction hint) go under Details.
+
+Summarize the ticket in 3-4 lines before proceeding: for a question, the ask in one line first - who needs what, by when, and why.
 
 ### Step 1b - Fetch the Sentry Issue
 
@@ -96,83 +103,89 @@ Search `$WORKSPACE` for the code path. Run `ls "$WORKSPACE"` first to see availa
 7. **Check recent related work** - merged PRs from the last ~14 days that touch the same files or mention the error, across the org: `gh search prs --owner <github-org> --merged --merged-at ">$(date -d '14 days ago' +%F 2>/dev/null || date -v-14d +%F)" "<error fragment or function>"` (the `-v` form is macOS), plus the ticket's linked PRs from Step 1. A fix for a sibling error landed yesterday is either the cause, the fix, or a pattern to copy - say which.
 8. **Introduced by (regressions)** - find the commit that introduced the faulty line (`git log -S '<code fragment>' -- <file>`, or blame), then its PR and review state: `gh api "repos/<github-org>/<repo>/commits/<sha>/pulls" --jq '.[0] | {number, title, merged_at}'` and `gh api "repos/<github-org>/<repo>/pulls/<number>/reviews" --jq '[.[].state]'`. Report the commit, PR, ticket key in its title, and whether it was approved - or that it went in with no PR.
 
-Use `grep -r` and `find` broadly across `$WORKSPACE`, not just the current project. Bugs cross service boundaries. Step 3 is done when you have the throwing file:line at the analyzed SHA, the call chain to the service boundary, and the error handler on that path read; a missing item goes to Open Questions.
+Use `grep -r` and `find` broadly across `$WORKSPACE`, not just the current project. Bugs cross service boundaries. Step 3 is done when you have the throwing file:line at the analyzed SHA, the call chain to the service boundary, and the error handler on that path read; for a question, when each ask has the file:line, doc page or command output that answers it. A missing item goes to Open Questions.
 
 **Do NOT checkout, fetch, pull, or modify any repo.** (Backstop: `Bash(git -C:*)`, `Bash(find:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit, file deletion or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them: `git -C` with `checkout`, `fetch`, `commit` or `push`, `find` with `-delete`, `-exec` or `-execdir`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`.) With a Sentry release SHA from Step 1b, that SHA is the truth - read files with `git show <sha>:<path>`. Without one, analyze whatever branch is currently checked out and pin to its `git rev-parse HEAD`, which must exist on the remote. If a repo is not on master/main, note it in the triage output (e.g., "Analyzed on branch `feature-x`, 3 commits ahead of master"). **And: the code that threw in prod may be a different deployed SHA than HEAD** - the error-time code is the truth, so if the analyzed code doesn't fit the symptom, suspect deployed≠HEAD and note it (don't trust HEAD as what ran).
 
-### Step 4 - Decide Between Causes
 
-**Evidence ledger first.** Before concluding, every source below must end as `checked: <result>` or `unavailable: <reason>` - the ticket and its linked work, Sentry, logs, live record state (when the ticket names a record), code at the deployed SHA, recent changes and recent related work. Leaving a source the session can reach unchecked is WRONG - the conclusion is only as good as the evidence it never looked at.
+### Step 4 - Decide
 
-**Rank competing causes (don't anchor).** List the **2-3 most plausible candidates**, ranked - each **falsifiable**, with the *one check that distinguishes it* from the others. Anchoring on the first plausible trace and then self-confirming it is triage's main failure mode. Lead the note with the top, but name the live alternate(s).
+**Evidence ledger first.** Before concluding, every source below must end as `checked: <result>`, `not applicable` or `unavailable: <reason>` - the ticket and its linked work, Sentry, logs, live record state (when the ticket names a record), code at the deployed SHA, other local repos and config under `$WORKSPACE` (infrastructure, configuration and deployment repos hold what the service code doesn't: secrets handling, routes, DNS, env), recent changes and recent related work. Leaving a source the session can reach unchecked is WRONG - and so is stating something a local repo could settle without opening it.
 
-**Run the deciding checks.** For each candidate, run its distinguishing check if the session can - a log query, a grep at the deployed SHA, a data lookup, a Sentry tag or breadcrumb. A runnable deciding check left unrun is NOT a valid stop: "90% sure" with the 100% check one command away is the hedge this step exists to remove. A check you can't run here → say why, and who or what can run it.
+**A fact only a person can see is asked for, not guessed.** When the check that decides an answer needs access this session doesn't have - a vendor dashboard (Cloudflare, AWS console), a customer's DNS or account, an admin screen - ask for that one fact under Needs you, with the exact place to look (`dash.cloudflare.com > <zone> > SSL/TLS > Custom Hostnames > <hostname>: Status and Certificate columns`). Finish the other asks in the same run. Until the user replies with the fact, the answer that depends on it is not in the ticket note, is never labelled proven, and sits under Needs you. Inferring it from docs and outside probes and presenting that as the answer is WRONG: an inference that flips once the person looks costs more trust than the minute it takes them to look.
 
-**Separate trigger from root cause.** `Trigger:` is what the user or system did that surfaced it; `Root cause:` is why the code allows it. A fix that only blocks the trigger leaves the bug - name both.
+**Bug shape - rank competing causes (don't anchor).** List the **2-3 most plausible candidates**, ranked - each **falsifiable**, with the *one check that distinguishes it* from the others. Anchoring on the first plausible trace and then self-confirming it is triage's main failure mode. Lead with the top, but name the live alternate(s).
 
-Before writing the triage note, explicitly categorize every claim:
+**Run the deciding checks.** For each candidate (bug) or each answer (question), run its deciding check if the session can - a log query, a grep at the deployed SHA, a data lookup, a Sentry tag, a doc page. A runnable deciding check left unrun is NOT a valid stop: "90% sure" with the 100% check one command away is the hedge this step exists to remove. A check you can't run here goes through the person-only gate above.
 
-- **Confirmed**: directly observed in logs, code, or error output
+**Bug shape - separate trigger from root cause.** `Trigger:` is what the user or system did that surfaced it; `Root cause:` is why the code allows it. A fix that only blocks the trigger leaves the bug - name both.
+
+Before writing the output, explicitly categorize every claim:
+
+- **Confirmed**: directly observed in logs, code, error output, or a check you ran
 - **Inferred**: logically follows from confirmed facts but not directly observed
 - **Speculative**: plausible but unverified
 
-Start reviewing your findings neutrally from another perspective now. If the root cause claim itself is Speculative, go back to Step 3. A second pass still Speculative -> `Can't-determine`.
+**Claims about people.** "X said Y", "X's answer was wrong", "this contradicts what X told the customer" is a claim like any other: it needs X's words quoted with the date and where they were written, and it goes to darkmoon in Step 5. Without the quote it is dropped. Saying a colleague was wrong in the ticket note is never the default - it goes there only when the user asks for it.
 
-Then sanity check:
-- **Can I name a red-capable repro this cause predicts** - one request/command/test that would go red on exactly this bug and green once fixed? If I can't even *describe* one, it's a hypothesis, not a confirmed cause - **cap the confidence** accordingly (the Reproduction Hint below isn't decoration; it's the test of whether you actually understand the cause).
+Start reviewing your findings neutrally from another perspective now. If the root cause (bug) or an answer (question) is Speculative, go back to Step 3. A second pass still Speculative -> `Can't-determine` for that item.
+
+Bug shape, sanity check:
+- **Can I name a red-capable repro this cause predicts** - one request/command/test that would go red on exactly this bug and green once fixed? If I can't even *describe* one, it's a hypothesis, not a confirmed cause - **cap the confidence** accordingly.
 - Does the root cause explain ALL the symptoms, or just some?
 - Could this be a symptom of something deeper (e.g., 500s caused by DB saturation, not app code)?
 - Is the error rate actually elevated, or is this normal baseline noise?
-- Am I sure about the service boundary? Check the catalog's service notes - e.g. a server-side BFF's logs are not browser errors, and two frontends can show the same symptom - could be wrong
+- Am I sure about the service boundary? Check the catalog's service notes - a server-side BFF's logs are not browser errors, and two frontends can show the same symptom.
 
-**Falsify the top cause:** state *"this is wrong if `<X>`"* and check `<X>` - a targeted disproof of the *specific* cause, not just the general review above.
+**Falsify the top cause or answer:** state *"this is wrong if `<X>`"* and check `<X>` - a targeted disproof of the *specific* claim, not just the general review above.
 
-**Confidence comes with its path to certainty:** `To reach certainty: <the one check>` - and if that check is runnable here, run it now (see "Run the deciding checks") instead of reporting the gap.
+**Confidence comes with its path to certainty:** `To reach certainty: <the one check>` - and if that check is runnable here, run it now instead of reporting the gap.
 
 ### Step 5 - Independent Verification (skipped with `--fast`)
 
-A conclusion checked only by the context that formed it is self-confirmed. Use the `Skill` tool to invoke **`/darkmoon --claims`** (always pass the `--claims` flag - without it darkmoon reads the transcript instead) with the root cause and the 3-5 claims it rests on, each as a verifiable claim: *"In `<repo path:line @ sha>`, <what is true>. Consequence: <what it causes>."*
+A conclusion checked only by the context that formed it is self-confirmed. Use the `Skill` tool to invoke **`/darkmoon --claims`** (always pass the `--claims` flag - without it darkmoon reads the transcript instead) with the 3-6 claims the answer rests on, each verifiable: *"In `<repo path:line @ sha>`, <what is true>. Consequence: <what it causes>."* Include every claim about a person (Step 4), with its quote and source.
 
 Integrate the verdicts:
-- **Refuted** → drop the claim. If it was the root cause or the trigger, return to Step 4 with the next candidate - once; after that, report `Can't-determine` with what is still open.
+- **Refuted** → drop the claim. If it was the root cause, the trigger or an answer, return to Step 4 with the next candidate - once; after that, report `Can't-determine` with what is still open.
 - **Weak** → downgrade to Inferred and add the skeptic's counter to the evidence.
 - **Can't-determine** → keep as Inferred, plus what would settle it.
 - **Upheld** → mark `(verified)`.
 
-Re-state the confidence after verification. A `Confirmed` verdict needs its root cause Upheld.
+A check darkmoon can't re-run (a live `dig` or `curl`, a dashboard read the user gave you) is labelled `self-run, not independently verified` with the command and its output shown - never `(verified)`. Re-state the confidence after verification. A `Confirmed` verdict needs its root cause Upheld.
 
-### Step 6 - Output Triage Note
+### Step 6 - Output
 
-Include all necessary details, but make it concise. Every code/method/file link is a GitHub permalink pinned to a commit SHA (`https://github.com/<org>/<repo>/blob/<sha>/<path>#L<n>` - the SHA actually read: the Sentry release SHA when known, else `git rev-parse HEAD` of the analyzed checkout, which must exist on the remote); a branch-name link (`/blob/master/`) rots and is WRONG. Snippets go in fenced code blocks with a language tag.
+Write the head for the shape, then Needs you, then the ticket note, then Details - the contract's order. Every code/method/file link is a GitHub permalink pinned to a commit SHA (`https://github.com/<org>/<repo>/blob/<sha>/<path>#L<n>` - the SHA actually read: the Sentry release SHA when known, else `git rev-parse HEAD` of the analyzed checkout, which must exist on the remote); a branch-name link (`/blob/master/`) rots and is WRONG. Snippets go in fenced code blocks with a language tag.
 
-Format:
+Words: plain ones. A term the reader would have to look up gets replaced or said in plain words. No process notes ("one slip to flag", "I ran X earlier") above Details.
+
+**Bug head:**
 
 ```
 ## Triage: <TICKET-ID> - <Title>
 
-**TL;DR**
 - Broke: <one plain line>
 - Why: <one plain line>
 - Fix: <one plain line>
 
-**Verdict: <Confirmed | Likely | Can't-determine> · Confidence: <X>%**
-To reach certainty: <the one check> - ran it: <result> | can't run here: <reason>
-Verified: <N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted> | skipped (--fast)
+Verdict: <Confirmed | Likely | Can't-determine> · <X>% · to reach certainty: <the one check> - ran it: <result> | can't run here: <reason>
 
-### Root Cause
+Needs you: <facts only a person can get, with where to look; your decisions> | none
+
+Ticket note (draft, not posted, <N> words):
+> <Step 7>
+
+### Details
 Trigger: <what surfaced it>
-Root cause: <why the code allows it - file:line permalinks>
+Root cause: <why the code allows it - permalink>
 Introduced by: <commit + PR + ticket, approved or not> | not a regression | not determined
-
-### Competing Causes
+Emitting service: <service> - <evidence>
+Competing causes:
 1. <top cause> - deciding check: <check> → <result>
 2. <alternate> - deciding check: <check> → <result> - why less likely
-
-### Evidence
-- [Confirmed] <fact from logs/code>
-- [Inferred] <logical conclusion from confirmed facts>
-- [Confirmed] Sentry: <SHORT-ID + permalink, lifetime events/users, last seen, 24h total/peak, firstRelease> - or "no Sentry issue found (searched: <query>)" / "Sentry unavailable"
-
+Evidence:
+- [Confirmed] <fact> / [Inferred] <conclusion>
+- Sentry: <SHORT-ID + permalink, lifetime events/users, last seen, 24h trend, firstRelease> | no Sentry issue found (searched: <query>) | Sentry unavailable
 | Source | Result |
 |---|---|
 | Ticket + linked work | checked: <...> |
@@ -180,41 +193,55 @@ Introduced by: <commit + PR + ticket, approved or not> | not a regression | not 
 | Logs | checked: <...> / unavailable: <reason> |
 | Live record state | checked: <...> / not applicable / unavailable: <reason> |
 | Code at deployed SHA | checked: <sha> (deployed / HEAD of <branch>, deployed unknown) |
+| Other local repos + config | checked: <...> / not applicable |
 | Recent changes + related PRs | checked: <...> |
+Call chain: <service-a> → <service-b>, with endpoints/functions per hop
+Recommendations: <fix aimed at the root cause, file and change>
+Reproduction hint: <one line> | none describable
+Verified: <N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted> | skipped (--fast)
+Open questions: <what you couldn't verify>
+```
 
-### Affected Services
-<list of services involved, helps ops/oncall scope the impact>
+**Question head:**
 
-### Call Chain
-<service-a> → <service-b> → <service-c>
-<with specific endpoints/functions at each hop>
+```
+## Triage: <TICKET-ID> - <Title>
 
-### Recommendations
-1. <Fix with specific file and what to change - aimed at the root cause, not only the trigger>
-2. <Secondary fix if applicable>
+The ask: <who needs what, by when, and why - one line>
 
-### Reproduction Hint
-<One-liner on how to reproduce, e.g., "Hit GET /api/orders/{nonexistent-id} with a valid user token">
+| Ask | Answer | Sure? |
+|---|---|---|
+| <ask, 15 words max> | <answer, 15 words max> | <proven: source / likely / can't tell yet> |
 
-### Open Questions
-- <Anything you couldn't verify>
+Needs you: <facts only a person can get, with where to look; your decisions> | none
 
-### Debugging Walkthrough (only if confidence >= 80%)
-<One paragraph explaining the key debugging technique that cracked this. Focus on the reusable insight, not the specific bug. E.g., "The 500 looked like a backend crash, but checking error transformation middleware revealed all upstream errors were wrapped as InternalServerError. Always check error handlers when status codes don't match the actual error.">
+Ticket note (draft, not posted, <N> words):
+> <Step 7>
+
+### Details
+Per ask: <the evidence - permalink, doc link, or command and output; self-run checks labelled>
+<the evidence ledger table, as in the bug shape>
+Verified: <...> | skipped (--fast)
+Open questions: <...>
 ```
 
 ### Step 7 - Ticket Note (always)
 
-After the triage note, draft a short comment for the Jira ticket - what a teammate reads, not the full analysis:
-- **Facts only:** lead with the verdict word - `Confirmed` -> the root cause; `Likely` -> the cause labeled Likely plus the one open check; `Can't-determine` -> what would settle it. Then impact (Sentry counts / error rate), the fix location. No alternate causes, no speculation, no debugging walkthrough.
+The note is what a teammate reads on the ticket, written to the person who asked:
+- **Written as the user:** the note goes out under the user's name. Find who that is (`/jira`'s own-accountId call) and match it to the ticket's comment authors: the user's earlier comments are "my answer on 6 Oct", never "<the user's name>'s answer".
+- **Addressed and tagged:** open with the asker's name; name the owner when the ticket needs one; cc only people the note asks something of or answers. Posting with `/jira comment` turns each name into a real @-mention (its Mentions section).
+- **Bug:** lead with the verdict word - `Confirmed` -> the root cause; `Likely` -> the cause labelled Likely plus the one open check; `Can't-determine` -> what would settle it. Then impact (Sentry counts / error rate) and the fix location.
+- **Question:** one numbered line per ask, the answer first. An ask waiting on Needs you says so in one line ("waiting on the dashboard status") instead of guessing.
+- **No:** alternate causes, speculation, the debugging story, process notes, or corrections of a colleague the user didn't ask for.
 - **SHA-pinned permalinks** for every code reference (same rule as Step 6).
-- **5-10 lines**, plain hyphens, no headings beyond one bold lead-in per item.
+- **At most 120 words** (plus 25 per ask beyond 4). Count with `wc -w` on the drafted text and put the count in the heading; over the cap, cut and count again - showing a note over its cap is WRONG.
 
 Show it and stop. Posting it is a separate, explicit user request (then use `/jira comment`) - this skill stays READ ONLY.
 
 ## Rules
 
 - **NEVER fake confidence.** If you're not sure, say "I don't know" with what you'd need to verify.
+- **Correct yourself once, in one line.** When new evidence overturns an answer you gave, say which line changed and why, then give the corrected answer - no running commentary across turns.
 - **READ ONLY** (prefix grants scoped as in Step 3's backstop) Do not modify any code, write comments in JIRA, resolve or assign Sentry issues, or anything except for fetching, thinking and analyzing.
 - **Search broadly.** Don't assume the bug is in one service. Cross-service bugs are common.
 - **Check error handlers.** Error transformation (wrapping, re-throwing, status code mapping) is the #1 source of misleading errors.

@@ -28,7 +28,7 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
 | Turn a PRD into a spec | `/forge <prd>` |
 | Pick between designs | `/dialectic <question>` |
 | Handle an alert that just fired | `/firewatch <alert>` |
-| Find why a ticket's bug happens | `/triage <TICKET-ID>` |
+| Find why a ticket's bug happens, or answer what a ticket asks | `/triage <TICKET-ID>` |
 | Check whether a ticket is really done | `/lordvessel <TICKET-ID>` |
 | Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
 | See if a skill's output is stable | `/jury <skill> <args>` |
@@ -124,9 +124,9 @@ Usage patterns by workflow. Every skill's full flags live in its `SKILL.md`.
     /sentry search "cannot be refunded" 90d
     /sentry fixed OWL-API-511 edce648713   # did that deploy stop it?
 
-**`/triage`** - ticket to a proven root cause
+**`/triage`** - a bug ticket to a proven root cause, a question ticket to an answer per ask
 
-    /triage <TICKET-ID>           # evidence ledger, darkmoon check, ticket note
+    /triage <TICKET-ID>           # answer first, then the ticket note, evidence last
     /triage <jira-url>            # same, by URL
     /triage <TICKET-ID> --fast    # skip the darkmoon pass
 
