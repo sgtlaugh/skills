@@ -18,7 +18,7 @@ check() {
 }
 
 echo "=== voice-gate.sh ==="
-check "clean comment in the house style" 0 "" "\`load_owl_schedule\` retries forever when the moon API returns 503 ([here](https://github.com/acme/owl/blob/$SHA/owl/moon.py#L42)).
+check "clean comment in the house style" 0 "" "\`load_owl_schedule\` retries forever when the moon API returns 503, as [the retry loop](https://github.com/acme/owl/blob/$SHA/owl/moon.py#L42) never counts.
 
 Should we cap it at 3 attempts? That might be fine for a cron job, but this runs in the request path."
 check "minor nit lead-in is allowed" 0 "" "**Minor nit:** the docstring repeats the function name."
@@ -65,7 +65,7 @@ check "a long quote does not count toward the reply's length" 0 "" "> $(printf '
 
 Fixed the hinge."
 check "file:line in backticks is not a link" 1 "is not a link" "Every delete calls \`delay()\` (\`rendition_type.py:128\`)."
-check "file:line linked to a SHA blob" 0 "" "Every delete calls \`delay()\` ([\`rendition_type.py:128\`](https://github.com/acme/owl/blob/$SHA/app/rendition_type.py#L128))."
+check "file:line linked to a SHA blob" 0 "" "Every delete calls \`delay()\` in [\`rendition_type.py:128\`](https://github.com/acme/owl/blob/$SHA/app/rendition_type.py#L128)."
 check "cross-repo PR without owner" 1 "needs its owner" "With nest-config#16394 this runs twice."
 check "owner/repo#N, PR#N and #N are fine" 0 "" "With acme/nest-config#16394 and PR#12 this runs twice, see #554."
 check "two interjections in one review" 1 "one at most" '[{"body":"Hmm, `a` looks off."},{"body":"Ah, and `b` too."}]'
@@ -85,6 +85,12 @@ check "a host:port is not a file reference" 0 "" 'The pool talks to `db.owlpost.
 check "ratios and times are not file references" 0 "" "Contrast is 16.9:1 at 10.30:15."
 check "iOS and macOS are words, not identifiers" 0 "" "Does this work on iOS and macOS?"
 check "a real file:line still needs its link" 1 'file reference "owl.py:12"' "See owl.py:12 for it."
+check "a trailing parenthetical link is flagged" 1 "link in parentheses" "One broker for every task ([\`celeryconfig.py:15\`](https://github.com/acme/owl/blob/$SHA/celeryconfig.py#L15)), so it raises too."
+check "a link on the words it backs is clean" 0 "" "One broker for [every task](https://github.com/acme/owl/blob/$SHA/celeryconfig.py#L15), so it raises too."
+check "a plain parenthesis is not a link" 0 "" "The retry (three attempts) is fine."
+check "a tilde estimate is flagged" 1 "approximate number \"~31 minutes\"" "Shrinks the window from ~31 minutes to a few ms."
+check "a rounded number is clean" 0 "" "Shrinks the window from 30 minutes to a few ms."
+check "a tilde inside a code span is not an estimate" 0 "" "Run \`cd ~/owl\` first."
 out=$(echo "hi" | timeout 5 bash "$GATE" --max-chars 2>&1); rc=$?
 if [ "$rc" = 2 ] && grep -q 'needs a number' <<<"$out"; then echo "  PASS: --max-chars with no value is a usage error, not a hang"; pass=$((pass+1)); else echo "  FAIL: --max-chars with no value (rc $rc)"; fail=$((fail+1)); fi
 out=$(printf -- '- The owl hoots twice at night.\n%.0s' $(seq 30) | bash "$GATE" --max-chars=2000 2>&1); rc=$?

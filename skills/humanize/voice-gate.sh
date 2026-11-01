@@ -110,6 +110,12 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     push @v, "heading \"$1\" (comments are paragraphs)" if $text =~ /^(#{1,6}\s.*)$/m;
     push @v, "emoji \"$1\"" if $text =~ /([\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B50}\x{2B06}\x{2934}\x{2935}\x{3030}\x{FE0F}])/;
     push @v, "severity tag \"$1\" (only **Minor nit:** is used)" if $text =~ /(\[(?:critical|warning|blocker|major|minor|nit|info|suggestion)\]|\*\*(?:critical|warning|blocker|major|severity)[^*]*\*\*)/i;
+    # A link belongs on the words it backs ("one broker for [every task](url)"), not in trailing parentheses after
+    # them: "(see [x](url))" makes the reader jump to learn what the sentence already should have said
+    push @v, "link in parentheses \"$1\" - put the link on the words it backs, like [every task](url) or [`refresh_nest`](url)"
+        if $prose =~ /(?<!`)(\(\s*\[[^\]\n]{1,60}\]\([^)\s]+\)[^()\n]{0,40}\))/;
+    # "~31 minutes" reads like a model estimating; a person rounds it (30 minutes) or says about
+    push @v, "approximate number \"$1\" - round it, or say about" if $text =~ /(?<![\w~])(~\s?\d[\d.,]*(?:\s?[a-zA-Z%]+)?)/;
     push @v, "praise filler \"$1\"" if $text =~ /\b(great (?:job|work|catch|question|pr|change)|nice (?:job|work|catch)|well done|kudos|awesome work|excellent work)\b/i;
     # A drafting session can leave a note about its own process in the text (seen live: a line saying the gate
     # ran on "this draft"); posted under your name, it gives the whole comment away

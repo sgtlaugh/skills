@@ -12,6 +12,8 @@ One or two short paragraphs, a blank line between them. An inline comment is usu
 
 When proposing an alternative, name what it costs. Calibrate instead of asserting: "That might be fine for X, but...", "Fine by me, just flagging...".
 
+**Stop at the last fact.** When the opening already gave the verdict ("Not convinced it's worth addressing."), a closing line that says it again ("I'd leave it as is.") is cut. A remark about scope or cost ("Guarding every enqueue feels like a separate change.") gets its own short paragraph after the evidence. Numbers are rounded the way people say them, "30 minutes" rather than "~31 minutes"; the gate flags the tilde.
+
 **Short paragraphs, or bullets.** A paragraph runs a few short sentences, about 320 characters at most; the gate flags longer ones. When a comment carries two or more parallel facts - the hops of a call chain, several files, a list of cases - they go in bullets, one fact each, instead of one long paragraph. A single point is never split into bullet fragments.
 
 **One review says each thing once.** The summary gives the overall concern in a sentence or two; the comments carry the detail. A summary that restates a comment is cut.
@@ -44,6 +46,7 @@ A template is what gives automated review away: every comment opening the same w
 ## References
 
 - **A file and line is a link** to the blob at the reviewed commit: ``[`moon.py:88`](https://github.com/acme/owl/blob/4f2a9c1/owl/moon.py#L88)``. A bare `moon.py:88` makes the reader go find it.
+- **The link sits on the words it backs,** not in parentheses after them: "one broker for [every task](…)", "the unguarded retry in [`refresh_nest`](…)", "as we can see from [`moon.py:17`](…)". A trailing `([file:line](…))` is a footnote the reader has to chase; the gate flags it.
 - **A PR or issue in another repo** is `owner/repo#N` (`acme/nest-config#16394`). GitHub autolinks only that form; `nest-config#16394` stays plain text. In the same repo, `#N` is enough.
 
 ## Approvals and status
@@ -55,7 +58,7 @@ A template is what gives automated review away: every comment opening the same w
 
 **Bug, with the trade-off:**
 
-> `refresh_moon_cache` holds the lock across the HTTP call ([here](https://github.com/acme/owl/blob/4f2a9c1/owl/moon.py#L88)), so a slow upstream stalls every reader.
+> `refresh_moon_cache` holds the lock [across the HTTP call](https://github.com/acme/owl/blob/4f2a9c1/owl/moon.py#L88), so a slow upstream stalls every reader.
 >
 > Can we fetch first and take the lock only for the swap? We'd occasionally fetch twice on a cold start, which seems cheaper than the stall.
 
@@ -63,9 +66,9 @@ A template is what gives automated review away: every comment opening the same w
 
 > Ah, this lets `purge_expired_sightings` run twice at once.
 >
-> - Every nest delete enqueues it ([`nest.py:128`](https://github.com/acme/owl/blob/4f2a9c1/owl/nest.py#L128)).
+> - [Every nest delete](https://github.com/acme/owl/blob/4f2a9c1/owl/nest.py#L128) enqueues it.
 > - This PR routes those messages to the `sightings` queue, where acme/nest-config#16394 starts a worker.
-> - The nightly CronJob runs the same purge ([`purge.py:16`](https://github.com/acme/owl/blob/4f2a9c1/scripts/purge.py#L16)).
+> - The [nightly CronJob](https://github.com/acme/owl/blob/4f2a9c1/scripts/purge.py#L16) runs the same purge.
 >
 > Is the purge safe to run concurrently? If not, can we drop the enqueue now that the CronJob owns cleanup?
 
