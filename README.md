@@ -13,78 +13,47 @@ Claude Code skills that make the agent prove it.
 - **Evidence or nothing:** every verdict cites a grep, a query or a `file:line`, or says `Can't-determine`.
 - **Fresh eyes:** reviews run in a separate context, so the author's reasoning can't wave its own work through.
 
-## Contents
-
-- [Quick start](#quick-start)
-- [The skills](#the-skills)
-- [Example verdict](#example-verdict)
-- [How they connect](#how-they-connect)
-- [Configuration](#configuration)
-- [Requirements](#requirements)
-- [Tests](#tests)
-- [Uninstall](#uninstall)
-
 ## Quick start
 
 ```bash
 git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/skills/install.sh
 ```
 
-Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Every flag is in [`CHEATSHEET.md`](CHEATSHEET.md).
+Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Common usage is in [`CHEATSHEET.md`](CHEATSHEET.md); every flag is in each skill's `SKILL.md`.
+
+> [!NOTE]
+> Review skills never touch your code. `/bonfire`, `/duck --quack` and `/nicepr --create` write only what you ask for, and `/jira` writes only after you say yes to a preview. `/gadfly`, `/forge`, `/dialectic` and `/jury` save their reports under `~/.claude/`.
 
 ## The skills
 
-### Before you push
-
 | Skill | What it does |
 |---|---|
+| **Before you push** | |
 | [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and simplicity |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review through five independent lenses, then `/darkmoon` checks the findings. Severity is defined by impact, and the review follows a checked format (`parse-findings.sh`) that tools can read |
-| [`/nicepr`](skills/nicepr/SKILL.md) | Writes short, human PR titles and descriptions from the diff and the ticket |
-
-### Checking claims
-
-| Skill | What it does |
-|---|---|
-| [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims you give it, against the code |
-| [`/solaire`](skills/solaire/SKILL.md) | Run it before a research question. Seven fixed checks keep the answer grounded \\[T]/ |
-
-### Building and debugging
-
-| Skill | What it does |
-|---|---|
-| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: watch the test fail, write the least code to pass, refactor when green |
-| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks questions until you find the bug yourself |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review: five independent lenses, findings verified by `/darkmoon` |
+| [`/nicepr`](skills/nicepr/SKILL.md) | Short, human PR titles and descriptions from the diff and the ticket |
+| **Checking claims** | |
+| [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or your claims, against the code |
+| [`/solaire`](skills/solaire/SKILL.md) | Run before a research question: seven fixed checks keep the answer grounded |
+| **Building and debugging** | |
+| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first: watch the test fail, write the least code to pass, refactor when green |
+| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that questions you until you find the bug yourself |
 | [`/fathom`](skills/fathom/SKILL.md) | Judges whether a module is deep or shallow, and how to deepen it |
-
-### Specs and decisions
-
-| Skill | What it does |
-|---|---|
-| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built: gaps, grounding in real code, four adversarial lenses |
-| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft. You decide the forks, then `/gadfly` critiques it |
-| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then a judge names the trade-off and what would flip it |
-
-### Production
-
-| Skill | What it does |
-|---|---|
-| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM and alert history |
-| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release, and checks whether a deploy fixed it |
-| [`/triage`](skills/triage/SKILL.md) | Takes a bug ticket to a proven root cause, or answers what a question ticket asks, with a note ready to post |
-| [`/lordvessel`](skills/lordvessel/SKILL.md) | Checks a ticket against its PRs: each requirement traced to code or marked missing, code no requirement asked for (with a simpler alternative), open questions and threads, a status note ready to post |
-| [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets, and reads Confluence pages |
-
-### About skills themselves
-
-| Skill | What it does |
-|---|---|
+| **Specs and decisions** | |
+| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built: gaps, grounding in real code, four lenses |
+| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft; you decide the forks, `/gadfly` critiques |
+| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then names the trade-off and what would flip it |
+| **Production** | |
+| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM, alert history |
+| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release; checks if a deploy fixed it |
+| [`/triage`](skills/triage/SKILL.md) | A bug ticket to a proven root cause, a question ticket to an answer per ask |
+| [`/lordvessel`](skills/lordvessel/SKILL.md) | Checks a ticket against its PRs: each requirement traced to code, or missing |
+| [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets; reads Confluence pages |
+| **About skills themselves** | |
 | [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
-| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and shows which findings were consistent and which were luck |
-| [`/velka`](skills/velka/SKILL.md) | Reads your past sessions and reports habits worth fixing or automating (digested mechanically, no LLM). `--propose` turns repeated pushback into CLAUDE.md edits |
-| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text, and gates text headed for GitHub against a house style |
-
-Review skills never touch your code. `/bonfire`, `/duck --quack` and `/nicepr --create` write only what you ask for. `/gadfly`, `/forge`, `/dialectic` and `/jury` save their reports under `~/.claude/`.
+| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times: which findings were consistent and which were luck |
+| [`/velka`](skills/velka/SKILL.md) | Mines your past sessions for habits; `--propose` drafts CLAUDE.md edits |
+| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns; gates GitHub text against a house style |
 
 ## Example verdict
 
@@ -93,16 +62,17 @@ Review skills never touch your code. `/bonfire`, `/duck --quack` and `/nicepr --
 ```
 ## 🌑 darkmoon - judgment on 7 claims
 
-| # | Claim                                 | Verdict   | Evidence                                                     |
-|---|---------------------------------------|-----------|--------------------------------------------------------------|
-| 2 | issue_refund is never called          | Refuted ✗ | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
-| 3 | handle_chargeback is dead code        | Refuted ✗ | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
-| 4 | The repo never imports pickle         | Upheld ✓  | grep -rniE 'pickle|__import__' → no output                   |
+| # | Claim                                 | Verdict           | Evidence                                                     |
+|---|---------------------------------------|-------------------|--------------------------------------------------------------|
+| 2 | issue_refund is never called          | Refuted ✗         | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
+| 3 | handle_chargeback is dead code        | Refuted ✗         | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
+| 4 | The repo never imports pickle         | Upheld ✓          | grep -rniE 'pickle|__import__' → no output                   |
+| 6 | The refund endpoint logged no errors  | Can't-determine ? | a production log fact: nothing in the repo can settle it     |
 
 Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 ```
 
-## How they connect
+## The main hand-offs
 
 Skills hand off to each other instead of repeating work. `/darkmoon` is the shared verifier.
 
@@ -120,8 +90,12 @@ flowchart LR
     aristarchus --> fathom["/fathom"]
     aristarchus --> jira
     forge["/forge"] --> gadfly["/gadfly"]
+    forge --> jira
+    gadfly --> jira
+    duck["/duck"] --> jira
     nicepr["/nicepr"] --> jira
     nicepr -. optional .-> humanize["/humanize"]
+    jury["/jury"] -. runs N times .-> anyskill([any skill])
     darkmoon --> skeptic([darkmoon-skeptic agent])
 
     classDef verifier fill:#4c3a72,stroke:#2e2347,color:#fff
@@ -132,9 +106,17 @@ flowchart LR
 
 ## Configuration
 
-Two files live in `~/.config/claude-skills/`. `install.sh` creates both if they're missing. It never overwrites them, and backs up anything in its way to `.bak`. Skills that need neither work right after install.
+Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the first two if they're missing, never overwrites them, and backs up anything in its way to `.bak`. Skills that need none of them work right after install.
 
-**`credentials.json`** holds API tokens, mode 600. Set `CLAUDE_SKILLS_CREDENTIALS` to keep it elsewhere.
+| File | Created by `install.sh` | Used by | Holds |
+|---|---|---|---|
+| `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below); `CLAUDE_SKILLS_CREDENTIALS` moves it |
+| `services.md` | yes | `/sentry`, `/triage`, `/firewatch`, `/lordvessel` | *Your* systems: each Sentry project's repo, your log search skill, alert patterns. Start from [`services.example.md`](services.example.md). A missing value is asked for, never guessed |
+| `voice.md` | no | `/humanize` | *Your* voice: how you suggest, push back and approve, 5-10 real comments, caps on your phrases. [`github-voice.md`](skills/humanize/references/github-voice.md) says what goes in it |
+| `work.json` | no | `/nicepr` | `{"reviewers": ["<login>", ...]}`: who `--create` asks to review a PR that isn't a draft (never you) |
+
+<details>
+<summary><code>credentials.json</code> keys</summary>
 
 | Key | Used by | Where to get it |
 |---|---|---|
@@ -151,11 +133,7 @@ Two files live in `~/.config/claude-skills/`. `install.sh` creates both if they'
 
 Skills that call `/jira` or `/sentry` use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
 
-**`services.md`** describes *your* systems: which repo each Sentry project lives in, your log search skill, alert patterns. `/sentry`, `/triage`, `/firewatch` and `/lordvessel` read it. If a value is missing, the skill asks instead of guessing. Start from [`services.example.md`](services.example.md).
-
-**`voice.md`** is optional and not created by `install.sh`. With it, `/humanize` drafts GitHub text in *your* voice: how you suggest, push back and approve, 5-10 of your real comments as examples, and caps on your signature phrases. [`github-voice.md`](skills/humanize/references/github-voice.md) says what goes in it.
-
-**`work.json`** is optional and not created by `install.sh`. `/nicepr` reads `{"reviewers": ["<login>", ...]}` from it: with `--create` and no `--reviewers`, a PR that is not a draft asks those people to review (never you).
+</details>
 
 ## Requirements
 
@@ -172,42 +150,21 @@ Linux and macOS, bash 3.2 or newer.
 
 ## Tests
 
-### Shell tests
+| Suite | Command | In CI | Cost | Run it |
+|---|---|---|---|---|
+| Shell tests | `bash tests/run.sh` | yes, Linux and macOS's stock bash | free | on every change |
+| `/darkmoon` eval | `evals/darkmoon/run.sh -n 2` | no | about $2 a pass | before and after changing the skeptic |
+| Review eval | `evals/review/run.sh -n 2` | no | about $4-5 a pass | before and after changing occam's brief or the aristarchus lenses |
 
-```bash
-bash tests/run.sh
-```
+- **Shell tests** cover `/darkmoon`'s extractor and hook, `/velka`'s scripts and quote check, `/humanize`'s voice gate, `/aristarchus`'s findings parser, `install.sh`, and the agent-to-hook wiring. CI also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
+- **The `/darkmoon` eval** runs claims with known answers against a fixture repo full of traps and scores each verdict PASS, SOFT or FAIL. Watch SOFT, not just FAIL: a rule that softens real evidence into "argument, not proof" shows up there first.
+- **The review eval** applies planted diffs to a small fixture repo and runs `/occam` and `/aristarchus`'s Saboteur lens on each. A case lists what the review must find, the false positives it must avoid, and how many times one defect may be reported. The Saboteur brief is read from the skill at run time.
 
-Covers `/darkmoon`'s extractor and hook, `/velka`'s scripts and quote check, `/humanize`'s voice gate, `/aristarchus`'s findings parser, `install.sh`, and the agent-to-hook wiring. CI runs them on Linux and on macOS's stock bash. It also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
-
-### `/darkmoon` eval
-
-```bash
-evals/darkmoon/run.sh -n 2
-```
-
-Runs claims with known answers against a fixture repo full of traps, and scores each verdict PASS, SOFT or FAIL.
-
-- **Manual, not CI:** it calls headless Claude, about $2 a pass.
-- **When:** before and after any change to the skeptic.
-- **Watch SOFT, not just FAIL:** a rule that softens real evidence into "argument, not proof" shows up there first.
-
-### Review eval
-
-```bash
-evals/review/run.sh -n 2
-```
-
-Applies planted diffs to a small fixture repo and runs `/occam` and `/aristarchus`'s Saboteur lens on each. A case lists what the review must find, the false positives it must avoid, and how many times one defect may be reported.
-
-- **Manual, not CI:** about $4-5 a pass.
-- **When:** before and after any change to occam's reviewer brief or the aristarchus lenses. The Saboteur brief is read from the skill at run time.
-
-The skills themselves are prompts. `/kiln` checks their structure; `/jury` checks their consistency.
+The skills themselves are prompts: `/kiln` checks their structure, `/jury` their consistency.
 
 ## Uninstall
 
-`install.sh` links everything into `~/.claude/`. To uninstall, delete those links. Your config in `~/.config/claude-skills/` stays. Reports and caches stay too, for you to delete if you want: `~/.claude/reports/`, `~/.claude/jury-runs/` and `~/.claude/velka/`.
+`install.sh` links everything into `~/.claude/`. To uninstall, delete those links. Your config in `~/.config/claude-skills/` stays, and so do reports and caches, for you to delete if you want: `~/.claude/reports/`, `~/.claude/jury-runs/` and `~/.claude/velka/`.
 
 ```bash
 cd ~/Github/skills && find ~/.claude -lname "$PWD/*" -delete && find ~/.claude/skills -type d -empty -delete
