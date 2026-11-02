@@ -62,12 +62,12 @@ Restart Claude Code and type `/`. Re-run `install.sh` after each pull. Common us
 ```
 ## 🌑 darkmoon - judgment on 7 claims
 
-| # | Claim                                 | Verdict           | Evidence                                                     |
-|---|---------------------------------------|-------------------|--------------------------------------------------------------|
-| 2 | issue_refund is never called          | Refuted ✗         | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
-| 3 | handle_chargeback is dead code        | Refuted ✗         | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
-| 4 | The repo never imports pickle         | Upheld ✓          | grep -rniE 'pickle|__import__' → no output                   |
-| 6 | The refund endpoint logged no errors  | Can't-determine ? | a production log fact: nothing in the repo can settle it     |
+| # | Claim                                 | Verdict         | Evidence                                                     |
+|---|---------------------------------------|-----------------|--------------------------------------------------------------|
+| 2 | issue_refund is never called          | Refuted ✗       | api.py:1 imports it `as give_back`; api.py:5 calls give_back |
+| 3 | handle_chargeback is dead code        | Refuted ✗       | handlers.py:3 getattr(self, f"handle_{event}") reaches it    |
+| 4 | The repo never imports pickle         | Upheld ✓        | grep -rniE 'pickle|__import__' → no output                   |
+| 6 | The refund endpoint logged no errors  | Can't-determine | needs the production logs; the repo can't show it            |
 
 Verdict: 4 refuted · 0 weak · 2 upheld · 1 can't-determine.
 ```
@@ -110,10 +110,15 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 
 | File | Created by `install.sh` | Used by | Holds |
 |---|---|---|---|
-| `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below); `CLAUDE_SKILLS_CREDENTIALS` moves it |
-| `services.md` | yes | `/sentry`, `/triage`, `/firewatch`, `/lordvessel` | *Your* systems: each Sentry project's repo, your log search skill, alert patterns. Start from [`services.example.md`](services.example.md). A missing value is asked for, never guessed |
-| `voice.md` | no | `/humanize` | *Your* voice: how you suggest, push back and approve, 5-10 real comments, caps on your phrases. [`github-voice.md`](skills/humanize/references/github-voice.md) says what goes in it |
-| `work.json` | no | `/nicepr` | `{"reviewers": ["<login>", ...]}`: who `--create` asks to review a PR that isn't a draft (never you) |
+| `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
+| `services.md` | yes | `/sentry`, `/triage`, `/firewatch`, `/lordvessel` | *Your* systems: repos, log search, alert patterns |
+| `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
+| `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
+
+- **`credentials.json`** lives elsewhere if `CLAUDE_SKILLS_CREDENTIALS` points there.
+- **`services.md`** says which repo each Sentry project lives in, your log search skill and your alert patterns. Start from [`services.example.md`](services.example.md); a value it lacks is asked for, never guessed.
+- **`voice.md`** holds how you suggest, push back and approve, 5-10 of your real comments, and caps on your signature phrases. [`github-voice.md`](skills/humanize/references/github-voice.md) says what goes in it.
+- **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft (never you).
 
 <details>
 <summary><code>credentials.json</code> keys</summary>

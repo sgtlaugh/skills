@@ -132,7 +132,7 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 
 ```text
 /firewatch <alert text>                   # severity, known patterns, logs, APM, report
-/firewatch Opsgenie alert #<tinyId>       # by Opsgenie alert
+/firewatch Opsgenie alert #<tinyId>       # an Opsgenie alert, by its tiny ID
 /firewatch check all services             # breadth scan from your catalog's queries
 ```
 
