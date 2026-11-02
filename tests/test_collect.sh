@@ -33,6 +33,11 @@ cp "$FIX/basic-session.jsonl" "$TMPPROJECT/session-hobbit.jsonl"
 # bash 3.2 compares -nt in whole seconds; an old mtime keeps the cache check from racing the copy
 touch -t 202601050000 "$TMPPROJECT/session-hobbit.jsonl"
 
+# collect.sh also serves a digest only when it is newer than digest.sh, whose mtime is whenever the repo was checked
+# out: on a fast runner that can be the same whole second as the digest. A copy with an old digest.sh can't race
+mkdir -p "$TMPROOT/velka"; cp "$DIR/../skills/velka/collect.sh" "$DIR/../skills/velka/digest.sh" "$TMPROOT/velka/"
+touch -t 202601050000 "$TMPROOT/velka/digest.sh"; SCRIPT="$TMPROOT/velka/collect.sh"
+
 export VELKA_DIGDIR="$TMPROOT/digests"
 
 # Test 1: processes new files
