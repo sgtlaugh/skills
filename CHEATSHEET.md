@@ -1,6 +1,6 @@
 # Cheatsheet
 
-Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each skill is, in the [README](README.md#the-skills).
+Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does is in the [README](README.md#the-skills).
 
 ## Which skill?
 
@@ -9,7 +9,7 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 | Check my change before I commit | `/occam` |
 | Review someone's PR | `/aristarchus <PR-URL>` |
 | Write the PR description | `/nicepr` |
-| Know if that last answer is actually right | `/darkmoon` |
+| Check the last answer | `/darkmoon` |
 | Settle one claim against the code | `/darkmoon --claims <claim>` |
 | Research something without bluffing | `/solaire <question>` |
 | Build a feature test-first | `/bonfire <feature>` |
@@ -19,7 +19,7 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 | Turn a PRD into a spec | `/forge <prd>` |
 | Pick between designs | `/dialectic <question>` |
 | Handle an alert that just fired | `/firewatch <alert>` |
-| Find why a ticket's bug happens, or answer what a ticket asks | `/triage <TICKET-ID>` |
+| Root-cause a bug ticket, or answer a question ticket | `/triage <TICKET-ID>` |
 | Check whether a ticket is really done | `/lordvessel <TICKET-ID>` |
 | Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
 | Read, create or comment on a Jira ticket | `/jira PROJ-123` |
@@ -131,7 +131,7 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 **`/firewatch`**
 
 ```text
-/firewatch <alert text>                   # severity, known patterns, logs, APM, report
+/firewatch <alert text>                   # rates severity, then digs through logs and APM
 /firewatch Opsgenie alert #<tinyId>       # an Opsgenie alert, by its tiny ID
 /firewatch check all services             # breadth scan from your catalog's queries
 ```
@@ -157,7 +157,7 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 **`/lordvessel`**
 
 ```text
-/lordvessel <TICKET-ID>                   # each requirement vs code, extra code, threads, CI, note
+/lordvessel <TICKET-ID>                   # traces each requirement to code
 /lordvessel <jira-url>                    # same, by URL
 /lordvessel <TICKET-ID> --fast            # skip the darkmoon pass
 ```
@@ -177,7 +177,7 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 **`/kiln`**
 
 ```text
-/kiln <skill>                             # static review: binding, contracts, stale refs
+/kiln <skill>                             # static review of a SKILL.md
 /kiln <skill> --fire                      # also generate adversarial test cases
 ```
 
@@ -213,19 +213,19 @@ Common usage by workflow. Every flag is in each skill's `SKILL.md`; what each sk
 
 ## Cost and time
 
-Take these with a grain of salt: a few runs each, and they swing with repo size and how deep the skill digs. A `-` was not recorded.
+Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 
 | Run | Model | Cost | Time | Measured |
 |---|---|---|---|---|
 | `/darkmoon --claims` (a few claims) | Opus 5.5 | $0.20-0.40 | under 1 min | Oct 2026 |
-| `/firewatch check all services` | Opus 5.5 (1M) | about $0.30 | about 1 min | Oct 2026 |
-| `/firewatch <alert>` | Opus 5.5 (1M) | $0.70-0.90 | about 3 min | Oct 2026 |
-| `/triage <TICKET-ID>` | Opus 5.5 (1M) | $2.20-2.50 | about 8 min | Oct 2026 |
+| `/firewatch check all services` | Opus 5.5 (1M) | $0.30 | 1 min | Oct 2026 |
+| `/firewatch <alert>` | Opus 5.5 (1M) | $0.70-0.90 | 3 min | Oct 2026 |
+| `/triage <TICKET-ID>` | Opus 5.5 (1M) | $2.20-2.50 | 8 min | Oct 2026 |
 | `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.05-3.39 | 4-7 min | Oct 2026 |
 | `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | - | 2-5 min | Oct 2026 |
-| `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | about 9 min | Oct 2026 |
+| `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
 | `/gadfly <spec>` | Opus 4.6 (1M) | $1.30-5.60 | 5-10 min | June 2026 |
-| `/forge <prd>` | - | $5-15 | about 14 min | June 2026 |
+| `/forge <prd>` | - | $5-15 | 14 min | June 2026 |
 | `/jury <skill>` | the target's | N × the target | about one run (parallel) | - |
 
 ## Habits that work
