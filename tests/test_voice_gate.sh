@@ -91,7 +91,8 @@ check "a plain parenthesis is not a link" 0 "" "The retry (three attempts) is fi
 check "a tilde estimate is flagged" 1 "approximate number \"~31 minutes\"" "Shrinks the window from ~31 minutes to a few ms."
 check "a rounded number is clean" 0 "" "Shrinks the window from 30 minutes to a few ms."
 check "a tilde inside a code span is not an estimate" 0 "" "Run \`cd ~/owl\` first."
-out=$(echo "hi" | timeout 5 bash "$GATE" --max-chars 2>&1); rc=$?
+# perl's alarm, not timeout: macOS has no GNU coreutils, so timeout is not there (exit 127)
+out=$(echo "hi" | perl -e 'alarm shift; exec @ARGV' 5 bash "$GATE" --max-chars 2>&1); rc=$?
 if [ "$rc" = 2 ] && grep -q 'needs a number' <<<"$out"; then echo "  PASS: --max-chars with no value is a usage error, not a hang"; pass=$((pass+1)); else echo "  FAIL: --max-chars with no value (rc $rc)"; fail=$((fail+1)); fi
 out=$(printf -- '- The owl hoots twice at night.\n%.0s' $(seq 30) | bash "$GATE" --max-chars=2000 2>&1); rc=$?
 if [ "$rc" = 0 ]; then echo "  PASS: --max-chars=N raises the limit"; pass=$((pass+1)); else echo "  FAIL: --max-chars=N (rc $rc: $out)"; fail=$((fail+1)); fi
