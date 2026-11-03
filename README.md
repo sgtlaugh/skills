@@ -152,15 +152,13 @@ Linux and macOS, bash 3.2 or newer.
 
 ## Tests
 
-| Suite | Command | In CI | Cost per pass | Run it |
-|---|---|---|---|---|
-| Shell tests | `bash tests/run.sh` | yes | free | every change |
-| `/darkmoon` eval | `evals/darkmoon/run.sh -n 2` | no | $2 | after changing the skeptic |
-| Review eval | `evals/review/run.sh -n 2` | no | $4 | after changing `/occam` or the `/aristarchus` lenses |
+| Suite | Command | Cost | Checks |
+|---|---|---|---|
+| Shell tests | `bash tests/run.sh` | free | Scripts, hooks and `install.sh`; runs in CI |
+| `/darkmoon` eval | `evals/darkmoon/run.sh -n 2` | $2 | Verdicts on trap claims with known answers |
+| Review eval | `evals/review/run.sh -n 2` | $4 | `/occam` and the Saboteur lens on planted bugs |
 
-- **Shell tests** cover `/darkmoon`'s extractor and hook, `/velka`'s scripts and quote check, `/humanize`'s voice gate, `/aristarchus`'s findings parser, `install.sh`, and the agent-to-hook wiring. CI also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
-- **The `/darkmoon` eval** runs claims with known answers against a fixture repo full of traps and scores each verdict PASS, SOFT or FAIL. Watch SOFT, not just FAIL: a rule that softens real evidence into "argument, not proof" shows up there first.
-- **The review eval** applies planted diffs to a small fixture repo and runs `/occam` and `/aristarchus`'s Saboteur lens on each. A case lists what the review must find, the false positives it must avoid, and how many times one defect may be reported.
+Run the shell tests on every change, and an eval before and after changing the skill it covers. CI also scans the full history for secrets with [gitleaks](https://github.com/gitleaks/gitleaks).
 
 ## Uninstall
 
