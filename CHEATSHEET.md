@@ -226,7 +226,7 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
 | `/gadfly <spec>` | Opus 4.6 (1M) | $1.30-5.60 | 5-10 min | June 2026 |
 | `/forge <prd>` | - | $5-15 | 14 min | June 2026 |
-| `/jury <skill>` | the target's | N × the target | about one run (parallel) | - |
+| `/jury <skill>` | the target's | N × the target | same as one run (parallel) | - |
 
 ## Habits that work
 
