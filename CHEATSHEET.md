@@ -224,7 +224,7 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.05-3.39 | 4-7 min | Oct 2026 |
 | `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | - | 2-5 min | Oct 2026 |
 | `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
-| `/gadfly <spec>` | Opus 4.6 (1M) | $1.30-5.60 | 5-10 min | June 2026 |
+| `/gadfly <spec>` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
 | `/forge <prd>` | - | $5-15 | 14 min | June 2026 |
 | `/jury <skill>` | the target's | N × the target | same as one run (parallel) | - |
 
@@ -233,5 +233,5 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 - **Review, then describe.** `/occam` before committing, `/nicepr --create` to open the PR.
 - **Doubt the confident answer.** When a response sounds too sure, `/darkmoon` it.
 - **Spec loop.** `/forge` drafts, `/gadfly` attacks, you decide, repeat until no blockers remain.
-- **High stakes, more runs.** `/jury aristarchus <PR> --headless` shows which findings were consistent and which were luck.
+- **High stakes, more runs.** One run is a sample: three `/gadfly` runs on the same spec found 12, 8 and 5 issues. `/jury gadfly <spec>` or `/jury aristarchus <PR> --headless` shows which findings were consistent and which were luck.
 - **After editing a skill,** `/kiln` it before you commit. Don't you dare go hollow.

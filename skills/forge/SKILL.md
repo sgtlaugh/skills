@@ -23,7 +23,7 @@ A blacksmith's forge: raw PRD in, drafted, **stressed by gadfly**, hardened spec
 ```
 For jury-grade confidence, don't bolt it onto forge - run `/jury gadfly <forge-output> --prd <prd>` **yourself** on the finished draft (the pass-check below reminds you). That's a cleaner, fresh-context grade than nesting jury inside the run.
 
-Cost: a full run is ingest + ground + draft + a gadfly pass + revise ≈ **2-3x a gadfly run** (one measured full run: $5.35; gadfly alone has measured $1.3-4.8, so expect roughly $5-15). `--no-temper` is far cheaper (no gadfly). Worth it against the eng-weeks a wrong spec burns.
+Cost: a full run is ingest + ground + draft + a gadfly pass + revise ≈ **2-3x a gadfly run** (one measured full run: $5.35; gadfly alone has measured $2.2-4.6, so expect roughly $5-15). `--no-temper` is far cheaper (no gadfly). Worth it against the eng-weeks a wrong spec burns.
 
 ## Phase 0 - Ingest the PRD
 
