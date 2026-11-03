@@ -126,8 +126,8 @@ Repos (confirmed): <name> at <abs path> @ <sha>, one per repo you grounded in St
 Run it fully - every phase. Return its complete output verbatim (the ranked findings + open questions)."
 ```
 - **It must be the actual gadfly skill** (harness-loaded), not a re-described critique - a pasted imitation runs shallower. The subagent invokes gadfly via its own Skill tool.
-- gadfly self-fans for grounding. Nested under this Agent, its own subagents work but report back asynchronously; on a host that disallows nesting it grounds inline instead (its SKILL handles both). Pass the confirmed repos so it never needs to ask you to confirm them, which it can't do from inside an Agent.
-- gadfly re-grounds from scratch (it caps delegated citations at `med` and re-verifies) - that's the point: an *independent* opinion, not forge's grounding rubber-stamped. The re-ground cost is the price of a real critic.
+- gadfly grounds inline, inside this Agent's context. Pass the confirmed repos so it never needs to ask you to confirm them, which it can't do from inside an Agent.
+- gadfly re-grounds from scratch and re-verifies its top-severity citations - that's the point: an *independent* opinion, not forge's grounding rubber-stamped. The re-ground cost is the price of a real critic.
 - **Want jury-grade (union of N)?** Don't nest it here - run `/jury gadfly <forge-output> --prd <prd> --n 3 --headless` yourself on the finished draft (the pass-check recommends exactly this). A fresh, user-launched jury is cleaner and more trustworthy than one buried inside forge's own run.
 
 Capture gadfly's findings (Sinks / Blocker / Handle, each with its `[SPEC]`/`[PRD]` tag + verify-by). These drive the single revise pass.
