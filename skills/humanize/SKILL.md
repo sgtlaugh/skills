@@ -153,7 +153,7 @@ The output is NOT done until:
 7. The required structure from Step 1 is intact: headings and their fixed emoji, `**Lead-in:**` labels, Title Case PR titles, checkboxes, code blocks
 8. No three short sentences in a row (Hard rule 4)
 9. Each of Hard rules 1-8 holds, checked by number
-10. Text headed for GitHub: the last gate run printed `voice-gate: clean`
+10. Text headed for GitHub: the last gate run printed `voice-gate: clean`, or every hit it still prints is quoted as a false positive with its reason
 
 ## Reference files
 

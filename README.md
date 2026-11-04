@@ -112,9 +112,9 @@ flowchart LR
     aristarchus --> fathom["/fathom"]
     aristarchus --> jira
     forge["/forge"] --> gadfly["/gadfly"]
-    forge --> jira
-    gadfly --> jira
-    duck["/duck"] --> jira
+    forge -. jira creds .-> jira
+    gadfly -. jira creds .-> jira
+    duck["/duck"] -. jira creds .-> jira
     nicepr["/nicepr"] --> jira
     nicepr -. optional .-> humanize["/humanize"]
     jury["/jury"] -. runs N times .-> anyskill([any skill])
@@ -166,7 +166,7 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 |---|---|
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
 | [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills, including `/sentry-fix` |
-| [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/lordvessel`, `/sentry`, `/firewatch`, `/darkmoon` |
+| [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/lordvessel`, `/sentry`, `/firewatch`, `/darkmoon`; optional for `/solaire` |
 | curl 7.76+ | The API skills (they use `--fail-with-body`) |
 | [pandoc](https://pandoc.org/) | Document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` |
 | python + [pytest](https://pytest.org/) | `/bonfire` and `/duck --quack` |
