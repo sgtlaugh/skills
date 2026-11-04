@@ -31,11 +31,11 @@ Runs a target skill N times concurrently in **independent** contexts, then merge
 
 Estimate `N × the target's per-run cost + ~$1-2 merge`, as a rough range, then wait for an explicit `y`.
 
-**You can't know the target's per-run cost pre-flight - it varies widely, so treat any estimate as a loose FLOOR, not a ceiling.** A light review-type run ≈ **$1-2**; a log/multi-repo-heavy run (anything that reads logs or traverses several repos) ≈ **$5-6 and several minutes** each - so N=3 spans ~$5 to ~$20+ (one observed heavy run: 3× ≈ $18). For an unfamiliar target, bias the range **high**, say "could exceed this," and run **N=2 first** to calibrate its real per-run cost before scaling up. The displayed session cost may also exclude separately-billed subagents.
+**You can't know the target's per-run cost pre-flight - it varies widely, so treat any estimate as a loose FLOOR, not a ceiling.** A review-type run ≈ **$2-5** (`CHEATSHEET.md` has measured per-skill costs); a log/multi-repo-heavy run (anything that reads logs or traverses several repos) ≈ **$5-6 and several minutes** each - so N=3 spans ~$5 to ~$20+ (one observed heavy run: 3× ≈ $18). For an unfamiliar target, bias the range **high**, say "could exceed this," and run **N=2 first** to calibrate its real per-run cost before scaling up. The displayed session cost may also exclude separately-billed subagents.
 
 ## Step 3 - Fan out (parallel, independent)
 
-Spawn N subagents in parallel. Each agent's task is to **invoke the `<target>` skill itself** (via the Skill tool) with the parsed args and return its output - e.g. *"Use the `<target>` skill with `<args>`. Run the skill fully - execute every step, don't shortcut. Return its complete output verbatim."* (Substitute the actual target name from Step 1, not a skill from this doc.)
+Spawn N `Agent` calls in ONE message, each with `subagent_type: "general-purpose"` (never `fork`: a fork copies this session's context, the target's `SKILL.md` read in Step 1 included, so the jurors stop being independent samples), `run_in_background: false` set explicitly (leaving it out runs the agent in the background), and no `model` parameter (jurors run on the session's model; a smaller one changes the sample). They run concurrently and all return before your next step. Each agent's task is to **invoke the `<target>` skill itself** (via the Skill tool) with the parsed args and return its output - e.g. *"Use the `<target>` skill with `<args>`. Run the skill fully - execute every step, don't shortcut. Return its complete output verbatim."* (Substitute the actual target name from Step 1, not a skill from this doc.)
 
 - **Invoke the real skill, don't reproduce it.** Harness-loaded = full fidelity (all steps run, incl. existing-comments + deep reasoning). A pasted copy runs shallower - that's the fidelity bug this avoids.
 - Independent context = independent sample.
@@ -44,8 +44,12 @@ Spawn N subagents in parallel. Each agent's task is to **invoke the `<target>` s
 **`--headless` mode (self-fanning targets).** The default (subagents) is lighter, cached, and MCP-present - right for the common target that does *not* spawn its own subagents. A target that **itself** fans out can degrade as a subagent (its subagents report back asynchronously, or nesting is blocked). For those, run each juror as a **root process** instead:
 ```bash
 mkdir -p ~/.claude/jury-runs; D=$(mktemp -d ~/.claude/jury-runs/"$(date +%Y%m%d-%H%M%S)"-XXXX); echo "$D"
+```
+Write `/<target> <args>` to `<D>/prompt.txt` with the Write tool - args pasted into a double-quoted shell string break on a `"`, `$` or backtick - then launch with the printed path written literally:
+```bash
+D=<the printed path>
 for i in $(seq 1 N); do
-  claude -p "/<target> <args>" --dangerously-skip-permissions --max-budget-usd <2x the per-run estimate from Step 2> --output-format json > "$D/run-$i.json" 2>"$D/run-$i.err" &
+  claude -p "$(< "$D/prompt.txt")" --dangerously-skip-permissions --max-budget-usd <2x the per-run estimate from Step 2> --output-format json > "$D/run-$i.json" 2>"$D/run-$i.err" &
 done
 wait
 for f in "$D"/run-*.json; do jq -r '.result // empty' "$f" > "${f%.json}.md"; done
@@ -53,7 +57,7 @@ for f in "$D"/run-*.json; do jq -r '.result // empty' "$f" > "${f%.json}.md"; do
 Each root process loads the target via the harness (full fidelity) and **can fan out fully**. Pull `.result` from each `run-<i>.json` for the merge - these ARE the saved raws (Step 4 already satisfied). Heavier than subagents (N cold starts, no shared cache, and headless may lack interactively-authenticated MCP servers), so use it **only** when the target self-fans.
 
 **Don't misread an in-flight run as a crash (this WILL bite you).** `--output-format json` writes the **whole blob atomically at the end** - so mid-run the `run-<i>.json` is **0 bytes**, and that means *still running*, NEVER crashed. Rules:
-- **Run the launch + `wait` as ONE blocking foreground call with `timeout: 600000`** (the Bash tool's 2-minute default would cut it off). Only a target estimated past ~9 minutes per run goes `run_in_background` instead - then wait for its exit notification, never poll. The bash tool then returns only when every juror has exited - no polling, no guessing. A heavy target (e.g. gadfly ≈ 7 min) means this call blocks for minutes; that's expected - let it.
+- **Run the launch + `wait` as ONE blocking foreground call with `timeout: 600000`** (at the Bash tool's 2-minute default the call moves to the background mid-run, and you lose the blocking wait). Only a target estimated past ~9 minutes per run goes `run_in_background` instead - then wait for its exit notification, never poll. The bash tool then returns only when every juror has exited - no polling, no guessing. A heavy target (e.g. gadfly ≈ 7 min) means this call blocks for minutes; that's expected - let it.
 - **Judge done-ness by the process, not the file** - `wait` returning (or the PID gone from `ps`) is the done signal. Empty json + live PID = working. Do **not** declare a crash, and do **not** launch a diagnostic "test run" (it wastes a full target run's cost), from a 0-byte file alone.
 - **Run the cost-rollup `jq` ONLY after `wait` returns.** On empty files it yields `null` - if you see `null`, you ran it too early; the runs aren't done.
 - **`otelHeadersHelper failed … Permission denied` in `run-<i>.err` is a BENIGN telemetry warning, not a failure.** It appears even in successful runs. Diagnose failure from the JSON (`.is_error==true`, missing `.result`, or empty json *after* the PID exited) - never from stderr noise.
@@ -70,7 +74,7 @@ Notes:
 
 ## Step 4 - Save raw outputs (persistent)
 
-Capture each run's output from its **completion notification** (the returned agent result) - don't rely on fetching a background agent's output by ID; it may not resolve. Write each run verbatim to `<run dir>/run-<i>.md`, creating the run dir once with `mkdir -p ~/.claude/jury-runs && mktemp -d ~/.claude/jury-runs/"$(date +%Y%m%d-%H%M%S)"-XXXX` (the random suffix keeps two juries started in the same second apart; use the printed path literally afterwards). This is the **audit trail + re-merge cache** - re-run the merge later with `/jury --merge <dir>`. Print the directory path in the output.
+Each juror's output comes back as its `Agent` call's result (they run in the foreground, Step 3). Write each run verbatim to `<run dir>/run-<i>.md`, creating the run dir once with `mkdir -p ~/.claude/jury-runs && mktemp -d ~/.claude/jury-runs/"$(date +%Y%m%d-%H%M%S)"-XXXX` (the random suffix keeps two juries started in the same second apart; use the printed path literally afterwards). This is the **audit trail + re-merge cache** - re-run the merge later with `/jury --merge <dir>`. Print the directory path in the output.
 
 **Full reports (both modes).** The merge reads `run-<i>.md`. A run that printed `Full report → <path>` (gadfly, dialectic): copy that file to `run-<i>.full.md`, which Step 5 reads instead of the summary.
 
