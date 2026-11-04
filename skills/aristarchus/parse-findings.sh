@@ -61,8 +61,9 @@ CHECK=$check perl -CSD -0777 -ne '
             my $want = $emoji{$x->{severity}};
             push @problems, "finding #$x->{n} is $x->{severity} but leads with \"$x->{lead}\" (use $want)" if index($x->{lead}, $want) < 0;
         }
-        # The findings summary lists every detailed finding by number, and nothing else
-        my ($summary) = $r =~ /\*\*Findings summary\*\*(.*?)(?=\n---\s*\n)/s;
+        # The findings summary lists every detailed finding by number, and nothing else. Its label starts a line: a
+        # note above the review that names the label in passing is not the section
+        my ($summary) = $r =~ /^\*\*Findings summary\*\*(.*?)(?=\n---\s*\n)/ms;
         if (defined $summary) {
             my %listed = map { $_ => 1 } $summary =~ /^\S+\s+#(\d+\w*)/mg;
             my %detailed = map { $_->{n} => 1 } @f;

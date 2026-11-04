@@ -39,6 +39,7 @@ check "a sub-numbered finding is reported, not dropped" 1 "not in the format" "$
 check "an old-style header without the severity" 1 "not in the format" "$(mutate 's/#2 · warning · Bug ·/#2 · Bug ·/')"
 check "emoji that contradicts the severity" 1 "leads with" "$(mutate 's/⚠️  \*\*#2/🛑  **#2/')"
 check "a finding missing from the summary list" 1 "#3 has no line in the summary list" "$(mutate 's/⚠️  #3  owl\/cache.py:14\n[^\n]*\n//')"
+check "a note above the review that names the summary label is not the summary" 0 "parse-findings: ok" "$(mutate 's/\A/**Format check:** a missing `**Findings summary**` label was added.\n\n/')"
 check "a summary line with no detailed finding" 1 "#9 is in the summary list" "$(mutate 's/(\*\*Findings summary\*\*\n)/$1\n⚠️  #9  owl\/ghost.py:1\n    Ghost\n/')"
 check "a verified count that disagrees with the header" 1 "header says 3 upheld but 2" "$(mutate 's/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.* (unresolved)/')"
 check "a finding with no verdict while darkmoon ran" 1 "#2 has no (verified)" "$(mutate 's/read moon.py:55-70.\* \(verified\)/read moon.py:55-70.*/')"
