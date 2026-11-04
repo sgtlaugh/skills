@@ -225,7 +225,7 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | - | 2-5 min | Oct 2026 |
 | `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
 | `/gadfly <spec>` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
-| `/forge <prd>` | - | $5-15 | 14 min | June 2026 |
+| `/forge <prd>` (5 repos, with temper) | Opus 5.5 (1M) | $5.39-6.56 | 14-17 min | Nov 2026 |
 | `/jury <skill>` | the target's | N × the target | same as one run (parallel) | - |
 
 ## Habits that work
