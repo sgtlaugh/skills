@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # velka collect - digest all sessions into a cache (mtime-keyed; only re-parses changed).
-# maxdepth 2 = real sessions only; EXCLUDES <session>/subagents/*.jsonl (they double-count).
+# maxdepth 2 = main sessions only; EXCLUDES <session>/subagents/*.jsonl, a separate record of subagent work
+# (its tool calls and Skill calls, such as /jury jurors, are not counted).
 # Usage: collect.sh [projects-root]   # default ~/.claude/projects
 set -euo pipefail
 ROOT="${1:-$HOME/.claude/projects}"

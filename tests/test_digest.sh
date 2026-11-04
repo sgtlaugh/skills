@@ -101,5 +101,20 @@ jq -nc '{type: "user", message: {content: [{type: "tool_result", tool_use_id: "t
 assert_jq "a slash tag in tool output does not count" ".slash | length" "0" "$(bash "$SCRIPT" "$toolout" 2>/dev/null)"
 rm -f "$toolout"
 
+# One message written as one line per content block: every tool call counts, the usage only once
+split=$(mktemp)
+for b in 0 1 2; do
+    jq -nc --argjson b "$b" '{type: "assistant", sessionId: "owl-split", timestamp: "2026-08-20T10:00:0\($b)Z",
+        message: {id: "msg_owl", usage: {input_tokens: 7, output_tokens: 50},
+                  content: [{type: "tool_use", id: "toolu_\($b)", name: "Bash",
+                             input: {command: (if $b == 0 then "git -C /tmp/nest commit -m feat" elif $b == 1 then "cat tests/run.sh" else "bash tests/run.sh" end)}}]}}'
+done > "$split"
+out=$(bash "$SCRIPT" "$split" 2>/dev/null)
+assert_jq "each content-block line of one message keeps its tool call" ".tools.Bash" "3" "$out"
+assert_jq "usage repeated on every line of one message counts once" ".tokens.out" "50" "$out"
+assert_jq "git -C <dir> commit counts as a commit" ".bash.git_commit" "1" "$out"
+assert_jq "reading tests/run.sh is not a test run, running it is" ".bash.test_run" "1" "$out"
+rm -f "$split"
+
 echo "  --- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]

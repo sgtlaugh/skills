@@ -27,6 +27,10 @@ check "ambiguous prefix fails" 1 "2 transcripts match" '[{"session":"owl-blocks"
 check "unknown session fails" 1 "0 transcripts match" '[{"session":"hoot-hoot-404","quote":"never squash my commits"}]'
 check "short id fails" 1 "8+ characters" '[{"session":"owl","quote":"never squash my commits"}]'
 check "one bad quote fails the batch" 1 "PASS owl-blocks-0001" '[{"session":"owl-blocks-0001","quote":"never squash my commits"},{"session":"owl-blocks-0002","quote":"made up words here"}]'
+jq -nc '{type: "user", message: {content: "<bash-stdout>never squash commits on the release branch</bash-stdout>"}}' > "$ROOT/proj/owl-shell-0004.jsonl"
+check "shell output shown in a user turn can't vouch for a quote" 1 "not in any human turn" '[{"session":"owl-shell-0004","quote":"never squash commits on the release branch"}]'
+jq -nc '{type: "user", message: {content: "<command-message>velka</command-message> <command-name>/velka</command-name> <command-args>stop renaming my test owls</command-args>"}}' > "$ROOT/proj/owl-slash-0005.jsonl"
+check "a slash command's arguments still count as the user's words" 0 "PASS" '[{"session":"owl-slash-0005","quote":"stop renaming my test owls"}]'
 jq -nc '{type: "user", message: {content: "grep for a\\.b in the owl logs"}}' > "$ROOT/proj/owl-escape-0003.jsonl"
 check "a quote with a backslash passes" 0 "PASS" '[{"session":"owl-escape-0003","quote":"grep for a\\.b in the owl logs"}]'
 check "non-array input is a usage error" 2 "JSON array" '{"session":"owl-blocks-0001"}'

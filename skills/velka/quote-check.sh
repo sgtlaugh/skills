@@ -26,7 +26,9 @@ while IFS=$'\x1f' read -r -d '' sid quote; do
               | (if (.message.content | type) == "string" then .message.content
                  elif (.message.content | type) == "array" then ([.message.content[]? | select(.type == "text") | .text] | join(" "))
                  else "" end)
-              | gsub("\\s+"; " ");
+              | if test("<command-args>") then (capture("<command-args>(?<a>[\\s\\S]*?)</command-args>").a // "") else . end
+              | gsub("\\s+"; " ") | gsub("^ +"; "")
+              | select(test("^<(command-[a-z]+|local-command-[a-z]+|system-reminder|task-notification|bash-[a-z]+|user-prompt-submit-hook)>") | not);
               contains($nq))' >/dev/null; then
         echo "PASS $sid: \"$quote\""
     else

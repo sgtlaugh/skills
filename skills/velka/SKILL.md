@@ -29,7 +29,7 @@ Velka, Goddess of Sin: she *observes and records transgressions* across the whol
 ```
 
 ## Phase 0 - Refresh the digests (cheap, cached)
-Run the collector - it (re)digests only new/changed sessions (mtime-cached), excludes subagent transcripts, dedupes streaming duplicates:
+Run the collector - it (re)digests only new/changed sessions (mtime-cached), excludes subagent transcripts, dedupes the usage repeated on each line of one message:
 ```
 bash ~/.claude/skills/velka/collect.sh
 ```
@@ -91,7 +91,7 @@ Run these over the windowed digests. **Every row carries its evidence (counts + 
   ```
   **Before calling any skill dead, cross-check typed history** - old transcripts get pruned, so digests undercount (this detector once reported a skill at 0 that history showed at 5 runs). For each ≤2x skill, count its typed invocations **inside the same window** (`.timestamp` is epoch milliseconds; use `1970-01-01` for `--all`) and report the larger number:
   ```
-  jq -s --arg s "/<skill>" --arg d '<window start: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ>' '($d | sub("\\.[0-9]+Z$";"Z") | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . + "T00:00:00Z" else . end | fromdateiso8601 * 1000) as $since | [.[] | objects | select(((.display // "") | startswith($s)) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
+  jq -s --arg s "/<skill>" --arg d '<window start: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ>' '($d | sub("\\.[0-9]+Z$";"Z") | if test("^[0-9]{4}-[0-9]{2}-[0-9]{2}$") then . + "T00:00:00Z" else . end | fromdateiso8601 * 1000) as $since | [.[] | objects | select(((.display // "") | . == $s or startswith($s + " ")) and (.timestamp // 0) >= $since)] | length' "$HOME/.claude/history.jsonl"
   ```
 - **Cross-session file hotspots** (a file edited across MANY sessions = a churn magnet / refactor candidate - higher-value than within-session thrash):
   ```
@@ -198,5 +198,5 @@ A run is complete only when:
 - **The blind-spot caveat is mandatory** on testing/coverage findings: velka sees only tools run *through Claude Code*; IDE/CI/other-shell activity is invisible. Stating "you don't test" without it is a false accusation.
 - **Cross-session by default.** Single-session windows are low-value (you lived it); warn and recommend `--all`.
 - **Speculative is OFF by default.** Mechanical counts carry the report; `--advice` gates the judgment tier, every item labelled `argument, not measured`.
-- **Read-only on your code (instruction-enforced, NOT structural).** velka reads transcripts and writes ONLY its own cache (`~/.claude/velka/` digests + last-run marker); it never edits your code or any CLAUDE.md, commits, or touches the repo (`--propose` only writes its quote list to `/tmp`). Be honest about the enforcement: the `allowed-tools` grant is narrowed to `collect.sh` + `jq`/`cat`/`ls`/`date`/`find` and the Grep tool (`find` is the widest: it can `-delete`) (arbitrary `bash` is NOT pre-approved, so an unexpected shell command prompts - the tripwire). But any `Bash` grant can in principle write via redirection - this is a **prompt-level boundary, not a hard guarantee.** For a hard backstop, add a `deny` rule in `settings.json`. Do not claim velka "physically cannot" alter code.
+- **Read-only on your code (instruction-enforced, NOT structural).** velka reads transcripts and writes ONLY its own cache (`~/.claude/velka/` digests + last-run marker); it never edits your code or any CLAUDE.md, commits, or touches the repo (`--propose` only writes its quote list to `/tmp`). Be honest about the enforcement: the `allowed-tools` grant is narrowed to `collect.sh`, `quote-check.sh`, `jq`/`cat`/`ls`/`date`/`find`, Read and the Grep tool (`find` is the widest: it can `-delete`) (arbitrary `bash` is NOT pre-approved, so an unexpected shell command prompts - the tripwire). But any `Bash` grant can in principle write via redirection - this is a **prompt-level boundary, not a hard guarantee.** For a hard backstop, add a `deny` rule in `settings.json`. Do not claim velka "physically cannot" alter code.
 - **Efficient.** Digests are mtime-cached - only changed sessions re-parse. Never re-ingest raw transcripts in the analyzer; read the digests.

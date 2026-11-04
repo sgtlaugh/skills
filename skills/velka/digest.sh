@@ -16,7 +16,10 @@ jq -cR 'fromjson? // empty' "$f" | jq -s '
   (map(select(type=="object"))) as $L
   | ($L | map(select(.type=="assistant" and .message.id != null))
     | group_by(.message.id) | map(max_by(.timestamp)) | sort_by(.timestamp)) as $a
-  | ($a | map(.message.content[]? | select(.type=="tool_use"))) as $t
+  # A message is written one content block per line, all under one message.id: usage repeats on each line (so
+  # tokens come from the deduped $a), but each tool_use is its own line, so tool calls come from every line
+  | ($L | map(select(.type=="assistant") | .message.content[]? | select(type=="object" and .type=="tool_use"))
+    | unique_by(.id // tostring)) as $t
   | ($t | map(.input.command // empty)) as $cmds
   | ($t | map({key: (.id // ""), value: (.input.command // "")}) | from_entries) as $cmd_by_id
   | [ $L[] | select(.type=="user" and (.message.content|type=="array")) | .message.content[]
@@ -59,9 +62,9 @@ jq -cR 'fromjson? // empty' "$f" | jq -s '
                        | group_by(.) | map({key: .[0], value: length}) | from_entries),
       bash: {
         total:      ($cmds | length),
-        git_commit: ($cmds | map(select(test("git +commit")))                                | length),
+        git_commit: ($cmds | map(select(test("(^|[;&|(\\n] *)git( +-[cC] +[^ ]+)* +commit\\b")))  | length),
         git_revert: ($cmds | map(select(test("git +(reset|checkout|restore|stash|revert)"))) | length),
-        test_run:   ($cmds | map(select(test("pytest|jest|vitest|unittest|rspec|go +test|cargo +test|(npm|pnpm|yarn|bun|deno) +(run +)?test|make +test|(mvn|gradlew?) .*test|\\btox\\b|tests?/run"))) | length),
+        test_run:   ($cmds | map(select(test("pytest|jest|vitest|unittest|rspec|go +test|cargo +test|(npm|pnpm|yarn|bun|deno) +(run +)?test|make +test|(mvn|gradlew?) .*test|\\btox\\b|(^|[;&|(] *)((ba)?sh +)?(\\./)?tests?/run"))) | length),
         grep:       ($cmds | map(select(test("(^| )(grep|rg|ag) ")))                          | length)
       },
       skill_tooluse: ($t | map(select(.name=="Skill") | .input.skill // empty)),
