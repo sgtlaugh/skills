@@ -227,8 +227,8 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 |---|---|---|---|---|
 | `/darkmoon --claims` (a few claims) | Opus 5.5 | $0.20-0.40 | under 1 min | Oct 2026 |
 | `/firewatch check all services` | Opus 5.5 (1M) | $0.30 | 1 min | Oct 2026 |
-| `/firewatch <alert>` | Opus 5.5 (1M) | $0.70-0.90 | 3 min | Oct 2026 |
-| `/triage <TICKET-ID>` | Opus 5.5 (1M) | $2.20-2.50 | 8 min | Oct 2026 |
+| `/firewatch <alert>` (Sentry or Jenkins) | Opus 5.5 (1M) | $0.35-0.61 | 1-2 min | Nov 2026 |
+| `/triage <TICKET-ID>` | Opus 5.5 (1M) | $1.78-3.10 (`--fast` $0.84) | 8 min | Nov 2026 |
 | `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.05-3.39 | 4-7 min | Oct 2026 |
 | `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | - | 2-5 min | Oct 2026 |
 | `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
