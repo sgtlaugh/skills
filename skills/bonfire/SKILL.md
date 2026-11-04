@@ -1,8 +1,8 @@
 ---
 name: bonfire
 trigger: /bonfire
-description: Test-first build loop (TDD) - write a failing test, SEE it fail for the right reason (red), write minimal code to pass (green), refactor only when green. One behavior at a time, vertical slices, tested through the public interface. For building a feature with >=2 behaviors or a bug fix that needs a regression guard. Writes the test AND the minimal impl, runs pytest each cycle. Python/pytest.
-allowed-tools: Read, Write, Edit, Grep, Glob, AskUserQuestion, Bash(pytest:*), Bash(python -m pytest:*), Bash(python3 -m pytest:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
+description: Test-first build loop (TDD) - write a failing test, SEE it fail for the right reason (red), write minimal code to pass (green), refactor only when green. One behavior at a time, vertical slices, tested through the public interface. For building a feature with >=2 behaviors or a bug fix that needs a regression guard. Writes the test AND the minimal impl, runs the repo's test command each cycle. Python (pytest) and TypeScript/JavaScript (mocha, jest, vitest).
+allowed-tools: Read, Write, Edit, Grep, Glob, AskUserQuestion, Bash(pytest:*), Bash(python -m pytest:*), Bash(python3 -m pytest:*), Bash(npx mocha:*), Bash(npx jest:*), Bash(npx vitest:*), Bash(npm test:*), Bash(yarn test:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
 ---
 
 # /bonfire - die, rest at the bonfire, venture again
@@ -17,7 +17,7 @@ The TDD loop *is* the Dark Souls loop: **red** (the flame's out - your test fail
 ```
 /bonfire <feature or bug to build, test-first>
 ```
-bonfire writes BOTH the test and the minimal impl (you review). Python/pytest only.
+bonfire writes BOTH the test and the minimal impl (you review). Python (pytest) and TypeScript/JavaScript (mocha, jest, vitest); other stacks get the same loop with the repo's own runner, which isn't pre-approved.
 
 ## When to fire it (proportional - don't TDD a typo)
 - **Use it:** a feature with **>=2 behaviors**, or a **bug fix** that deserves a regression guard (write the failing repro first).
@@ -26,12 +26,13 @@ bonfire writes BOTH the test and the minimal impl (you review). Python/pytest on
 ## Phase 0 - Plan (proportional gate)
 - Name the **public interface** the work needs (the function/method/endpoint callers use), and **list the behaviors** to test, **prioritized** - plus what you are **NOT** testing (you can't test everything).
 - Read the repo's **`CLAUDE.md`** + the **existing tests** in the target area so test names + style match the project (not a separate glossary - use what the repo has).
+- **Find the test commands before the first test:** the focused form (one test or one directory) for every red and green, and the suite form for the end. Take them from `CLAUDE.md`, then `package.json` scripts, `pytest.ini`/`pyproject.toml`, or the CI workflow - never assume `npm test` or bare `pytest`. A documented command that fails on setup (a missing token, a service that isn't running) is fixed or swapped for the runner it wraps, before any red counts.
 - Name the interface you'll test through, by `/fathom`'s rule: a small interface, tests *through* the seam, mocks at seams, never internals.
 - **Gate (proportional):** for a multi-behavior **feature**, state the plan and **confirm with the user before writing tests** (`AskUserQuestion`, interface + behavior list). For a **single bug-fix-with-regression-test**, just proceed.
 
 ## Phase 1 - Tracer bullet (first behavior, end-to-end)
 Write **ONE** test for the first/most-central behavior, through the **public interface**, asserting **observable behavior** (return value, persisted state, a call made/not made) - never internal/private state.
-- **RED:** run just that test with the repo's test command - `pytest path::Test::test_name`, or the containerized form its `CLAUDE.md` documents (e.g. `docker exec <service> py.test path::test_name`). It **must fail** - and on the **asserted behavior**, shown in the output. If it fails on an **import/syntax/fixture error, that is a FAKE red** - fix the *test/setup*, not the code, until the failure is the real behavior. If the public interface doesn't exist yet, add a signature-only stub (returns `None` or an obviously wrong value) as setup; the red must then fail on the assertion. The stub is not the impl. (A green you never earned through a real red is unverified.)
+- **RED:** run just that test with the repo's focused command - `pytest path::Test::test_name`, `npx vitest run path -t "name"`, `npx jest path -t "name"`, `npx mocha path --grep "name"`, or the containerized or wrapped form its `CLAUDE.md` documents (e.g. `docker exec <service> py.test path::test_name`, a runner that only takes a directory). It **must fail** - and on the **asserted behavior**, shown in the output. If it fails on an **import/syntax/fixture error, that is a FAKE red** - fix the *test/setup*, not the code, until the failure is the real behavior. In TypeScript the fake reds are a type error (`TS2304`, `TS2339`...), `Cannot find module`, and a stub that throws: none of them is the assertion failing. If the public interface doesn't exist yet, add a signature-only stub (returns `None`, or in TypeScript a wrong value of the declared type - never a `throw`) as setup; the red must then fail on the assertion. The stub is not the impl. (A green you never earned through a real red is unverified.)
 - **Green on the first run?** The test is wrong or the behavior already exists. Break the impl on purpose and watch it go red for the right reason, or drop the test as redundant. Never keep a test you haven't seen fail.
 - **GREEN:** write the **minimal** code to pass *this* test - nothing for future tests (`occam`: no speculative features). Run → 🔥 green.
 
@@ -59,5 +60,5 @@ A bonfire run is complete only when:
 - **Minimal code to pass the current test.** No speculative features (`occam`). Refactor later, at the bonfire.
 - **Refactor only when green.** Never restructure while a test is red.
 - **Proportional.** Features/bug-fixes earn the full loop; trivial changes don't - don't make TDD into ceremony.
-- **Writes code + tests, runs pytest; never commits/pushes.** You review and commit. (Run via the repo's documented test command and interpreter, per its `CLAUDE.md`. A containerized runner like `docker exec` isn't pre-approved, so it asks first.)
+- **Writes code + tests, runs the repo's tests; never commits/pushes.** You review and commit. (Run via the repo's documented test command and interpreter, per its `CLAUDE.md`. A containerized or env-prefixed runner like `docker exec` isn't pre-approved, so it asks first.)
 - **Not correctness, not design.** Proves tests catch their behavior + minimal code; bugs in untested paths still ship (`/aristarchus`), design shape is `/fathom`'s job.
