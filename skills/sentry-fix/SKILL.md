@@ -20,26 +20,16 @@ Takes one Sentry issue and ends in one of two places: a **verdict that no code c
 
 ## Phase 1 - Gather
 
-1. **Deep-dive the issue** by following the `/sentry` skill (`~/.claude/skills/sentry/SKILL.md`): its Connection block, API rules, Issue Deep-Dive and Hand off sections, unchanged. You need the exception type and value, in-app frames, `handled`, first/last release, the latest event's release, `request_id`/`trace_id`, request method and URL, breadcrumbs, spread and the 24h trend.
+1. **Deep-dive the issue** by following the `/sentry` skill (`~/.claude/skills/sentry/SKILL.md`): its Connection block, API rules, Issue Deep-Dive, Classify and Hand off sections, unchanged. You need the exception type and value, in-app frames, `handled`, first/last release, the latest event's release, `request_id`/`trace_id`, request method and URL, breadcrumbs, spread and the 24h trend.
 2. **Map the project to its repo** with the service catalog (`~/.config/claude-skills/services.md`, Services table) or `--repo`. Stamp the repo: `git -C <repo> rev-parse --short HEAD`.
 3. **Read the code at the deployed release** (the catalog explains release formats, null releases and compiled frames). Read the crashing function's whole file, not the frame line alone.
 4. **Logs**, when `request_id` is tagged and the catalog names a log search skill: trace that request around the event's `dateCreated` for the inputs and the downstream calls. The request body and the downstream response usually decide the root cause.
 
 ## Phase 2 - Gate: should code change at all?
 
-Classify, first match wins. Each class names its action; only **Needs a fix** continues to Phase 3.
+Classify with `/sentry`'s **Classify** table (Noise, Third-party, Deliberate report, Handled 4xx, Needs a fix), including its rules on low volume and downstream 5xx. Before accepting **Needs a fix**, check one more class only this skill can see:
 
-| Class | Signals | Action instead of a code fix |
-|---|---|---|
-| **Noise** | transient infrastructure the app can't prevent: `ECONNRESET`, `ETIMEDOUT`, `EAI_AGAIN`, `ECONNREFUSED`, `Network Error`, `Failed to fetch`, `Loading chunk`, `ResizeObserver loop`, 502/503/504 from a gateway, driver pool/network errors - plus the catalog's project noise patterns | an inbound filter or ignore rule; say which. If the app turns a transient failure into a user-visible dead end (no retry, no message), that part is a fix - reclassify. |
-| **Third-party** | zero in-app frames; the error lives entirely in a library, browser extension or host page | upgrade or work around the dependency if it matters to users, else filter |
-| **Deliberate report** | a catalog *deliberate error-tracking function* sits in the frames: code reported on purpose and continued | decide whether the report is still wanted; not a crash |
-| **Handled 4xx** | `handled: true` and a client-error type (bad request, not found, forbidden, conflict, validation), returned to the client as designed | stop reporting it to Sentry; the behavior is right |
-| **Already fixed** | the crash site differs between the event's release and the repo's HEAD, and `git log <release>..HEAD -- <file>` shows a change that addresses it | give the commit; recommend `/sentry fixed <issue> <release-with-it>` after it deploys |
-| **Needs a fix** | everything else | continue |
-
-- **Low volume is not noise.** A 6-event issue is often a real bug that few users reach. Volume ranks priority, not validity.
-- **A downstream 5xx is a question of layer, not a dismissal.** When our code calls another service and it fails, decide which layer is wrong: our caller sent input the downstream can't take (validate it in our layer), the downstream mishandles valid input (fix the downstream repo, when it's in the catalog), or the downstream correctly returned a 4xx and our layer turned it into a 500 (pass the status through or map it). Only a genuine downstream outage with correct handling on our side is noise.
+- **Already fixed** - the crash site differs between the event's release and the repo's HEAD, and `git log <release>..HEAD -- <file>` shows a change that addresses it. Give the commit and recommend `/sentry fixed <issue> <release-with-it>` once it deploys.
 
 Not **Needs a fix** → write the report (Phase 6) with the class, the evidence and the action, and stop. No branch.
 

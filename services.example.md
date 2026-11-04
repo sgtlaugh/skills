@@ -45,7 +45,7 @@ Read by `/firewatch`. Known patterns specific to your systems, checked after the
 
 ## Fixes
 
-Read by `/sentry-fix`: how to run each repo's tests, plus noise and reporting patterns specific to your projects.
+Read by `/sentry` (noise and reporting patterns, for its Classify step) and `/sentry-fix` (all of it): how to run each repo's tests, plus noise and reporting patterns specific to your projects.
 
 | Key | Value |
 |---|---|
