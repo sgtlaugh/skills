@@ -23,6 +23,26 @@ git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/ski
 - Re-run `install.sh` after each pull.
 - Common usage is in [`CHEATSHEET.md`](CHEATSHEET.md); every flag is in each skill's `SKILL.md`.
 
+### Set up what you use
+
+Most skills work right after install. The rest need credentials, your service catalog or a clones directory; `install.sh` lists what is still missing every time it runs, and [Configuration](#configuration) explains each file.
+
+| Skill | Needs |
+|---|---|
+| `/occam`, `/kiln`, `/fathom`, `/bonfire`, `/solaire`, `/dialectic`, `/darkmoon`, `/jury`, `/velka` | nothing |
+| `/humanize` | nothing; `voice.md` for your own voice |
+| `/gadfly`, `/forge`, `/duck` | nothing for a local file; `jira*` credentials to read a ticket or Confluence page |
+| `/jira` | `jira*` credentials |
+| `/nicepr` | `gh auth login`; `jira*` credentials for ticket context; `work.json` for reviewers |
+| `/sentry` | `sentry*` credentials and `services.md` (Global and Services) |
+| `/triage` | `jira*` and `sentry*` credentials, `services.md`, `$WORKSPACE` and `gh auth login` |
+| `/sentry-fix` | `sentry*` credentials, `services.md` (Services and Fixes), `$WORKSPACE` and `gh auth login` |
+| `/lordvessel` | `jira*` credentials, `gh auth login` and the `services.md` GitHub org; `$WORKSPACE` speeds up code search |
+| `/firewatch` | `services.md`; `sentry*`, `datadog*`, `jenkins*` and `opsgenieApiKey` for those alert sources; `jira*` credentials to file tickets |
+| `/aristarchus` | `gh auth login` and `$WORKSPACE`; `jira*` credentials for ticket context; the `services.md` Fixes table for the mutation check |
+
+`$WORKSPACE` is the directory holding your local clones: `export WORKSPACE=~/code` in your shell profile.
+
 ## The skills
 
 | Skill | What it does |
@@ -111,12 +131,12 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | File | Created by `install.sh` | Used by | Holds |
 |---|---|---|---|
 | `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
-| `services.md` | yes | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/lordvessel` | *Your* systems: repos, log search, alert patterns |
+| `services.md` | yes | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/lordvessel`, `/aristarchus` | *Your* systems: repos, log search, alert patterns, test commands |
 | `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
 | `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
 
 - **`credentials.json`** lives elsewhere if `CLAUDE_SKILLS_CREDENTIALS` points there.
-- **`services.md`** says which repo each Sentry project lives in, your log search skill and your alert patterns.
+- **`services.md`** says which repo each Sentry project lives in, your log search skill, your alert patterns and how to run each repo's tests.
 - **`voice.md`** holds how you suggest, push back and approve.
 - **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft.
 

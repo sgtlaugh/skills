@@ -24,8 +24,13 @@ ln -s "$REPO/skills/retired-skill/SKILL.md" "$S/retired-skill/SKILL.md"
 ln -s "$H/unmounted-drive/SKILL.md" "$S/other-repo-skill/SKILL.md"
 ln -s "$H/other-repo/occam" "$S/occam"
 
-HOME="$H" bash "$REPO/install.sh" >/dev/null; rc=$?
+out=$(HOME="$H" WORKSPACE= bash "$REPO/install.sh" 2>&1); rc=$?
 check "first run exits 0" '[ $rc -eq 0 ]'
+check "first run names the unset jira keys and what they block" '[[ "$out" == *"unset in credentials.json: jiraApiToken, jiraBaseUrl, jiraEmail → /jira, /triage"* ]]'
+check "first run names the unset sentry keys" '[[ "$out" == *"sentryAuthToken, sentryOrg → /sentry, /sentry-fix"* ]]'
+check "first run flags the catalog as still the template" '[[ "$out" == *"services.md is still the template"* ]]'
+check "first run flags an unset \$WORKSPACE" '[[ "$out" == *"WORKSPACE is unset"* ]]'
+check "setup notes point at the README section" '[[ "$out" == *"Set up what you use\" in $REPO/README.md"* ]] && grep -q "^### Set up what you use" "$REPO/README.md"'
 
 check "every skill file is linked" '[ "$(find "$REPO/skills" -type f | wc -l)" -eq "$(find "$S" -type l -lname "$REPO/*" | wc -l)" ]'
 check "agent is linked to the repo" '[ "$(readlink "$H/.claude/agents/darkmoon-skeptic.md")" = "$REPO/agents/darkmoon-skeptic.md" ]'
@@ -40,8 +45,16 @@ check "credentials.json created mode 600" '[ "$(stat -c %a "$H/.config/claude-sk
 echo '{"jiraApiToken": "estus-flask"}' > "$H/.config/claude-skills/credentials.json"
 echo "# my catalog" > "$H/.config/claude-skills/services.md"
 rm "$S/darkmoon/SKILL.md" && echo "edited again" > "$S/darkmoon/SKILL.md"
-HOME="$H" bash "$REPO/install.sh" >/dev/null; rc=$?
+out=$(HOME="$H" WORKSPACE="$H/clones" bash "$REPO/install.sh" 2>&1); rc=$?
 check "second run exits 0" '[ $rc -eq 0 ]'
+check "second run still lists what is missing" '[[ "$out" == *"unset in credentials.json: jiraBaseUrl, jiraEmail → /jira"* ]]'
+check "a set key is no longer listed" '[[ "$out" != *jiraApiToken* ]]'
+check "an edited catalog is not flagged" '[[ "$out" != *"still the template"* ]]'
+check "a set \$WORKSPACE is not flagged" '[[ "$out" != *"WORKSPACE is unset"* ]]'
+jq 'with_entries(.value = "set")' "$REPO/credentials.example.json" > "$H/.config/claude-skills/credentials.json"
+out=$(HOME="$H" WORKSPACE="$H/clones" bash "$REPO/install.sh" 2>&1)
+check "a complete setup says nothing is missing" '[[ "$out" == *"Setup still missing"*"  none"* ]] && [[ "$out" != *"⚠"* ]]'
+echo '{"jiraApiToken": "estus-flask"}' > "$H/.config/claude-skills/credentials.json"
 check "second run keeps credentials" 'grep -q estus-flask "$H/.config/claude-skills/credentials.json"'
 check "second run keeps the catalog" 'grep -q "my catalog" "$H/.config/claude-skills/services.md"'
 check "a second backup never overwrites the first" 'grep -q hand-edited "$S/darkmoon/SKILL.md.bak" && cat "$S"/darkmoon/SKILL.md.bak.* | grep -q "edited again"'

@@ -56,14 +56,31 @@ done
 
 echo "Config in ~/.config/claude-skills:"
 mkdir -p "$CONFIG_DIR"
-seed "$REPO/services.example.md" "$CONFIG_DIR/services.md" " - fill it in for sentry, triage, firewatch and lordvessel"
+seed "$REPO/services.example.md" "$CONFIG_DIR/services.md"
 seed "$REPO/credentials.example.json" "$CONFIG_DIR/credentials.json" " (mode 600)"
+
+# Printed every run, so setup that is still missing stays visible after the first install
+echo "Setup still missing (see \"Set up what you use\" in $REPO/README.md):"
+missing=0
 if [ -e "$CONFIG_DIR/credentials.json" ]; then
-    if unset_count=$(jq '[.[] | select(. == null)] | length' "$CONFIG_DIR/credentials.json" 2>/dev/null); then
-        if [ "$unset_count" -gt 0 ]; then echo "  ⚠ $unset_count credential(s) unset in $CONFIG_DIR/credentials.json"; fi
+    if unset=$(jq -r --slurpfile tpl "$REPO/credentials.example.json" \
+        '. as $c | $tpl[0] | keys[] | select(($c[.] // "") == "")' "$CONFIG_DIR/credentials.json" 2>/dev/null); then
+        for group in "jira:/jira, /triage, /lordvessel; ticket input for /gadfly, /forge, /duck, /nicepr, /aristarchus" \
+                     "sentry:/sentry, /sentry-fix, /triage, /firewatch" \
+                     "datadog:/firewatch (Datadog APM)" "jenkins:/firewatch (Jenkins jobs)" "opsgenie:/firewatch (Opsgenie alerts)"; do
+            keys=$(printf '%s\n' "$unset" | grep "^${group%%:*}" | paste -sd, - | sed 's/,/, /g')
+            if [ -n "$keys" ]; then echo "  ⚠ unset in credentials.json: $keys → ${group#*:}"; missing=1; fi
+        done
     else
-        echo "  ⚠ $CONFIG_DIR/credentials.json is not valid JSON"
+        echo "  ⚠ $CONFIG_DIR/credentials.json is not valid JSON"; missing=1
     fi
 fi
+if cmp -s "$REPO/services.example.md" "$CONFIG_DIR/services.md"; then
+    echo "  ⚠ services.md is still the template → /sentry, /sentry-fix, /triage, /firewatch, /lordvessel, the /aristarchus mutation check"; missing=1
+fi
+if [ -z "${WORKSPACE:-}" ]; then
+    echo "  ⚠ \$WORKSPACE is unset (your clones directory) → /aristarchus, /triage, /sentry-fix"; missing=1
+fi
+if [ "$missing" -eq 0 ]; then echo "  none"; fi
 
 echo "✓ Done. Restart Claude Code to pick up new skills."
