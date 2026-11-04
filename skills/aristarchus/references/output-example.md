@@ -3,7 +3,7 @@
 **CI**: passing | **Reviewers**: @rhs
 **Filtered**: 0 files skipped | **Conventions**: CLAUDE.md (8 rules) | **Existing comments**: 2 fetched (1 deduped) | **JIRA**: OWL-4521 fetched
 **Verified**: 5 claims via darkmoon - 3 upheld, 1 weak, 0 can't-determine, 1 refuted
-**Agents**: lenses 5/5 | config research n/a | library tracing ran: requests, 0 findings | cross-repo n/a
+**Agents**: lenses 5/5 | config research n/a | library tracing ran: requests, 0 findings | cross-repo n/a | mutation ran: 5 killed, 0 survived (0 filed)
 
 ---
 

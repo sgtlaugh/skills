@@ -1,8 +1,8 @@
 ---
 name: aristarchus
-description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, verification).
+description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, a mutation check of the PR's tests, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, mutation check, verification).
 trigger: /aristarchus
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(wc:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(wc:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*), Bash(bash ~/.claude/skills/aristarchus/mutate.sh:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -22,6 +22,7 @@ Analyze PR diffs file-by-file, produce a structured review with categorized find
 
 - **`$WORKSPACE`** is exported, pointing at the directory holding your local clones. Every review checks out the PR in a worktree of `$WORKSPACE/<repo>`; Step 6c reads the infra/config repo(s) there. `$WORKSPACE` unset → stop and ask the user to export it; guessing a clones directory is WRONG.
 - **`gh auth status`** passes.
+- **Optional - service catalog:** a test command per repo in `~/.config/claude-skills/services.md` (Fixes section) enables Step 6d's mutation check. Without one, Step 6d records `n/a` and the review runs as before.
 - **Skills:** `/darkmoon` (with the `darkmoon-skeptic` agent) and `/fathom`. `/jira` is optional - without JIRA credentials the review continues with no ticket context.
 
 ## Step 1 - Parse Input
@@ -31,7 +32,7 @@ Record the start time: `date +%s` via Bash. This is used in Step 9 to show total
 Run `printenv WORKSPACE`. If empty, **stop** and tell the user to `export WORKSPACE=<dir containing their clones>` - an unset value makes `$WORKSPACE/<repo>` resolve to `/<repo>`, and the "repo missing" error would blame the wrong cause.
 
 - No args → ask for a PR URL.
-- Strip `--` flags before processing. `--fast` skips Steps 3b, 6a, 6b, 6c, and 8 (config research, lenses, library tracing, cross-repo check, darkmoon). Default (no flag) runs all of them.
+- Strip `--` flags before processing. `--fast` skips Steps 3b, 6a, 6b, 6c, 6d and 8 (config research, lenses, library tracing, cross-repo check, mutation check, darkmoon). Default (no flag) runs all of them.
 
 ## Step 2 - PR Metadata and JIRA Context
 
@@ -56,7 +57,7 @@ gh pr checkout <url> --detach \
 ```
 All later file reads use worktree paths. After review, `ExitWorktree` with `action: "remove", discard_changes: true` - the checkout is read-only and disposable, and its commits are the PR's own (already on the remote), so the harness "unsaved work" guard would otherwise block removal.
 
-**Unless `--fast`:** run Steps 4, 5 and 7 here as one parallel batch (the lenses need the diff and conventions), then Step 3b if it applies. Step 6, the main analysis, comes next; the lens agents, the library tracer and the cross-repo checker launch after it, together (Step 6a). With `--fast`, Steps 4, 5 and 7 run in their normal place.
+**Unless `--fast`:** run Steps 4, 5 and 7 here as one parallel batch (the lenses need the diff and conventions), then Step 3b if it applies. Step 6, the main analysis, comes next; the lens agents, the library tracer, the cross-repo checker and the mutation check launch after it, together (Step 6a). With `--fast`, Steps 4, 5 and 7 run in their normal place.
 
 ## Step 3b - Config Change Research (skipped with --fast)
 
@@ -155,7 +156,7 @@ A finding that changes behavior is never a `nit`, however small. One exception t
 
 Five independent review perspectives the main review may miss. **This is discovery, not verification** - verification happens in Step 8.
 
-**Timing:** after Step 6, launch every lens - plus the Step 6b tracer and the Step 6c checker when they apply - as parallel `Agent` calls in ONE message, each with `run_in_background: false` set explicitly (leaving it out runs the agent in the background) and with no `model` parameter (the lenses run on the session's model - a smaller model misses findings, and the lenses exist to add them). They run concurrently and all return before your next step, so there is nothing to wait for: no timers, no placeholder agents, no polling. Step 3b's research, when it applies, runs before Step 6 because the debiased lenses get its output.
+**Timing:** after Step 6, launch every lens - plus the Step 6b tracer and the Step 6c checker when they apply - as parallel `Agent` calls in ONE message, together with Step 6d's Bash call, each with `run_in_background: false` set explicitly (leaving it out runs the agent in the background) and with no `model` parameter (the lenses run on the session's model - a smaller model misses findings, and the lenses exist to add them). They run concurrently and all return before your next step, so there is nothing to wait for: no timers, no placeholder agents, no polling. Step 3b's research, when it applies, runs before Step 6 because the debiased lenses get its output.
 
 **Independence is structural.** Spawn one `Agent` instance per lens (using the `Agent` tool, NOT Explore - Explore is read-only search, not analysis) - each runs in a fresh context with NO access to the main review's findings or each other's. A single model wearing multiple hats in the same context shares confirmation bias; separate agents don't.
 
@@ -282,6 +283,27 @@ When the diff touches infra files (`charts/`, `deploy/`, `workers/`, `tasks/`, k
 
 Each finding carries `source:cross-repo` in its verification line; `Confirmed` follows the same rule as Step 6b. Deployment mismatches are `warning` minimum.
 
+## Step 6d - Mutation Check (skipped with --fast)
+
+Lenses judge test coverage by reading, and reading misses gaps: on one PR, five of five reviews read a new `return kind === 'owl' && name === 'hoot'` and none noticed that flipping `&&` to `||` left every test green. `mutate.sh` checks this mechanically. It flips each condition the PR adds (`&&`/`||`, `==`/`!=`, `not`/`!`, `return true`/`false`) one at a time and runs the PR's changed tests against each. A mutant the tests stay green on is a condition no test pins down.
+
+**When it runs** - both must hold, else record `mutation n/a: <reason>` on the Agents line and continue; a missing piece never stops the review:
+- The service catalog (`~/.config/claude-skills/services.md`, Fixes section) has a test command for this repo.
+- The PR author is trusted: `gh api repos/<owner>/<repo>/pulls/<number> --jq .author_association` is `OWNER`, `MEMBER` or `COLLABORATOR`. The check executes the PR's own code - its tests, and any test helper or config it changes - on your machine, so a PR from outside the repo's team never runs (`mutation n/a: author is <association>`).
+
+**Before Step 6a's message**, start each prerequisite the catalog lists that isn't already running, with the catalog's start command, and note exactly what you started.
+
+**Run it as a Bash call in the same message as the Step 6a lenses**, with the Bash `timeout` set to `600000`. It runs while they do, so it adds no time:
+```bash
+bash ~/.claude/skills/aristarchus/mutate.sh --worktree <absolute review worktree path> --base <baseRefOid> \
+  --test '<the catalog test command, verbatim>' [--setup '<the catalog worktree setup command>']
+```
+It never edits the review worktree: mutants run in a scratch worktree it creates and removes. It fills the test command's `{dirs}` or `{files}` placeholder with the PR's changed tests, stops at 12 mutants and 480 s (counting what it didn't run), and always exits 0 with one `mutation:` line - counts, or `skipped - <reason>` - then one `SURVIVED <file>:<line> ...` line per survivor.
+
+**After it returns**, stop exactly what you started, the way the catalog says - a service the user already had running stays up.
+
+**Each SURVIVED line becomes a finding**, after one check: read the line, and drop the survivor when the flip cannot change behavior (the operator sat inside a string, or both sides are always equal) - that is an equivalent mutant, not a gap. A kept survivor is a `warning` tagged `Tests` at that `file:line`. Its Problem names the input that tells the two versions apart and that no test supplies; its Fix is that test. Its verification line is `*Confirmed - mutation: <before> -> <after> left <tests> passing.*`, and it goes to Step 8 like every finding. When a lens or the main review already flagged missing tests there, merge into that finding and add the mutation result as its evidence. A killed mutant never removes or downgrades a finding: it proves some test failed, not that a good test exists.
+
 ## Step 7 - Existing Comments
 
 Fetch existing feedback so you don't repeat it - inline comments, review bodies, and conversation comments (bots often post summaries in the latter two). Write the owner and repo from the PR URL literally: `gh` fills `{owner}/{repo}` from the current directory's remote, which in a fork clone is the fork, not the PR's repo.
@@ -337,7 +359,7 @@ Header (6 lines + `---`):
 **CI**: passing|failing|pending | **Reviewers**: names (parse `reviewRequests`: `__typename: User` → login, `__typename: Team` → name)
 **Filtered**: N files skipped (N sampled) | **Conventions**: <CLAUDE.md source> (N rules)|none | **Existing comments**: N fetched (M deduped) | **JIRA**: <ID> fetched|<ID> supplied|none found|failed
 **Verified**: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted (dropped, including Weak nits) | skipped (--fast)
-**Agents**: lenses N/5 | config research <ran | n/a> | library tracing <ran: packages, N findings | n/a | skipped: reason> | cross-repo <ran: repos, N findings | n/a | skipped: reason>
+**Agents**: lenses N/5 | config research <ran | n/a> | library tracing <ran: packages, N findings | n/a | skipped: reason> | cross-repo <ran: repos, N findings | n/a | skipped: reason> | mutation <ran: K killed, S survived (F filed) | n/a: reason | skipped: reason>
 ---
 ```
 The **Agents** line records every agent step, so none can drop silently: `n/a` = not triggered, `skipped` = triggered but failed. With `--fast`: `lenses skipped (--fast)` and the same for the rest.
@@ -417,14 +439,14 @@ It checks each finding header, that the emoji matches the severity word, that th
 3. Existing comments field is filled - count fetched + deduped
 4. Summary includes Confidence + Recommendation
 5. Summary states **what was NOT examined** (e.g., "scripts/ not grepped", "sampled 30 of 55 files") - a clean review with unstated scope gives false confidence. Status notes from skipped or failed steps (config research, library tracing, cross-repo check) go in this sentence
-6. The **Agents** header line is filled for every agent step (lenses, config research, library tracing, cross-repo)
+6. The **Agents** header line is filled for every agent step (lenses, config research, library tracing, cross-repo, mutation)
 7. Nits and non-critical pre-existing findings are in the Notes, not among the detailed findings
 8. JIRA field is filled - ticket fetched, supplied, none found, or failed
 9. `parse-findings.sh --check` printed `parse-findings: ok` on the final review
-10. `ExitWorktree` ran with `action: "remove"`
+10. `ExitWorktree` ran with `action: "remove"`, and every prerequisite Step 6d started is stopped
 11. Every lens that ran appears in the lens section, with findings or `<Lens>: no findings`
 
 ## Guard Rails
 
-- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only. Lens, tracer and cross-repo subagents have full tool access; for them the read-only guarantee is prompt-only unless deny rules cover Edit/Write in `$WORKSPACE`.
+- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only. Step 6d is the one step that executes code: the PR's tests, only for an `OWNER`/`MEMBER`/`COLLABORATOR` author, in a scratch worktree `mutate.sh` creates and removes - the review worktree and your checkout are never edited. Its test and prerequisite commands come from the catalog, so they can fall outside the grants above and prompt on first use; that prompt is the tripwire, not a fault. Lens, tracer and cross-repo subagents have full tool access; for them the read-only guarantee is prompt-only unless deny rules cover Edit/Write in `$WORKSPACE`.
 - **`gh` auth required** - if `gh auth status` fails, stop and tell the user to run `gh auth login`.

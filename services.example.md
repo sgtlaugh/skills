@@ -45,7 +45,7 @@ Read by `/firewatch`. Known patterns specific to your systems, checked after the
 
 ## Fixes
 
-Read by `/sentry` (noise and reporting patterns, for its Classify step) and `/sentry-fix` (all of it): how to run each repo's tests, plus noise and reporting patterns specific to your projects.
+Read by `/sentry` (noise and reporting patterns, for its Classify step), `/sentry-fix` (all of it) and `/aristarchus` (the repo table, for its mutation check): how to run each repo's tests, plus noise and reporting patterns specific to your projects.
 
 | Key | Value |
 |---|---|
@@ -53,10 +53,12 @@ Read by `/sentry` (noise and reporting patterns, for its Classify step) and `/se
 | Deliberate error-tracking function | a function your code calls to report to Sentry on purpose and then continue, e.g. `reportError`, or `none` |
 | Project noise patterns | errors specific to your products that are never code bugs, e.g. "`owl-web`: `Viewer is on a different domain` (embedded viewer on a customer page)" |
 
-| Repo | Test command (run from the repo root) | Prerequisites and how to start them |
-|---|---|---|
-| `owl-api` | `pytest -q <path>` | Postgres on `localhost:5432`: `docker run -d --rm --name owl-pg -p 5432:5432 postgres:16` |
-| `owl-gateway` | `npm test -- <dir>` | none |
+Test commands run from the repo root. `{files}` is the test files to run and `{dirs}` their directories. Worktree setup runs once in a fresh worktree, before any test - for the untracked files a clone lacks.
+
+| Repo | Test command | Worktree setup | Prerequisites and how to start them |
+|---|---|---|---|
+| `owl-api` | `pytest -q {files}` | none | Postgres on `localhost:5432`: `docker run -d --rm --name owl-pg -p 5432:5432 postgres:16` |
+| `owl-gateway` | `npm test -- {dirs}` | `ln -s $WORKSPACE/owl-gateway/node_modules node_modules` | none |
 
 ## Jenkins
 

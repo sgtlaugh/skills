@@ -44,7 +44,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 **`/aristarchus`**
 
 ```text
-/aristarchus <PR-URL>                     # all 5 lenses + darkmoon verification
+/aristarchus <PR-URL>                     # 5 lenses, mutation check, darkmoon verification
 /aristarchus <PR-URL> --fast              # quick pass, no agent steps
 ```
 
@@ -229,7 +229,7 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/firewatch check all services` | Opus 5.5 (1M) | $0.30 | 1 min | Oct 2026 |
 | `/firewatch <alert>` (Sentry or Jenkins) | Opus 5.5 (1M) | $0.35-0.61 | 1-2 min | Nov 2026 |
 | `/triage <TICKET-ID>` | Opus 5.5 (1M) | $1.78-3.10 (`--fast` $0.84) | 8 min | Nov 2026 |
-| `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.05-3.39 | 4-7 min | Oct 2026 |
+| `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.55-4.98 | 7-14 min (a slow test suite makes the mutation check the long pole) | Nov 2026 |
 | `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | - | 2-5 min | Oct 2026 |
 | `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
 | `/gadfly <spec>` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
