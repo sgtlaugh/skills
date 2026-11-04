@@ -2,7 +2,7 @@
 name: occam
 description: Review the changes thoroughly - bugs, drift (leftover old logic, stale docs/tests/callers), simplifications, and whether the diff is the minimal change for the goal. Runs on your local uncommitted work by default (or a commit / the whole branch) in a fresh-context reviewer, so the author's reasoning can't wave its own work through. Read-only.
 trigger: /occam
-allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git status:*), Bash(git ls-files:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git symbolic-ref:*), Bash(git remote:*)
+allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git status:*), Bash(git ls-files:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git remote -v)
 ---
 
 # /occam - review your own change before it ships
@@ -28,7 +28,7 @@ The review you'd otherwise type by hand: *"review the changes thoroughly - any i
   | default | `git diff HEAD` + `git ls-files --others --exclude-standard` (read each untracked file in full - they are not in the diff) |
   | `--staged` | `git diff --cached` |
   | `--last` | `git show HEAD` |
-  | `--branch` | `git diff <merge-base sha>..HEAD`, with the sha resolved here from `git merge-base HEAD <remote>/<base>`. `<remote>` = the remote this branch will be merged into (the org/upstream repo - `git remote -v` shows which URL that is); with several candidates, ask. Never the first remote listed - in multi-fork repos that is often a colleague's fork. `<base>` = `git symbolic-ref refs/remotes/<remote>/HEAD`, else `main`/`master` |
+  | `--branch` | `git diff <merge-base sha>..HEAD`, with the sha resolved here from `git merge-base HEAD <remote>/<base>`. `<remote>` = the remote this branch will be merged into (the org/upstream repo - `git remote -v` shows which URL that is); with several candidates, ask. Never pick a remote because it is listed first - in multi-fork repos that is often a colleague's fork. `<remote>/<base>` = `git rev-parse --abbrev-ref <remote>/HEAD` (prints e.g. `origin/main`), else `<remote>/main` or `<remote>/master` |
 
   Run them once: empty scope → "nothing to review" and stop.
 - **Goal** is the yardstick for scope creep and for "goal not met". `--last`/`--branch`: the commit messages. Local work: the stated `<goal>`, else the user's request from this conversation in one line. If neither exists, **ask in one line** - never infer the goal from the diff, because a goal reverse-engineered from a bloated diff silently absorbs the bloat.
