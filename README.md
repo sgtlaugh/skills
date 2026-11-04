@@ -34,6 +34,7 @@ Most skills work right after install. The rest need credentials, your service ca
 | `/gadfly`, `/forge`, `/duck` | nothing for a local file; `jira*` credentials to read a ticket or Confluence page |
 | `/jira` | `jira*` credentials |
 | `/nicepr` | `gh auth login`; `jira*` credentials for ticket context; `work.json` for reviewers |
+| `/niceticket` | nothing; `gh auth login` to confirm a commit for its code links, `sentry*` credentials for a Sentry issue |
 | `/sentry` | `sentry*` credentials and `services.md` (Global and Services) |
 | `/triage` | `jira*` and `sentry*` credentials, `services.md`, `$WORKSPACE` and `gh auth login` |
 | `/sentry-fix` | `sentry*` credentials, `services.md` (Services and Fixes), `$WORKSPACE` and `gh auth login` |
@@ -51,6 +52,7 @@ Most skills work right after install. The rest need credentials, your service ca
 | [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and simplicity |
 | [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review: five independent lenses, a mutation check of the tests, findings verified by `/darkmoon` |
 | [`/nicepr`](skills/nicepr/SKILL.md) | Short, human PR titles and descriptions from the diff and the ticket |
+| [`/niceticket`](skills/niceticket/SKILL.md) | Short, well-formatted Jira bug tickets: only the sections the facts support, code links as permalinks |
 | **Checking claims** | |
 | [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims, against the code |
 | [`/solaire`](skills/solaire/SKILL.md) | Run before a research question: seven fixed checks keep the answer grounded |

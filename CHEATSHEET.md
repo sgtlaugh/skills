@@ -9,6 +9,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 | Check my change before I commit | `/occam` |
 | Review someone's PR | `/aristarchus <PR-URL>` |
 | Write the PR description | `/nicepr` |
+| Write a bug ticket | `/niceticket <report, Sentry issue or logs>` |
 | Check the last answer | `/darkmoon` |
 | Settle one claim against the code | `/darkmoon --claims <claim>` |
 | Research something without bluffing | `/solaire <question>` |
@@ -47,6 +48,16 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 /aristarchus <PR-URL>                     # 5 lenses, mutation check, darkmoon verification
 /aristarchus <PR-URL> --fast              # quick pass, no agent steps
 ```
+
+**`/niceticket`**
+
+```text
+/niceticket <pasted report>               # draft a bug ticket from it
+/niceticket <Sentry issue URL>            # from the issue, through /sentry
+/niceticket                               # from the conversation so far
+```
+
+Drafts only; `/jira` creates the ticket once you have read it.
 
 **`/nicepr`**
 
