@@ -48,11 +48,10 @@ BRANCH=<branch> GH_USER=<login> FORK_REMOTE=<fork remote name, empty if none> FO
 
 **Step 0c: Base branch and diff**
 ```bash
-# Detect base branch - check symbolic HEAD, fallback to main/master
-BASE=$(git symbolic-ref refs/remotes/$UPSTREAM/HEAD 2>/dev/null | sed "s@^refs/remotes/$UPSTREAM/@@")
-if [ -z "$BASE" ]; then
-  git rev-parse --verify $UPSTREAM/main &>/dev/null && BASE=main || BASE=master
-fi
+# The org repo's default branch from GitHub: a remote you added yourself has no local HEAD ref, and an unfetched
+# one has no main either, so guessing main/master locally picks master on a main-based repo
+BASE=$(gh api "repos/$ORG_REPO" --jq .default_branch 2>/dev/null)
+[ -n "$BASE" ] || BASE=$(git symbolic-ref --short refs/remotes/$UPSTREAM/HEAD 2>/dev/null | sed "s@^$UPSTREAM/@@")
 
 # Fetch base to ensure it's current
 git fetch $UPSTREAM $BASE 2>&1
@@ -175,7 +174,7 @@ PR descriptions should look clean on GitHub:
 - `<details><summary>Click to expand</summary>...</details>` for long output, benchmarks, logs
 - Tables for structured comparisons (before/after, benchmarks, field mappings)
 - Mermaid diagrams for architecture or flow changes
-- Reference related issues with `#number` - GitHub auto-shows status icons (green = closed, purple = open)
+- Reference related issues with `#number` - GitHub auto-shows status icons (green = open, purple = closed or merged)
 
 **Never:**
 - Walls of text. Max 3 sentences per block, then break into bullets.
@@ -318,10 +317,11 @@ Non-empty output → add `--reviewer <output>` and name the reviewers in the rep
 
 ## Step 5 - Update PR (only with --update)
 
-Run Step 0 first (it detects FORK_REMOTE, ORG_REPO, BASE). Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `ORG_REPO`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls.
+Run Step 0 first (it detects FORK_REMOTE, ORG_REPO, BASE). Re-declare the Step 0 values (`BRANCH`, `GH_USER`, `FORK_REMOTE`, `ORG_REPO`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls. A PR opened from your fork is found only as `<login>:<branch>`: with `--repo`, a bare branch name matches branches in the org repo alone.
 
 ```bash
-gh pr view $BRANCH --repo $ORG_REPO --json number,title,body,url
+HEAD_REF=${FORK_REMOTE:+$GH_USER:}$BRANCH
+gh pr view "$HEAD_REF" --repo $ORG_REPO --json number,title,body,url
 ```
 
 If no PR found, error out. Check for unpushed commits with `git log $FORK_REMOTE/$BRANCH..HEAD --oneline`; non-empty output → push them:
@@ -333,7 +333,7 @@ git push $FORK_REMOTE $BRANCH
 Then run Steps 1-3. Treat existing description as baseline - preserve manual edits, merge new changes in. Save the new body with the Step 3 save block, write the old PR body to `${BODY_FILE%.md}.old.md`, show the diff with `git diff --no-index "${BODY_FILE%.md}.old.md" "$BODY_FILE"`, confirm before updating.
 
 ```bash
-gh pr edit $BRANCH --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FILE"
+gh pr edit "${FORK_REMOTE:+$GH_USER:}$BRANCH" --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FILE"
 ```
 
 ## Guard Rails
