@@ -29,7 +29,7 @@ git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/ski
 |---|---|
 | **Before you push** | |
 | [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and simplicity |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review: five independent lenses, findings verified by `/darkmoon` |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review: five independent lenses, a mutation check of the tests, findings verified by `/darkmoon` |
 | [`/nicepr`](skills/nicepr/SKILL.md) | Short, human PR titles and descriptions from the diff and the ticket |
 | **Checking claims** | |
 | [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims, against the code |
