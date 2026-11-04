@@ -29,7 +29,7 @@ The order is fixed: the answer first, the evidence last ("bottom line up front")
 3. **Ticket note** (Step 7), passing its word count.
 4. **Details** - the rest, below a `### Details` heading: the evidence ledger (every Step 4 source as `checked: <result>`, `not applicable` or `unavailable: <reason>`), the verification line (`Verified: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted` or `skipped (--fast)`), and the open questions. Details is the last section: nothing follows it.
 
-**Bug shape adds, under Details:** trigger and root cause as two lines (root cause with a SHA-pinned permalink), competing causes with each deciding check and its result, introduced-by (commit, PR, ticket, reviewed or not - or `not a regression` / `not determined`), the emitting service with its evidence (Step 1c), and a reproduction hint (or `none describable`).
+**Bug shape adds, under Details:** trigger and root cause as two lines (root cause with a SHA-pinned permalink), competing causes with each deciding check and its result, introduced-by (commit, PR, ticket, reviewed or not - or `not a regression` / `not determined`), the emitting service with its evidence (Step 1c), the Sentry class when a Sentry issue was found, and a reproduction hint (or `none describable`).
 
 **Question shape adds, under Details:** per ask, the evidence behind its answer (permalink, doc link, command and output).
 
@@ -68,6 +68,7 @@ From the deep-dive (never from search rows), carry forward:
 - **`request_id`** for Step 2, **`release`** (deployed SHA) for Step 3.
 - **Event time** - the latest event's `dateCreated` (and `lastSeen`): the log window for Step 2.
 - A ticket that says a fix already shipped → `/sentry fixed <id> <release>` tells you whether that deploy actually stopped it.
+- **Class** - the deep-dive's Classify verdict. A class other than *Needs a fix* (Noise, Third-party, Deliberate report, Handled 4xx) usually answers the ticket by itself: the verdict says so, and the fix line gives the class's action (a filter, an ignore rule, stop reporting it) instead of a code change. *Needs a fix* → Recommendations name `/sentry-fix <SHORT-ID>`, which builds and tests the fix.
 
 ### Step 1c - Where did it throw? (gate)
 
@@ -105,7 +106,7 @@ Search `$WORKSPACE` for the code path. Run `ls "$WORKSPACE"` first to see availa
 
 Use `grep -r` and `find` broadly across `$WORKSPACE`, not just the current project. Bugs cross service boundaries. Step 3 is done when you have the throwing file:line at the analyzed SHA, the call chain to the service boundary, and the error handler on that path read; for a question, when each ask has the file:line, doc page or command output that answers it. A missing item goes to Open Questions.
 
-**Do NOT checkout, fetch, pull, or modify any repo.** (Backstop: `Bash(git -C:*)`, `Bash(find:*)` and `Bash(gh api:*)` are prefix grants that would also let a checkout, fetch, commit, file deletion or an API write through, so this rule holds by instruction only unless your Claude Code settings deny them: `git -C` with `checkout`, `fetch`, `commit` or `push`, `find` with `-delete`, `-exec` or `-execdir`, and `gh api` with `-X`, `--method`, `-f`, `-F`, `--field` or `--input`.) With a Sentry release SHA from Step 1b, that SHA is the truth - read files with `git show <sha>:<path>`. Without one, analyze whatever branch is currently checked out and pin to its `git rev-parse HEAD`, which must exist on the remote. If a repo is not on master/main, note it in the triage output (e.g., "Analyzed on branch `feature-x`, 3 commits ahead of master"). **And: the code that threw in prod may be a different deployed SHA than HEAD** - the error-time code is the truth, so if the analyzed code doesn't fit the symptom, suspect deployed≠HEAD and note it (don't trust HEAD as what ran).
+**Do NOT checkout, fetch, pull, or modify any repo.** The `git -C`, `find` and `gh api` grants are prefix grants that could also write, so this holds by instruction unless your settings deny the write forms - the same deny list as `/sentry`'s Rules, plus `find` with `-delete`, `-exec` or `-execdir`. With a Sentry release SHA from Step 1b, that SHA is the truth - read files with `git show <sha>:<path>`. Without one, analyze whatever branch is currently checked out and pin to its `git rev-parse HEAD`, which must exist on the remote. If a repo is not on master/main, note it in the triage output (e.g., "Analyzed on branch `feature-x`, 3 commits ahead of master"). **And: the code that threw in prod may be a different deployed SHA than HEAD** - the error-time code is the truth, so if the analyzed code doesn't fit the symptom, suspect deployed≠HEAD and note it (don't trust HEAD as what ran).
 
 
 ### Step 4 - Decide
@@ -186,6 +187,7 @@ Competing causes:
 Evidence:
 - [Confirmed] <fact> / [Inferred] <conclusion>
 - Sentry: <SHORT-ID + permalink, lifetime events/users, last seen, 24h trend, firstRelease> | no Sentry issue found (searched: <query>) | Sentry unavailable
+- Sentry class: <class from the deep-dive - the signals that decided it> | no Sentry issue
 | Source | Result |
 |---|---|
 | Ticket + linked work | checked: <...> |
@@ -196,7 +198,7 @@ Evidence:
 | Other local repos + config | checked: <...> / not applicable |
 | Recent changes + related PRs | checked: <...> |
 Call chain: <service-a> → <service-b>, with endpoints/functions per hop
-Recommendations: <fix aimed at the root cause, file and change>
+Recommendations: <fix aimed at the root cause, file and change; class Needs a fix → `/sentry-fix <SHORT-ID>` | the class's action for Noise, Third-party, Deliberate report, Handled 4xx>
 Reproduction hint: <one line> | none describable
 Verified: <N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted> | skipped (--fast)
 Open questions: <what you couldn't verify>
