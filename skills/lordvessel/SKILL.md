@@ -38,7 +38,7 @@ The GitHub org comes from `~/.config/claude-skills/services.md` (`GitHub org`); 
 Run in parallel:
 - `/jira` **Get Ticket** (description, comments, parent, links) and its **Linked PRs** lookup.
 - Every spec or design doc the description links (Confluence via `/jira confluence <url>`) and the ticket it was split from or belongs to (`parent`, `issuelinks`) - a requirement like "Option B from the tech spec" can't be judged without the spec.
-- `gh search prs --owner <github-org> "<KEY>" --json url,state,title,isDraft` - dev-status misses PRs whose branch and title don't carry the key the way the integration expects, and a search catches them.
+- `gh search prs --owner <github-org> '"<KEY>"' --json url,state,title,isDraft` - keep both quote layers: unquoted, GitHub matches the key's parts separately, so `OWL-249` also returns OWL-224 and OWL-259 - dev-status misses PRs whose branch and title don't carry the key the way the integration expects, and a search catches them.
 
 Union the two lists by URL. dev-status often succeeds and returns nothing while the search finds every PR - report both counts; neither source alone is trusted. A failed dev-status call (`curl: (N)`) leaves the search result as the only source - say so in the header; it is not "no PRs". A closed, unmerged PR is listed but is never evidence for coverage. No PRs found and dev-status succeeded → `Not addressed`, unless already satisfied at the default branch (`Covered (pre-existing)`). dev-status failed and search found 0 → `Can't-determine`, naming the failed call. Either way the status note says no work is linked.
 
@@ -61,12 +61,12 @@ gh pr diff <n> --repo <owner>/<repo>
 The query returns body, head, base and merge SHAs, conversation comments, reviews, review threads (with `isResolved`, `isOutdated`) and the head commit's check rollup. Unresolved threads and CI come straight from it - the first command lists the current threads people opened and counts the rest, which is exactly what the output contract shows:
 ```bash
 jq -r '.data.repository.pullRequest.reviewThreads.nodes | map(select(.isResolved | not)) as $t
-  | def bot: (.comments.nodes[0].author.login // "") | test("\\[bot\\]$|^copilot|^github-actions"; "i");
+  | def bot: .comments.nodes[0].author | (.__typename == "Bot") or ((.login // "") | test("\\[bot\\]$|^copilot|^github-actions"; "i"));
     ($t[] | select((.isOutdated | not) and (bot | not))
      | "\(.path):\(.line // .originalLine)\t\(.comments.nodes[0].author.login)\t\(.comments.nodes[0].body | split("\n")[0] | .[0:120])\t\(.comments.nodes[0].url)"),
     "+\([$t[] | select(.isOutdated)] | length) outdated, \([$t[] | select((.isOutdated | not) and bot)] | length) current from bots"' /tmp/lordvessel-<repo>-<n>.json
 jq -r '.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup
-  | if . == null then "NO_CHECKS" else "\(.state)\t" + ([.contexts.nodes[] | select((.conclusion // .state) | IN("FAILURE","ERROR","TIMED_OUT","CANCELLED")) | .name // .context] | join(", ")) end' /tmp/lordvessel-<repo>-<n>.json
+  | if . == null then "NO_CHECKS" else "\(.state)\t" + ([.contexts.nodes[] | select((.conclusion // .state) | IN("FAILURE","ERROR","TIMED_OUT","CANCELLED","STARTUP_FAILURE","ACTION_REQUIRED")) | .name // .context] | join(", ")) end' /tmp/lordvessel-<repo>-<n>.json
 ```
 Every connection is one fixed-size page. One whose `pageInfo.hasNextPage` is true is reported as `(truncated at <n>)`, never `none` or a bare count.
 Check the size first with `gh pr view <n> --repo <owner>/<repo> --json additions,deletions`. Over ~3000 changed lines → skip `gh pr diff`; list the files with `gh api "repos/<owner>/<repo>/pulls/<n>/files" --paginate --jq '.[].filename'` and read each one Step 4 needs at the head SHA with `gh api -H "Accept: application/vnd.github.raw" "repos/<owner>/<repo>/contents/<path>?ref=<headRefOid>"`.
@@ -103,7 +103,7 @@ Step 4 asks whether every requirement has code. This step asks the reverse: does
 
 ### Step 5 - Questions and contradictions
 
-**Unanswered question:** a comment containing `?` on this ticket or its PRs (ticket comment, PR conversation, review body or review thread; a parent or split-from ticket's open question gets one context line, never the status note) with no later reply from a different person in the same place. Strip URLs before looking for `?` (a link's `?query` is not a question), and skip bot authors (the `bot` regex in Step 3's thread query). A resolved thread counts as answered. Rhetorical asides don't count. Give the asker, link and date.
+**Unanswered question:** a comment containing `?` on this ticket or its PRs (ticket comment, PR conversation, review body or review thread; a parent or split-from ticket's open question gets one context line, never the status note) with no later reply from a different person in the same place. Strip URLs before looking for `?` (a link's `?query` is not a question), and skip bot authors (the `bot` test in Step 3's thread query: `__typename` `Bot`, or a bot login). A resolved thread counts as answered. Rhetorical asides don't count. Give the asker, link and date.
 
 **Contradiction:** two sources that cannot both hold, each cited:
 - the ticket requires X, the code does Y;
@@ -136,7 +136,7 @@ bash ~/.claude/skills/humanize/voice-gate.sh --max-chars 1000 <<'EOF'
 <the draft note>
 EOF
 ```
-Every violation is fixed and the gate re-run until it prints `voice-gate: clean`. Show the note and `voice-gate: clean`. A note shown without a clean gate run is WRONG.
+Every violation is fixed and the gate re-run until it prints `voice-gate: clean`; a hit you believe is a false positive is quoted with its reason instead. Show the note and the last gate output. A note shown without a gate run is WRONG.
 
 Show it and stop. Posting is a separate, explicit user request: `/jira comment` for the ticket (its yes rule applies), or the user posts on GitHub.
 
