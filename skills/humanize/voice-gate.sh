@@ -59,7 +59,9 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
                     my $name = join " ", map { $_ eq "\x00" ? "[...]" : $_ } @$v;
                     my $re = join "\\S*(?:\\s+\\S+)*?\\s+", map { quotemeta } grep { length }
                         split /\s*\x00\s*/, join " ", @$v;
-                    push @phrases, [$name, qr/(?<![\w])$re(?![\w])/i];
+                    # A phrase that is a sentence of its own ("Period.") only counts where a sentence starts;
+                    # mid-sentence it is the plain word ("the retention period.")
+                    push @phrases, [$name, $p =~ /\.$/ ? qr/(?:^|(?<=[.!?]\s)|(?<=\n))$re(?![\w])/i : qr/(?<![\w])$re(?![\w])/i];
                 }
             }
         }
