@@ -37,12 +37,14 @@ From `git remote -v` output:
   1. If fork remote exists, query `gh api "repos/$FORK_REPO" --jq '.parent.full_name'` for parent, match to a remote
   2. If `origin` exists AND points to an org repo (not a personal fork), use it
   3. Look for an org-named remote or `upstream` in `git remote -v` output
+  4. Your own repo that is not a fork (rule 1 finds no parent, and no remote is an org repo): the fork remote is the upstream too - `UPSTREAM=$FORK_REMOTE`, `ORG_REPO=$FORK_REPO` - and the PR goes from a branch of that repo to its own base
 
 Do NOT assume `origin` exists. Do NOT error out if `origin` is missing - detect upstream from other remotes.
 
 Record the detected values as literals. Shell variables do not persist between Bash calls, so every later command block (Step 0c onward) starts by re-declaring the ones it uses:
 ```bash
 BRANCH=<branch> GH_USER=<login> FORK_REMOTE=<fork remote name, empty if none> FORK_REPO=<owner/repo from the fork URL> UPSTREAM=<upstream remote name> ORG_REPO=<owner/repo from the upstream URL>
+HEAD_REF=<"$GH_USER:$BRANCH" when FORK_REPO differs from ORG_REPO, else "$BRANCH">
 ```
 
 **Step 0c: Base branch and diff**
@@ -289,9 +291,9 @@ Wait for user feedback before proceeding. Without `--create`/`--draft`, the run 
 
 Creating a PR because the preview was approved, without `--create`/`--draft` or an explicit "create the PR", is WRONG.
 
-Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `GH_USER`, `UPSTREAM`, `ORG_REPO`, `BASE`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls.
+Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `GH_USER`, `UPSTREAM`, `ORG_REPO`, `BASE`, `HEAD_REF`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls.
 
-Error if `FORK_REMOTE` is empty - never push to `$UPSTREAM` (the org's repo), whatever its remote is named.
+Error if `FORK_REMOTE` is empty. When `FORK_REPO` differs from `ORG_REPO`, never push to `$UPSTREAM` (the org's repo), whatever its remote is named; in your own non-fork repo (Step 0b rule 4) the two are one remote, and pushing the branch there is the normal flow.
 
 Before pushing, check for merge conflicts with base. Three-argument `merge-tree` prints conflict markers with a leading `+` (`+<<<<<<< .our`), so the pattern allows it:
 ```bash
@@ -302,7 +304,7 @@ If conflicts found, warn: "Branch has merge conflicts with $BASE. PR will show c
 ```bash
 git push -u $FORK_REMOTE $BRANCH
 
-gh pr create --repo $ORG_REPO --base $BASE --head $GH_USER:$BRANCH \
+gh pr create --repo $ORG_REPO --base $BASE --head "$HEAD_REF" \
   --title "<title>" --body-file "$BODY_FILE"
 ```
 
@@ -316,10 +318,9 @@ Non-empty output → add `--reviewer <output>` and name the reviewers in the rep
 
 ## Step 5 - Update PR (only with --update)
 
-Run Step 0 first (it detects FORK_REMOTE, ORG_REPO, BASE). Re-declare the Step 0 values (`BRANCH`, `GH_USER`, `FORK_REMOTE`, `ORG_REPO`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls. A PR opened from your fork is found only as `<login>:<branch>`: with `--repo`, a bare branch name matches branches in the org repo alone.
+Run Step 0 first (it detects FORK_REMOTE, ORG_REPO, BASE). Re-declare the Step 0 values (`BRANCH`, `FORK_REMOTE`, `ORG_REPO`, `HEAD_REF`) and `BODY_FILE` at the top of each command block - they do not survive between Bash calls. `HEAD_REF` matters here: with `--repo`, a PR from your fork is found only as `<login>:<branch>`, and a PR from a branch of the repo itself only as the bare branch.
 
 ```bash
-HEAD_REF=${FORK_REMOTE:+$GH_USER:}$BRANCH
 gh pr view "$HEAD_REF" --repo $ORG_REPO --json number,title,body,url
 ```
 
@@ -332,13 +333,13 @@ git push $FORK_REMOTE $BRANCH
 Then run Steps 1-3. Treat existing description as baseline - preserve manual edits, merge new changes in. Save the new body with the Step 3 save block, write the old PR body to `${BODY_FILE%.md}.old.md`, show the diff with `git diff --no-index "${BODY_FILE%.md}.old.md" "$BODY_FILE"`, confirm before updating.
 
 ```bash
-gh pr edit "${FORK_REMOTE:+$GH_USER:}$BRANCH" --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FILE"
+gh pr edit "$HEAD_REF" --repo $ORG_REPO --title "<new-title>" --body-file "$BODY_FILE"
 ```
 
 ## Guard Rails
 
 - **Preview first.** Always show title + body before creating. Never auto-create.
-- **Never push to upstream (the org's repo).** Always push to the fork remote, found by its URL's owner, even when it is named `origin`.
+- **Never push to upstream (the org's repo).** Always push to the fork remote, found by its URL's owner, even when it is named `origin`. The one exception is your own repo that is not a fork, where the fork remote is the upstream (Step 0b rule 4).
 - **Never force push.** If push fails, show error and ask.
 - These two hold by instruction only: `Bash(git push:*)` matches `--force` and any remote. A settings deny rule for `git push*--force*` and `git push* -f*` is the backstop for force pushes.
 - **No empty PRs.** If no commits ahead of base, error out.
