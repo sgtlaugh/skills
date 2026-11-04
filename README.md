@@ -45,6 +45,7 @@ git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/ski
 | **Production** | |
 | [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM, alert history |
 | [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release; checks if a deploy fixed it |
+| [`/sentry-fix`](skills/sentry-fix/SKILL.md) | Gates a Sentry issue, reproduces it with a failing test, fixes the root cause on a branch |
 | [`/triage`](skills/triage/SKILL.md) | A bug ticket to a proven root cause, a question ticket to an answer per ask |
 | [`/lordvessel`](skills/lordvessel/SKILL.md) | Checks a ticket against its PRs: each requirement traced to code, or missing |
 | [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets; reads Confluence pages |
@@ -84,6 +85,8 @@ flowchart LR
     lordvessel --> darkmoon
     lordvessel -. status note .-> humanize
     firewatch["/firewatch"] --> sentry
+    sentryfix["/sentry-fix"] --> sentry
+    sentryfix -. opens PR .-> nicepr
     firewatch --> jira
     aristarchus["/aristarchus"] --> darkmoon
     aristarchus --> fathom["/fathom"]
@@ -108,7 +111,7 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | File | Created by `install.sh` | Used by | Holds |
 |---|---|---|---|
 | `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
-| `services.md` | yes | `/sentry`, `/triage`, `/firewatch`, `/lordvessel` | *Your* systems: repos, log search, alert patterns |
+| `services.md` | yes | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/lordvessel` | *Your* systems: repos, log search, alert patterns |
 | `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
 | `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
 
@@ -130,8 +133,8 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/lordvessel` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
 | `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/lordvessel` | Your Atlassian email |
 | `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
-| `sentryAuthToken` | `/sentry` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
-| `sentryOrg` | `/sentry` | Your Sentry org slug |
+| `sentryAuthToken` | `/sentry`, `/sentry-fix` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
+| `sentryOrg` | `/sentry`, `/sentry-fix` | Your Sentry org slug |
 
 Skills that call `/jira` or `/sentry` use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
 
@@ -142,7 +145,7 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 | Tool | Needed for |
 |---|---|
 | [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
-| [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills |
+| [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills, including `/sentry-fix` |
 | [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/lordvessel`, `/sentry`, `/firewatch`, `/darkmoon` |
 | curl 7.76+ | The API skills (they use `--fail-with-body`) |
 | [pandoc](https://pandoc.org/) | Document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` |

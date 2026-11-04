@@ -22,6 +22,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 | Root-cause a bug ticket, or answer a question ticket | `/triage <TICKET-ID>` |
 | Check whether a ticket is really done | `/lordvessel <TICKET-ID>` |
 | Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
+| Fix a Sentry issue, test first | `/sentry-fix <issue>` |
 | Read, create or comment on a Jira ticket | `/jira PROJ-123` |
 | Lint a skill I just edited | `/kiln <skill>` |
 | See if a skill's output is stable | `/jury <skill> <args>` |
@@ -144,6 +145,13 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 /sentry new 24h                           # first seen in the window
 /sentry search "cannot be refunded" 90d   # free-text search
 /sentry fixed OWL-API-511 edce648713      # did that deploy stop it?
+```
+
+**`/sentry-fix`**
+
+```text
+/sentry-fix OWL-API-511                   # gate, red test, root-cause fix, commit on a local branch
+/sentry-fix OWL-API-511 --pr              # same, then open the PR via /nicepr --create
 ```
 
 **`/triage`**

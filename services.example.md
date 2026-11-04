@@ -43,6 +43,21 @@ Read by `/firewatch`. Known patterns specific to your systems, checked after the
 - `/my-logs owl-api "feed lag" last 1h`
 - Ask whether a backfill is running - it starves the feed consumer
 
+## Fixes
+
+Read by `/sentry-fix`: how to run each repo's tests, plus noise and reporting patterns specific to your projects.
+
+| Key | Value |
+|---|---|
+| Branch prefix | `fix` |
+| Deliberate error-tracking function | a function your code calls to report to Sentry on purpose and then continue, e.g. `reportError`, or `none` |
+| Project noise patterns | errors specific to your products that are never code bugs, e.g. "`owl-web`: `Viewer is on a different domain` (embedded viewer on a customer page)" |
+
+| Repo | Test command (run from the repo root) | Prerequisites and how to start them |
+|---|---|---|
+| `owl-api` | `pytest -q <path>` | Postgres on `localhost:5432`: `docker run -d --rm --name owl-pg -p 5432:5432 postgres:16` |
+| `owl-gateway` | `npm test -- <dir>` | none |
+
 ## Jenkins
 
 | Key | Value |
