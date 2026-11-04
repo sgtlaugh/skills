@@ -5,7 +5,6 @@ description: >
   URL/short ID deep-dive (stack trace, deployed release, request_id, trend), top or new
   unresolved issues per project, searching Sentry for an error message or type
   (duplicate checks, ticket triage), and checking whether a deployed fix stopped an issue.
-trigger: /sentry
 allowed-tools: Read, Bash(curl:*), Bash(jq:*), Bash(tr:*), Bash(grep:*), Bash(ls:*), Bash(git show:*), Bash(git log:*), Bash(git grep:*), Bash(git cat-file:*), Bash(git -C:*), Bash(gh api:*)
 argument-hint: "<issue-url|SHORT-ID> | top [project] [period] | new [period] | search \"<text>\" [period] | fixed <issue> <release>"
 ---

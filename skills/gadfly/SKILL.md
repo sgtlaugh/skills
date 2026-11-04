@@ -1,7 +1,6 @@
 ---
 name: gadfly
 description: Interrogate a tech spec or architecture doc before it gets built - extract requirements, gate the blocking gaps, ground the design in the code it touches, stress-test through four adversarial lenses. `--prd` checks whether the HOW satisfies the WHY. Hypotheses to check, not verdicts.
-trigger: /gadfly
 allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(printf:*), Bash(echo:*), Bash(command:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, AskUserQuestion
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: duck
 description: A sarcastic Socratic rubber duck for a bug/confusion you're stuck on - it refuses to hand you the answer and instead asks pointed, code-grounded questions that walk YOU to it (so you actually learn it), guided by a real diagnosis loop (feedback-loop-first, ranked hypotheses). Input a paste, a file pointer, or a JIRA ticket. --quack drops the act and actively solves: builds + runs a throwaway repro to PROVE the cause, then reveals it. Witty, never cruel, honest when it doesn't know.
-trigger: /duck
 allowed-tools: Read, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(grep:*), Bash(find:*), Write, Edit, Bash(pytest:*), Bash(python -m pytest:*), Bash(python3 -m pytest:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
 ---
 

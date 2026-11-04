@@ -1,6 +1,5 @@
 ---
 name: velka
-trigger: /velka
 description: Surface cross-session workflow habits from your Claude Code history. velka digests your past session transcripts (mechanically, no LLM) and reports recurring patterns - edit-thrash, skills you keep skipping, fine-grained committing, token churn, (with `--candidates`) intents you keep repeating that could become a skill, and (with `--propose`) CLAUDE.md edits backed by pushback you gave in 2+ sessions, every quote mechanically verified. Reports only what the transcripts mechanically prove; inference beyond the footprint is flagged low-confidence, never asserted.
 allowed-tools: Read, Grep, Bash(bash ~/.claude/skills/velka/collect.sh:*), Bash(bash ~/.claude/skills/velka/quote-check.sh:*), Bash(jq:*), Bash(cat:*), Bash(date:*), Bash(ls:*), Bash(find:*)
 ---

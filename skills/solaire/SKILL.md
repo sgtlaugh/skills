@@ -1,7 +1,6 @@
 ---
 name: solaire
 description: A pre-flight rigor harness - invoke it BEFORE answering a research / analysis / feasibility / recommendation prompt, and it forces the answer to be grounded, fact-vs-argument honest, and free of confabulated "gaps" - so the response survives scrutiny the first time. Jolly cooperation; praise the Sun.
-trigger: /solaire
 allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git blame:*), Bash(gh pr view:*), Bash(gh search:*), WebSearch, WebFetch
 ---
 

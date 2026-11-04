@@ -1,7 +1,6 @@
 ---
 name: occam
 description: Review the changes thoroughly - bugs, drift (leftover old logic, stale docs/tests/callers), simplifications, and whether the diff is the minimal change for the goal. Runs on your local uncommitted work by default (or a commit / the whole branch) in a fresh-context reviewer, so the author's reasoning can't wave its own work through. Read-only.
-trigger: /occam
 allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git status:*), Bash(git ls-files:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git remote -v)
 ---
 

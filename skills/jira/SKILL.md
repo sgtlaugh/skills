@@ -1,7 +1,6 @@
 ---
 name: jira
 description: Create, search, and manage JIRA tickets and fetch/edit Confluence pages via REST API
-trigger: /jira
 allowed-tools: Read, Bash(curl:*), Bash(jq:*), Bash(grep:*), Bash(pandoc:*), Bash(printf:*), Bash(head:*), Bash(git branch:*), Bash(cp:*), Bash(python3:*), Bash(echo:*), Bash(command:*)
 ---
 

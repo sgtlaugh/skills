@@ -1,7 +1,6 @@
 ---
 name: triage
 description: Triage a JIRA ticket - a bug to a proven root cause (Sentry, logs, live data, code at the deployed SHA, competing causes decided by running their checks), or a question ticket to a short answer per ask. Bottom line first, load-bearing claims verified by darkmoon, facts only a person can see asked for before answering, and a ready-to-post ticket note. --fast skips the verification pass.
-trigger: /triage
 allowed-tools: Read, Grep, Glob, Skill, Bash(git log:*), Bash(git blame:*), Bash(git show:*), Bash(git rev-parse:*), Bash(git -C:*), Bash(gh search:*), Bash(gh api:*), Bash(find:*), Bash(grep:*), Bash(ls:*), Bash(date:*), Bash(wc:*)
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: firewatch
 description: Investigate production alerts - assess severity, search logs, trace errors, and create JIRA tickets
-trigger: /firewatch
 allowed-tools: Read, Grep, Glob, Skill, Bash(curl -sS:*), Bash(gh search:*), Bash(gh pr list:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh api:*), Bash(git log:*), Bash(git show:*), Bash(git blame:*), Bash(find:*), Bash(jq:*), Bash(grep:*), Bash(tail:*), Bash(head:*), Bash(date +%s)
 ---
 

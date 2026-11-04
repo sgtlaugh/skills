@@ -1,7 +1,6 @@
 ---
 name: darkmoon
 description: Summon an independent, grounded skeptic to challenge the author's last response. A fresh-context agent reads the response + verifies against the real code/transcript, then upholds, refutes (evidence-grade), or marks can't-determine - per claim. Grounded, never manufactured; argument-counters never masquerade as proof.
-trigger: /darkmoon
 allowed-tools: Read, Grep, Glob, Bash(bash ~/.claude/skills/darkmoon/extract-qa.sh:*), Bash(grep:*), Bash(jq:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git blame:*), Bash(git status:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh search:*), WebFetch, WebSearch, Agent, SendMessage
 ---
 

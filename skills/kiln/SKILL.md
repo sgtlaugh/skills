@@ -7,7 +7,6 @@ description: >
   premature-completion steps, frontmatter drift. Produces prioritized action
   items. Read-only; does NOT run the skill. Use after writing/editing a skill,
   or before adopting someone else's.
-trigger: /kiln
 allowed-tools: Read, Grep, Glob, Bash(grep:*), Bash(ls:*)
 argument-hint: "<skill name or path> [--fire], e.g. 'occam' or 'occam --fire'"
 ---

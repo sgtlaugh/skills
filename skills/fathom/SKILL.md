@@ -1,6 +1,5 @@
 ---
 name: fathom
-trigger: /fathom
 description: Shared vocabulary + lens for designing deep modules - a lot of behavior behind a small interface, at a clean seam, testable through that interface. Invoke on a module/file to get a deep-vs-shallow verdict + concrete deepening suggestions, or with --twice to design an interface several ways and compare. Other skills (aristarchus) cite this for consistent design language. Read-only.
 allowed-tools: Read, Grep, Glob, Bash(grep:*), Agent
 ---

@@ -1,7 +1,6 @@
 ---
 name: dialectic
 description: Decide between options - argue each side to win (independent + grounded), cross-examine, then synthesize a recommendation with the condition that flips it. For real design/architecture decisions.
-trigger: /dialectic
 allowed-tools: Read, Write, Grep, Glob, Bash(git rev-parse:*), Bash(cd:*), Bash(grep:*), Bash(find:*), Bash(pandoc:*), Bash(date:*), WebFetch, Agent, AskUserQuestion
 ---
 

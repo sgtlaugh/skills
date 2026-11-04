@@ -1,7 +1,6 @@
 ---
 name: sentry-fix
 description: Fix a Sentry issue end to end - decide whether it deserves a code fix at all, find the root cause at the deployed code, reproduce it with a failing test, fix it in the codebase's own style, and leave a commit on a local branch (`--pr` opens a pull request through /nicepr). Python and TypeScript.
-trigger: /sentry-fix
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash(curl:*), Bash(jq:*), Bash(tr:*), Bash(git:*), Bash(gh api:*), Bash(ls:*), Bash(date:*), Bash(yarn:*), Bash(npm:*), Bash(npx:*), Bash(node:*), Bash(pytest:*), Bash(py.test:*), Bash(docker:*), Skill
 argument-hint: "<issue-url|SHORT-ID> [--repo <path>] [--pr]"
 ---

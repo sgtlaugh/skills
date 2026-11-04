@@ -1,7 +1,6 @@
 ---
 name: nicepr
 description: Generate short, human PR titles and descriptions from branch diff and JIRA context; with --create or --update, pushes to your fork and opens or edits the PR
-trigger: /nicepr
 allowed-tools: Read, Write, Edit, Skill, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*)
 ---
 

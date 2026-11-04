@@ -1,7 +1,6 @@
 ---
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, a mutation check of the PR's tests, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, mutation check, verification).
-trigger: /aristarchus
 allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(wc:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*), Bash(bash ~/.claude/skills/aristarchus/mutate.sh:*)
 ---
 

@@ -1,6 +1,5 @@
 ---
 name: bonfire
-trigger: /bonfire
 description: Test-first build loop (TDD) - write a failing test, SEE it fail for the right reason (red), write minimal code to pass (green), refactor only when green. One behavior at a time, vertical slices, tested through the public interface. For building a feature with >=2 behaviors or a bug fix that needs a regression guard. Writes the test AND the minimal impl, runs the repo's test command each cycle. Python (pytest) and TypeScript/JavaScript (mocha, jest, vitest).
 allowed-tools: Read, Write, Edit, Grep, Glob, AskUserQuestion, Bash(pytest:*), Bash(python -m pytest:*), Bash(python3 -m pytest:*), Bash(npx mocha:*), Bash(npx jest:*), Bash(npx vitest:*), Bash(npm test:*), Bash(yarn test:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
 ---

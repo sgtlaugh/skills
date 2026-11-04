@@ -1,7 +1,6 @@
 ---
 name: humanize
 description: Strip AI patterns from text and rewrite it for a human voice. Use when text sounds AI-generated. For GitHub review comments, PR replies and status notes it also applies github-voice and runs voice-gate; --concise halves length.
-trigger: /humanize
 allowed-tools: Read, Bash(bash ~/.claude/skills/humanize/voice-gate.sh:*)
 ---
 

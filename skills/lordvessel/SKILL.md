@@ -1,7 +1,6 @@
 ---
 name: lordvessel
 description: Review a JIRA ticket against the work done for it - every requirement traced to a linked PR and a SHA-pinned file:line or marked not addressed, the reverse trace (changed code no requirement asked for, with a simpler alternative shown), plus unanswered questions, unresolved review threads, CI state, contradictions between ticket and code, and a ready-to-post status note. Read-only. --fast skips the darkmoon verification.
-trigger: /lordvessel
 allowed-tools: Read, Grep, Glob, Skill, Bash(gh api:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh search:*), Bash(jq:*), Bash(bash ~/.claude/skills/humanize/voice-gate.sh:*)
 ---
 
