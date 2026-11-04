@@ -65,6 +65,8 @@ git diff $UPSTREAM/$BASE...HEAD
 
 Empty `git log` output -> stop with 'No commits ahead of $UPSTREAM/$BASE'; generating a body is NOT valid.
 
+**Extra commits.** The base is `$UPSTREAM/$BASE` and nothing else: comparing against another remote (your fork, a local clone's `src`, a local `master`) is WRONG. When the caller's prompt states the base and the PR's commits, use those and never warn about other commits. Otherwise a note that the branch carries commits beyond the change is allowed only for a commit that `git merge-base --is-ancestor <commit> $UPSTREAM/$BASE` shows is NOT on the base, after the fetch above succeeded. If that fetch failed or `$UPSTREAM/$BASE` doesn't exist, write no such note: an unverified "this commit isn't on master yet" is a false claim in the PR.
+
 Record the detected `BASE` as a literal alongside the Step 0b values.
 
 Always read full diff - needed for accurate Changes bullets. For very large diffs (500+ lines), focus on the most impactful changes and summarize the rest.
