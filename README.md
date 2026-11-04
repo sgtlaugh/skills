@@ -136,7 +136,7 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
 
 - **`credentials.json`** lives elsewhere if `CLAUDE_SKILLS_CREDENTIALS` points there.
-- **`services.md`** says which repo each Sentry project lives in, your log search skill, your alert patterns and how to run each repo's tests.
+- **`services.md`** says which repo each Sentry project lives in, your log search skill, your alert patterns and how to run each repo's tests. It starts as a template whose values read `<your ...>`; skills treat those as missing and ask, so fill in the sections your skills use.
 - **`voice.md`** holds how you suggest, push back and approve.
 - **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft.
 
