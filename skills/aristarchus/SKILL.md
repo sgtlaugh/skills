@@ -56,7 +56,7 @@ gh pr checkout <url> --detach \
 ```
 All later file reads use worktree paths. After review, `ExitWorktree` with `action: "remove", discard_changes: true` - the checkout is read-only and disposable, and its commits are the PR's own (already on the remote), so the harness "unsaved work" guard would otherwise block removal.
 
-**Unless `--fast`:** run Steps 4, 5, and 7 HERE as their parallel batch - the lens base context needs the diff and conventions, and Step 3b scans the diff. Then run Step 3b (if applicable), then launch Step 6a lens agents, Step 6b library tracer, and Step 6c cross-repo checker per their respective instructions, before starting Step 6. With `--fast`, Steps 4, 5, and 7 run in their normal place.
+**Unless `--fast`:** run Steps 4, 5 and 7 here as one parallel batch (the lenses need the diff and conventions), then Step 3b if it applies. Step 6, the main analysis, comes next; the lens agents, the library tracer and the cross-repo checker launch after it, together (Step 6a). With `--fast`, Steps 4, 5 and 7 run in their normal place.
 
 ## Step 3b - Config Change Research (skipped with --fast)
 
@@ -75,7 +75,7 @@ Detect whether the diff touches configuration or infrastructure settings. Do not
 >
 > *Produce a comparison table of ALL documented options for this setting with columns: Option | Behavior on [relevant edge case] | When to use | Risk. Cite sources. Do NOT recommend one option - present the facts for a human to decide."*
 
-Step 3b is complete when the research agent returns a comparison table with **≥2 options** and **≥1 cited source**. If the agent fails or returns no table, note `config research: failed` in the Summary's not-examined sentence and proceed without - do not block the review.
+Step 3b is complete when the research agent returns a comparison table with **≥2 options** and **≥1 cited source**. If the agent fails or returns no table, record `config research skipped: <reason>` on the Agents line and proceed without - do not block the review.
 
 The research output (the comparison table + sources) is stored and passed verbatim to ALL debiased lens agents as additional context under the heading **"Config research (from official docs):"**.
 
@@ -149,17 +149,17 @@ For each file (or batch):
 
 A finding that changes behavior is never a `nit`, however small. One exception the other way: a comment or docstring that misstates what the code or a library does is a `warning` - it misleads the next person who trusts it. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure between critical and warning → warning. Design and necessity findings cap at `warning`.
 
-**Pre-existing is a flag, not a severity.** A finding on a line this diff does not change keeps its severity and gets the `pre-existing` flag in its header. It is still reported - a serious bug the PR's context exposes stays serious - but listed last within its severity.
+**Pre-existing is a flag, not a severity.** A finding on a line this diff does not change keeps its severity and gets the `pre-existing` flag in its header. It is still reported - a serious bug the PR's context exposes stays serious - in the Notes, or with the real findings when it is critical (Step 9).
 
 ## Step 6a - Independent Review Lenses (skipped with --fast)
 
 Five independent review perspectives the main review may miss. **This is discovery, not verification** - verification happens in Step 8.
 
-**Timing:** Step 3b (config research) runs first if applicable - launch it and wait for its result, because the lens agents need its output. Then lens agents are launched in background. They run in parallel with the main analysis. After Step 6 completes, wait for all agent notifications - do NOT poll, sleep, read task output files, or use TaskOutput. These calls will fail because background agents use the Agent notification system, not the Task system. The system delivers notifications automatically as `task-notification` messages. **Do NOT emit the final review until ALL lens agent notifications have arrived.** If you write output before lens results arrive, you cannot integrate them - this defeats the purpose of running lenses. Wait.
+**Timing:** after Step 6, launch every lens - plus the Step 6b tracer and the Step 6c checker when they apply - as parallel `Agent` calls in ONE message, each with `run_in_background: false` set explicitly (leaving it out runs the agent in the background) and with no `model` parameter (the lenses run on the session's model - a smaller model misses findings, and the lenses exist to add them). They run concurrently and all return before your next step, so there is nothing to wait for: no timers, no placeholder agents, no polling. Step 3b's research, when it applies, runs before Step 6 because the debiased lenses get its output.
 
 **Independence is structural.** Spawn one `Agent` instance per lens (using the `Agent` tool, NOT Explore - Explore is read-only search, not analysis) - each runs in a fresh context with NO access to the main review's findings or each other's. A single model wearing multiple hats in the same context shares confirmation bias; separate agents don't.
 
-**Context bifurcation - not all lenses get the same context.** PR descriptions anchor LLM reviewers, reducing issue detection by 16-93% ([research](https://arxiv.org/abs/2603.18740)). Prompt-based debiasing ("verify these claims", "don't accept at face value") does not work - the anchor is in the context. The fix is structural: withhold the anchor from lenses that must reason about consequences from code, not from the author's story.
+**Context bifurcation - not all lenses get the same context.** The author's framing anchors LLM reviewers. In one study ([research](https://arxiv.org/abs/2603.18740)), framing a change as bug-free cut vulnerability detection by 16-93 percentage points across four models; for Claude Code, withholding the PR description recovered 68.75% of the missed detections, and withholding it plus an explicit instruction to ignore what framing remains reached about 94%. An instruction alone is weaker while the framing stays in context. So the debiased lenses get both: no PR description, and an instruction to treat the diff's own words as claims.
 
 Each agent receives the **base context**: the diff, the changed file paths, the repo `CLAUDE.md` conventions, and the JIRA ticket summary (one line - just the ticket title, NOT the full description). Each agent reads the full source of every changed file (bugs live in new-vs-existing-code interaction, not just within the diff).
 
@@ -177,9 +177,11 @@ Each agent receives the **base context**: the diff, the changed file paths, the 
 *Debiased lenses (Saboteur, Operator, Security):*
 > *"You are a read-only reviewer. Do NOT run tests, build commands, or execute code - analyze by reading source and grepping only. You have intentionally NOT been given the PR description, commit messages, or author's rationale. Assess this code change purely on its own merits by reading the diff and the surrounding code. Form your own understanding of what changed and why before evaluating whether it's correct. Do not seek out or infer the author's intent - your value is in the independent assessment.*
 >
+> *The diff carries framing of its own - comments, docstrings, names and test titles are the author's claims too. Judge the code by what it does, and treat what it says about itself as something to verify.*
+>
 > *If you receive a 'Config research (from official docs)' section below, it contains web-sourced documentation about the configuration settings changed in this diff. Use this research as your primary source of truth for evaluating the change - it overrides any assumptions you have about which option is 'better.' Present the documented alternatives in your findings and let the reviewer decide which fits their system."*
 
-**Available lenses (briefs are fixed, not softenable):**
+**Available lenses** (briefs are fixed - the eval in `evals/review/` reads the Saboteur's verbatim):
 
 1. **Saboteur** (`saboteur`) - *"You are a production incident investigator. For each changed function: what's the worst input? What if the external call fails/times out? What if this runs twice, concurrently, or never? What if neither branch is correct? When the diff changes a system's failure mode (e.g., silent degradation → hard rejection, or vice versa), flag it as a warning. Before concluding, investigate the domain impact: grep the codebase to understand what user-facing feature the changed component powers, what happens to end users when the new failure mode triggers, and whether retries/alerts/fallbacks exist. Trace data origins: if the changed code path receives data from external sources (user uploads, API responses, third-party feeds), check whether the field set is fully controlled - a blocklist/exclude pattern lets novel external fields through, and tightened validation (e.g., strict schema) would reject them. Name consequences at BOTH levels: (a) infrastructure ('write rejected') AND (b) user-facing ('user loses access to the feature this powers'). Do not resolve which failure mode is better - present both sides and let the reviewer decide. If config research is provided, cross-reference the documented risks with the actual codebase impact you found. Hunt: races, resource leaks, swallowed errors, silent data corruption, failure mode regressions. When you identify a failure mode (e.g., CrashLoopBackOff, deadlock, queue backup), trace what the failed component DOES - grep for what it schedules, consumes, or serves, and name the specific downstream operations that stop. If nothing real breaks, say so - do not manufacture concerns. End with `reviewed_paths:` and every file you read in full or grepped."*
 
@@ -204,7 +206,7 @@ Output as **Independent Review Lenses** section after findings.
 
 When the diff changes how a framework or library is used - not just business logic - the review's findings often rest on *assumed* library behavior that no one verified. This step downloads and unpacks the library at the exact pinned version and traces the actual execution path through its source.
 
-**Timing:** Launch as a background `Agent` alongside the Step 6a lenses (from Step 3, once the diff is loaded). Wait for its notification before writing the final review, same as lenses.
+**Timing:** one `Agent` call in the same message as the Step 6a lenses.
 
 **Detection - when to trigger:** Scan the diff for ANY of:
 - **Framework config dicts** - keys consumed by a library, not by repo code (e.g., `BROKER_TRANSPORT_OPTIONS`, `DATABASES`, `CACHES`, `LOGGING`, `REST_FRAMEWORK`, `ELASTICSEARCH_DSL`, ORM `Meta` class attributes)
@@ -220,11 +222,11 @@ grep -m1 -iE "^<package>(\[[^]]*\])?==" ./requirements.txt | cut -d= -f3 | cut -
 # Node - .packages is lockfile v2/v3, .dependencies is v1
 jq -r --arg p "<package>" '(.packages["node_modules/" + $p].version) // (.dependencies[$p].version) // empty' ./package-lock.json
 ```
-If no lockfile or no pin found, note `library tracing: version unknown, skipped` in the Summary's not-examined sentence and proceed without.
+If no lockfile or no pin found, record `library tracing skipped: version unknown` on the Agents line and proceed without.
 
 **Getting the source:** download and unpack, never install. Python: the wheel (or source tarball) from PyPI's JSON API. Node: `npm pack`, which runs no scripts for a registry package. Installing a source package executes its build code, and the version comes from the PR under review. The agent handles this internally - aristarchus's own `allowed-tools` does not need expanding because `Agent` subagents have full tool access.
 
-**Agent prompt (spawn one background `Agent`, NOT Explore):**
+**Agent prompt (one `Agent`, not Explore):**
 
 > *"You are a library source tracer. Your job is to verify what a library ACTUALLY does, not what the code comments or PR description CLAIM it does.*
 >
@@ -259,8 +261,7 @@ Pass the agent: the diff, the changed file paths, and the specific claims/config
 **After the agent completes:**
 - Merge findings into the main review. Each carries `source:library` in its verification line. `Confirmed` only when the finding's verification line quotes the agent's cited `path:line`; otherwise `Inferred`.
 - Library-traced findings that contradict a diff comment are `warning` minimum (a comment lying about library behavior misleads future maintainers).
-- If the agent found no contradictions, note in the output: *"Library source tracing: no contradictions found in `<packages>`."*
-- If the agent failed (download error, network), note in the Summary's not-examined sentence: *"Library source tracing: skipped (`<reason>`)."*
+- No contradictions → the Agents line reads `library tracing ran: <packages>, 0 findings`. A failed download → `library tracing skipped: <reason>`.
 
 ## Step 6c - Cross-Repo Check (skipped with --fast)
 
@@ -268,7 +269,7 @@ When the diff touches infra files (`charts/`, `deploy/`, `workers/`, `tasks/`, k
 
 **Which repos:** the ones the target repo's `CLAUDE.md` names; else the `$WORKSPACE` repos whose name contains `config`, `infra`, `deploy`, `ops`, `terraform` or `helm` (`ls "$WORKSPACE"`).
 
-**Timing:** Background `Agent`, launched alongside 6a/6b. If no such repo exists on disk, skip and note in the Summary's not-examined sentence: *"Cross-repo check: no infra/config repo found, skipped."*
+**Timing:** one `Agent` call in the same message as the Step 6a lenses. If no such repo exists on disk, record `cross-repo n/a: no infra/config repo found` on the Agents line.
 
 **Agent prompt:**
 
@@ -311,8 +312,6 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 **Completion contract:** verification is done when every finding has a darkmoon verdict integrated. A finding with no verdict when verification is active is a bug in the review process.
 
 **Quality rules (always apply, verified or not):**
-- **Confirm you actually loaded the repo `CLAUDE.md` (Step 4) and existing comments (Step 7).** If not, do it now - they change findings.
-- A finding on a line this diff does not change gets the `pre-existing` flag in its header and keeps its severity (see Severity in Step 6).
 - Substance over cosmetics: one real null-deref/auth gap beats ten style notes.
 - State what's *wrong* and its consequence, not what the diff changed. No hedging.
 - If you decided something isn't a bug, delete it entirely - no withdrawn findings in the output.
@@ -324,21 +323,28 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **The format is a contract.** `references/output-example.md` is a complete review in this format; `parse-findings.sh` checks it, and tools such as an automated reviewer read findings through it. Follow the example's finding headers, summary list and verification lines exactly.
 
-**Order:** header, `---`, "What this PR does", findings summary, `---`, detailed findings **grouped by severity** (criticals first, then warnings, then nits; pre-existing findings last within their severity), `---`, Independent Review Lenses (if run), `---`, Library Source Tracing (if run), `---`, Cross-Repo Analysis (if run), `---`, Summary. Omit empty sections.
+**Order:** header, `---`, "What this PR does", findings summary, `---`, detailed findings (criticals, then warnings), `---`, **Notes** (nits and pre-existing findings), `---`, Independent Review Lenses (if run), `---`, Library Source Tracing (if run), `---`, Cross-Repo Analysis (if run), `---`, Summary. Omit empty sections.
 
-Header (5 lines + `---`):
+**Signal over volume.** A reader acts on the criticals and warnings; everything else is a note.
+- **Notes** hold nits and pre-existing findings below the real findings, each as its normal finding header plus one line and the verification line - no Problem/Impact/Fix. A pre-existing **critical** stays with the real findings, flagged `pre-existing`.
+- **One defect, one finding.** The same mistake in several places is one finding that lists every location, not one finding per site.
+- **No findings is a valid review.** Say so in one line under the findings summary and keep the Summary; never pad with nits to look thorough.
+
+Header (6 lines + `---`):
 ```
 **Review: PR #<n> - <title>**
 **Author**: @user | **Base**: <base> <- <branch> | **Files**: N changed (+A, -D)
 **CI**: passing|failing|pending | **Reviewers**: names (parse `reviewRequests`: `__typename: User` → login, `__typename: Team` → name)
 **Filtered**: N files skipped (N sampled) | **Conventions**: <CLAUDE.md source> (N rules)|none | **Existing comments**: N fetched (M deduped) | **JIRA**: <ID> fetched|<ID> supplied|none found|failed
 **Verified**: N claims via darkmoon - U upheld, W weak, C can't-determine, R refuted (dropped, including Weak nits) | skipped (--fast)
+**Agents**: lenses N/5 | config research <ran | n/a> | library tracing <ran: packages, N findings | n/a | skipped: reason> | cross-repo <ran: repos, N findings | n/a | skipped: reason>
 ---
 ```
+The **Agents** line records every agent step, so none can drop silently: `n/a` = not triggered, `skipped` = triggered but failed. With `--fast`: `lenses skipped (--fast)` and the same for the rest.
 The **Verified** counts come from Step 8's ledger and must sum to N, with a Weak nit (dropped from the findings) counted under refuted, so the `weak` count equals the findings marked `(weak)`; a review that ran Step 8 without this line is incomplete - the user should see verification happened without re-running `/darkmoon`.
 **What this PR does** - 1 sentence from YOUR reading of the diff, describing what the code changes actually do. Do NOT paraphrase the PR body - if your sentence resembles it, you're echoing. The PR body explains *why*; this sentence states *what changed* mechanically.
 
-**Findings summary** - two lines per finding, numbered like the detailed findings and severity-grouped. Every detailed finding has a line here and nothing else does. This is the at-a-glance triage list:
+**Findings summary** - two lines per finding, numbered like the detailed findings and severity-grouped, notes last after a `Notes:` line. Every finding has a line here and nothing else does. This is the at-a-glance triage list:
 ```
 🛑  #1  file.py:42
     Null pointer dereference on empty user input
@@ -346,6 +352,7 @@ The **Verified** counts come from Step 8's ledger and must sum to N, with a Weak
 ⚠️  #2  indexing.py:128
     update_by_query unbounded - one large tenant can match millions of docs
 
+Notes:
 ✏️  #3  test_file.py:42 (pre-existing)
     Bare == without assert - dead assertion
 ```
@@ -368,17 +375,15 @@ Critical and warning findings:
 *Confirmed - [evidence: what was verified and how].* (verified)
 ```
 
-Nits:
+Notes (nits, and pre-existing findings of any severity but critical), under a `**Notes**` line:
 ```
 ✏️  **#3 · nit · Naming · file.py:120**
-
 One-line suggestion.
-
 *Confirmed - [evidence].* (verified)
 ```
 
 Rules:
-- **Severity order.** Group by severity: criticals (🛑), then warnings (⚠️), then nits (✏️). Within each group, sort by file order, with pre-existing findings last.
+- **Severity order.** Criticals (🛑), then warnings (⚠️), each sorted by file order; then the Notes. Pre-existing criticals sort last among the criticals.
 - **Problem/Impact split.** Every warning and critical separates the problem (what's wrong) from the impact (why it matters). Keep each to one line.
 - **Fix included.** Every warning and critical includes a concrete code suggestion. Nits may omit it if the fix is obvious.
 - **Inline comparisons.** When a finding compares options, flows, or behaviors: use a markdown table ONLY if ≤3 columns with short values. Otherwise use a bullet list:
@@ -412,8 +417,8 @@ It checks each finding header, that the emoji matches the severity word, that th
 3. Existing comments field is filled - count fetched + deduped
 4. Summary includes Confidence + Recommendation
 5. Summary states **what was NOT examined** (e.g., "scripts/ not grepped", "sampled 30 of 55 files") - a clean review with unstated scope gives false confidence. Status notes from skipped or failed steps (config research, library tracing, cross-repo check) go in this sentence
-6. Library source tracing status is noted - ran (packages + finding count), skipped (reason), or N/A (no library calls detected)
-7. Cross-repo analysis status is noted - ran (repos checked + finding count), skipped (reason), or N/A (no related repos configured)
+6. The **Agents** header line is filled for every agent step (lenses, config research, library tracing, cross-repo)
+7. Nits and non-critical pre-existing findings are in the Notes, not among the detailed findings
 8. JIRA field is filled - ticket fetched, supplied, none found, or failed
 9. `parse-findings.sh --check` printed `parse-findings: ok` on the final review
 10. `ExitWorktree` ran with `action: "remove"`
@@ -422,6 +427,4 @@ It checks each finding header, that the emoji matches the severity word, that th
 ## Guard Rails
 
 - **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only. Lens, tracer and cross-repo subagents have full tool access; for them the read-only guarantee is prompt-only unless deny rules cover Edit/Write in `$WORKSPACE`.
-- **Always use `EnterWorktree`** - never raw `git worktree add`. The worktree is disposable and read-only.
 - **`gh` auth required** - if `gh auth status` fails, stop and tell the user to run `gh auth login`.
-- **Always clean up the worktree** via `ExitWorktree`, even if interrupted.
