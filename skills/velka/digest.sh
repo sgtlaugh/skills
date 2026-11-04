@@ -6,7 +6,7 @@ set -euo pipefail
 f="$1"
 
 # Notes live mostly in bash comments; jq 1.6 does accept full-line # comments inside the program.
-# Schema: id, project, start/end, assistant_msgs, user_str/arr, tokens{in,out,cache_read,cache_create},
+# Schema: id, project, entrypoint (sdk-cli = a headless claude -p run), start/end, assistant_msgs, user_str/arr, tokens{in,out,cache_read,cache_create},
 # tools{}, files_edited{}, files_read{}, bash{total,git_commit,git_revert,test_run,grep},
 # skill_tooluse[], slash[], first_prompt (first 2-3 substantive human messages joined with " | "),
 # corrections[] ({ts, text} human turns that push back), hook_blocks{} (hook or "deny-rule" -> count).
@@ -44,6 +44,7 @@ jq -cR 'fromjson? // empty' "$f" | jq -s '
   | {
       id:      (($L | map(.sessionId) | map(select(.)) | first) // "unknown"),
       project: (($L | map(.cwd)       | map(select(.)) | first) // "unknown"),
+      entrypoint: (($L | map(.entrypoint) | map(select(.)) | first) // "unknown"),
       start:   ($a | first | .timestamp?),
       end:     ($a | last  | .timestamp?),
       assistant_msgs: ($a | length),

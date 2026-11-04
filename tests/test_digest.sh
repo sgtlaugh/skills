@@ -110,11 +110,15 @@ for b in 0 1 2; do
                              input: {command: (if $b == 0 then "git -C /tmp/nest commit -m feat" elif $b == 1 then "cat tests/run.sh" else "bash tests/run.sh" end)}}]}}'
 done > "$split"
 out=$(bash "$SCRIPT" "$split" 2>/dev/null)
+assert_jq "a session with no entrypoint field reads as unknown" ".entrypoint" "unknown" "$out"
 assert_jq "each content-block line of one message keeps its tool call" ".tools.Bash" "3" "$out"
 assert_jq "usage repeated on every line of one message counts once" ".tokens.out" "50" "$out"
 assert_jq "git -C <dir> commit counts as a commit" ".bash.git_commit" "1" "$out"
 assert_jq "reading tests/run.sh is not a test run, running it is" ".bash.test_run" "1" "$out"
-rm -f "$split"
+headless=$(mktemp)
+jq -nc '{type: "user", entrypoint: "sdk-cli", sessionId: "owl-batch", message: {content: "run the owl census benchmark"}}' > "$headless"
+assert_jq "a headless claude -p session records its entrypoint" ".entrypoint" "sdk-cli" "$(bash "$SCRIPT" "$headless" 2>/dev/null)"
+rm -f "$split" "$headless"
 
 echo "  --- $pass passed, $fail failed ---"
 [ "$fail" -eq 0 ]
