@@ -64,7 +64,7 @@ A section with nothing real to say is left out; a heading over filler is WRONG.
 - Code links are permalinks pinned to a commit SHA that exists on the remote: `https://github.com/<org>/<repo>/blob/<sha>/<path>#L<line>`. A link to a branch name drifts and is WRONG.
 - Link text is short and plain: `[content.ts:367](<permalink>)`, the file name and line. Never code formatting inside link text, never a bare URL in a sentence.
 - Sentry issues, PRs, log queries and other tickets are links too: `[BILLING-API-4HF](<url>)`, `[#812](<url>)`.
-- Code only when it says what words can't (the failing request, the exact error): a fenced block with its language, at most ten lines. Identifiers in a sentence go in backticks.
+- Code only when it says what words can't (the failing request, the exact error): a fenced block with a common language name (`bash`, `python`, `javascript`, `json`, `sql`, `yaml`), at most ten lines; Jira's code macro knows only its own list. Identifiers in a sentence go in backticks.
 
 ## Step 4 - Self-check, then show it
 
