@@ -104,6 +104,7 @@ flowchart LR
     firewatch["/firewatch"] --> sentry
     sentryfix["/sentry-fix"] --> sentry
     sentryfix -. opens PR .-> nicepr
+    niceticket["/niceticket"] --> sentry
     firewatch --> jira
     aristarchus["/aristarchus"] --> darkmoon
     aristarchus --> fathom["/fathom"]
