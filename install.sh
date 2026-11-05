@@ -83,7 +83,7 @@ elif unset=$(jq -r --slurpfile tpl "$REPO/credentials.example.json" \
         ok credentials.json "all $total keys set$seeded"
     else
         warn credentials.json "$((total - missing_keys)) of $total keys set$seeded"
-        for group in "jira:/jira, /triage, /lordvessel; ticket input for /gadfly, /forge, /duck, /nicepr, /aristarchus" \
+        for group in "jira:/jira, /triage; ticket input for /gadfly, /forge, /duck, /nicepr, /aristarchus" \
                      "sentry:/sentry, /sentry-fix, /triage, /firewatch" \
                      "datadog:/firewatch (Datadog APM)" "jenkins:/firewatch (Jenkins jobs)" "opsgenie:/firewatch (Opsgenie alerts)"; do
             keys=$(printf '%s\n' "$unset" | grep "^${group%%:*}" | paste -sd, - | sed 's/,/, /g')
@@ -100,7 +100,7 @@ if [ -L "$catalog" ] && [ ! -e "$catalog" ]; then
     fail services.md "broken link - fix or remove it, then re-run"
 elif cmp -s "$REPO/services.example.md" "$catalog"; then
     warn services.md "still the template$seeded"
-    hint "→ /sentry, /sentry-fix, /triage, /firewatch, /lordvessel, the /aristarchus mutation check"
+    hint "→ /sentry, /sentry-fix, /triage, /firewatch, the /aristarchus mutation check"
 else
     unfilled=$(grep -c '<your ' "$catalog" || true)
     if [ "$unfilled" -eq 0 ]; then ok services.md "filled in"
@@ -118,10 +118,10 @@ if [ -n "${WORKSPACE:-}" ]; then ok '$WORKSPACE' "$WORKSPACE"
 else warn '$WORKSPACE' "unset - export it to your clones directory → /aristarchus, /triage, /sentry-fix"; fi
 # The same local test gh makes before an API call: a token in the environment or a host in hosts.yml. gh auth token
 # is no test, since it also finds a keyring token that gh api won't use; gh auth status needs the network.
-if ! command -v gh >/dev/null; then warn gh "not installed → /aristarchus, /nicepr, /triage, /lordvessel, /sentry-fix"
+if ! command -v gh >/dev/null; then warn gh "not installed → /aristarchus, /nicepr, /triage, /sentry-fix"
 elif [ -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ] || grep -q '^[^[:space:]#]' "${GH_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/gh}/hosts.yml" 2>/dev/null; then
     ok gh "logged in"
-else warn gh "not logged in - run gh auth login → /aristarchus, /nicepr, /triage, /lordvessel, /sentry-fix"; fi
+else warn gh "not logged in - run gh auth login → /aristarchus, /nicepr, /triage, /sentry-fix"; fi
 
 echo
 if [ "$todo" -eq 0 ]; then

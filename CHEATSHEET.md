@@ -21,7 +21,6 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 | Pick between designs | `/dialectic <question>` |
 | Handle an alert that just fired | `/firewatch <alert>` |
 | Root-cause a bug ticket, or answer a question ticket | `/triage <TICKET-ID>` |
-| Check whether a ticket is really done | `/lordvessel <TICKET-ID>` |
 | Check whether a deploy fixed a Sentry issue | `/sentry fixed <issue> <release>` |
 | Fix a Sentry issue, test first | `/sentry-fix <issue>` |
 | Read, create or comment on a Jira ticket | `/jira PROJ-123` |
@@ -173,14 +172,6 @@ Drafts only; `/jira` creates the ticket once you have read it.
 /triage <TICKET-ID> --fast                # skip the darkmoon pass
 ```
 
-**`/lordvessel`**
-
-```text
-/lordvessel <TICKET-ID>                   # traces each requirement to code
-/lordvessel <jira-url>                    # same, by URL
-/lordvessel <TICKET-ID> --fast            # skip the darkmoon pass
-```
-
 **`/jira`**
 
 ```text
@@ -241,8 +232,6 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/firewatch <alert>` (Sentry or Jenkins) | Opus 5.5 (1M) | $0.35-0.61 | 1-2 min | Nov 2026 |
 | `/triage <TICKET-ID>` | Opus 5.5 (1M) | $1.78-3.10 (`--fast` $0.84) | 8 min | Nov 2026 |
 | `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.55-4.98 | 7-14 min (a slow test suite makes the mutation check the long pole) | Nov 2026 |
-| `/lordvessel <TICKET-ID> --fast` | Opus 5.5 (1M) | - | 2-5 min | Oct 2026 |
-| `/lordvessel <TICKET-ID>` | Opus 5.5 (1M) | - | 9 min | Oct 2026 |
 | `/gadfly <spec>` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
 | `/forge <prd>` (5 repos, with temper) | Opus 5.5 (1M) | $5.39-6.56 | 14-17 min | Nov 2026 |
 | `/jury <skill>` | the target's | N × the target | same as one run (parallel) | - |
