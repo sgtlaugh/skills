@@ -114,6 +114,15 @@ check "another script stays blocked" 2 'bash /opt/owl/other.sh x'
 check "the allowed script cannot hide a second command" 2 'bash /opt/owl/query.sh x; touch /home/owl/pwned'
 check "the allowed script cannot write through a redirect" 2 'bash /opt/owl/query.sh x > /home/owl/out'
 check "bash -c is not the allowed script" 2 'bash -c /opt/owl/query.sh'
+# The allowed script reached through a symlinked directory, either way round, is the same file; its neighbour isn't
+lnk=$(mktemp -d); mkdir -p "$lnk/real"; printf 'exit 0\n' > "$lnk/real/query.sh"; printf 'exit 0\n' > "$lnk/real/other.sh"; ln -s "$lnk/real" "$lnk/link"
+export DARKMOON_ALLOW_SCRIPT="$lnk/real/query.sh"
+check "the allowed script by a symlinked path runs" 0 "bash $lnk/link/query.sh logs-ppl x"
+check "another script by the symlinked path stays blocked" 2 "bash $lnk/link/other.sh x"
+export DARKMOON_ALLOW_SCRIPT="$lnk/link/query.sh"
+check "allowed by its symlinked path, the real path runs" 0 "bash $lnk/real/query.sh logs-ppl x"
+check "a relative path to the allowed file stays blocked" 2 "cd $lnk/real && bash query.sh x"
+rm -rf "$lnk"
 export DARKMOON_ALLOW_SCRIPT=query.sh
 check "a relative allowed path is ignored" 2 'bash query.sh x'
 unset DARKMOON_ALLOW_SCRIPT

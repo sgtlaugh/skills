@@ -138,7 +138,10 @@ while read -r seg; do
                 *) block "gh ${words[1]:-} ${words[2]:-} (read subcommands only)" ;;
             esac ;;
         bash|sh)
-            [ -n "${DARKMOON_ALLOW_SCRIPT:-}" ] && [[ "$DARKMOON_ALLOW_SCRIPT" == /* ]] && [ "${words[1]:-}" = "$DARKMOON_ALLOW_SCRIPT" ] \
+            # The same file by another absolute path (a symlinked install dir) is the same script
+            [ -n "${DARKMOON_ALLOW_SCRIPT:-}" ] && [[ "$DARKMOON_ALLOW_SCRIPT" == /* ]] && [[ "${words[1]:-}" == /* ]] \
+                && { [ "${words[1]}" = "$DARKMOON_ALLOW_SCRIPT" ] \
+                    || { a=$(realpath -e -- "$DARKMOON_ALLOW_SCRIPT" 2>/dev/null) && [ "$(realpath -e -- "${words[1]}" 2>/dev/null)" = "$a" ]; }; } \
                 || block "'$w' is not in the read-only allowlist" ;;
         *) block "'$w' is not in the read-only allowlist" ;;
     esac
