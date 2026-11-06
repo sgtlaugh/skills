@@ -98,7 +98,6 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 | **Build** | | |
 | [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: failing test, least code, refactor | pytest |
 | [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks until you see the bug | |
-| [`/fathom`](skills/fathom/SKILL.md) | Judges a module deep or shallow, and how to deepen it | |
 | **Design** | | |
 | [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it gets built | |
 | [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft | |
@@ -149,7 +148,6 @@ flowchart LR
     niceticket["/niceticket"] --> sentry
     firewatch --> jira
     aristarchus["/aristarchus"] --> darkmoon
-    aristarchus --> fathom["/fathom"]
     aristarchus --> jira
     forge["/forge"] --> gadfly["/gadfly"]
     forge -. jira creds .-> jira

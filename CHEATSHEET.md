@@ -15,7 +15,6 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 | Research something without bluffing | `/solaire <question>` |
 | Build a feature test-first | `/bonfire <feature>` |
 | Get unstuck on a bug, and learn why | `/duck <bug>` |
-| Judge a module's design | `/fathom <module>` |
 | Find holes in a spec before it's built | `/gadfly <spec>` |
 | Turn a PRD into a spec | `/forge <prd>` |
 | Pick between designs | `/dialectic <question>` |
@@ -101,13 +100,6 @@ Drafts only; `/jira` creates the ticket once you have read it.
 /duck <bug description>                   # questions you to the answer
 /duck <file or ticket>                    # starts from the code or the ticket
 /duck --quack                             # drops the act, proves the cause with a repro
-```
-
-**`/fathom`**
-
-```text
-/fathom <module>                          # deep vs shallow, and how to deepen it
-/fathom --twice <design question>         # design the interface several ways, compare
 ```
 
 ## Specs and decisions
