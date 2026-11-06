@@ -13,40 +13,38 @@ Claude Code skills that make the agent prove it.
 - **Evidence or nothing:** every verdict cites a grep, a query or a `file:line`, or says `Can't-determine`.
 - **Fresh eyes:** reviews run in a separate context, so the author's reasoning can't wave its own work through.
 
-## Quick start
+## Install
 
-```bash
-git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/skills/install.sh
-```
+1. Clone and run the installer:
 
-- Restart Claude Code and type `/`.
-- Re-run `install.sh` after each pull.
-- Common usage is in [`CHEATSHEET.md`](CHEATSHEET.md); every flag is in each skill's `SKILL.md`.
+   ```bash
+   git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/skills/install.sh
+   ```
 
-## Setup
+2. Read its checklist. Skills with nothing in their **Needs** column work now; each ⚠ line says what the rest are missing:
 
-Most skills work right after install. `install.sh` lists what the rest still need each time it runs, and the tables below say what each thing unlocks.
+   ```text
+   Config → ~/.config/claude-skills
+     ⚠ credentials.json  2 of 10 keys set
+     ⚠ services.md       still the template
+   Environment
+     ⚠ gh                not logged in - run gh auth login → /aristarchus, /nicepr, /triage, /sentry-fix
+   ```
 
-<details>
-<summary>What each skill needs</summary>
+3. Set up only what your skills need:
+   - **Jira, Sentry, alert keys:** add them to `~/.config/claude-skills/credentials.json`, which the installer created (mode 600). Where to get each one is under *Config files and credential keys* below.
 
-| Set up | For | How |
-|---|---|---|
-| Nothing | `/occam`, `/kiln`, `/fathom`, `/bonfire`, `/solaire`, `/dialectic`, `/darkmoon`, `/jury`, `/velka`, `/humanize`, `/niceticket` | - |
-| `gh auth login` | `/aristarchus`, `/nicepr`, `/triage`, `/sentry`, `/sentry-fix`, `/firewatch`; a PR in `/darkmoon`, `/solaire`, `/niceticket` | [gh](https://cli.github.com/) |
-| Jira credentials | `/jira`; ticket context in `/nicepr`, `/aristarchus`, `/triage`, `/gadfly`, `/forge`, `/duck`; tickets from `/firewatch` | `jira*` keys below |
-| Sentry credentials | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`; a Sentry issue in `/niceticket` | `sentry*` keys below |
-| Datadog, Jenkins, Opsgenie | `/firewatch` alert sources | keys below |
-| `services.md` | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`; the `/aristarchus` mutation check | fill in the template `install.sh` writes |
-| `$WORKSPACE` | `/aristarchus`, `/triage`, `/sentry-fix` | `export WORKSPACE=~/code` in your shell profile: the directory holding your clones |
-| `voice.md` | `/humanize` in your own voice | your own file |
-| `work.json` | reviewers for `/nicepr --create` | `{"reviewers": [...]}` |
-| pandoc | document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` | [pandoc](https://pandoc.org/) |
-| python + pytest | `/bonfire`, `/duck --quack` | [pytest](https://pytest.org/) |
+     ```json
+     { "jiraBaseUrl": "https://acme.atlassian.net", "jiraEmail": "you@acme.com", "jiraApiToken": "<token>" }
+     ```
 
-Every skill needs [Claude Code](https://docs.claude.com/en/docs/claude-code); `install.sh` and the API skills need [jq](https://jqlang.github.io/jq/) and curl 7.76+. Linux and macOS, bash 3.2 or newer.
+   - **gh:** `gh auth login`
+   - **`$WORKSPACE`:** `export WORKSPACE=~/code` in your shell profile, the folder holding your clones
+   - **`services.md`:** fill in the template in the same folder: your repos, log search and test commands
 
-</details>
+4. Re-run `install.sh` until the checklist is green, then restart Claude Code and type `/`. Re-run it after every pull.
+
+Every skill needs Claude Code, jq and curl 7.76+, on Linux or macOS with bash 3.2+. Common usage is in [`CHEATSHEET.md`](CHEATSHEET.md); every flag is in each skill's `SKILL.md`.
 
 <details>
 <summary>Config files and credential keys</summary>
@@ -86,35 +84,37 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 
 ## The skills
 
-| Skill | What it does |
-|---|---|
-| **Before you push** | |
-| [`/occam`](skills/occam/SKILL.md) | Reviews your change in a fresh context for bugs, leftovers and simplicity |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review: five independent lenses, a mutation check of the tests, findings verified by `/darkmoon` |
-| [`/nicepr`](skills/nicepr/SKILL.md) | Short, human PR titles and descriptions from the diff and the ticket |
-| [`/niceticket`](skills/niceticket/SKILL.md) | Short, well-formatted Jira bug tickets: only the sections the facts support, code links as permalinks |
-| **Checking claims** | |
-| [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks the last answer, or claims, against the code |
-| [`/solaire`](skills/solaire/SKILL.md) | Run before a research question: seven fixed checks keep the answer grounded |
-| **Building and debugging** | |
-| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first: watch the test fail, write the least code to pass, refactor when green |
-| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that questions you until you find the bug yourself |
-| [`/fathom`](skills/fathom/SKILL.md) | Judges whether a module is deep or shallow, and how to deepen it |
-| **Specs and decisions** | |
-| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built: gaps, grounding in real code, four lenses |
-| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft; you decide, `/gadfly` critiques |
-| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option to win, then names the trade-off and what would flip it |
-| **Production** | |
-| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates an alert: severity first, then logs, Sentry, APM, alert history |
-| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release; checks if a deploy fixed it |
-| [`/sentry-fix`](skills/sentry-fix/SKILL.md) | Gates a Sentry issue, reproduces it with a failing test, fixes the root cause on a branch |
-| [`/triage`](skills/triage/SKILL.md) | A bug ticket to a proven root cause, a question ticket to an answer per ask |
-| [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets; reads Confluence pages |
-| **About skills themselves** | |
-| [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind, contradictions and stale references |
-| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times: which findings were consistent and which were luck |
-| [`/velka`](skills/velka/SKILL.md) | Mines your past sessions for habits; `--propose` drafts CLAUDE.md edits |
-| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns; gates GitHub text against a house style |
+| Skill | What it does | Needs |
+|---|---|---|
+| **Before you push** | | |
+| [`/occam`](skills/occam/SKILL.md) | Fresh-context review of your change | |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review, every finding verified | gh, `$WORKSPACE` |
+| [`/nicepr`](skills/nicepr/SKILL.md) | PR title and description from the diff | gh |
+| [`/niceticket`](skills/niceticket/SKILL.md) | Short Jira bug ticket from the facts | |
+| **Checking claims** | | |
+| [`/darkmoon`](skills/darkmoon/SKILL.md) | A skeptic checks claims against the code | |
+| [`/solaire`](skills/solaire/SKILL.md) | Grounding checks before a research answer | |
+| **Building and debugging** | | |
+| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first build loop | pytest |
+| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck for your bug | |
+| [`/fathom`](skills/fathom/SKILL.md) | Is this module deep or shallow? | |
+| **Specs and decisions** | | |
+| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built | |
+| [`/forge`](skills/forge/SKILL.md) | A PRD to a grounded spec draft | |
+| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option, names the trade-off | |
+| **Production** | | |
+| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates a production alert | alert keys, `services.md` |
+| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue | Sentry, `services.md` |
+| [`/sentry-fix`](skills/sentry-fix/SKILL.md) | A Sentry issue to a tested fix | Sentry, gh, `services.md`, `$WORKSPACE` |
+| [`/triage`](skills/triage/SKILL.md) | A ticket to a root cause or an answer | Jira, Sentry, gh, `services.md`, `$WORKSPACE` |
+| [`/jira`](skills/jira/SKILL.md) | Jira tickets and Confluence pages | Jira |
+| **About skills themselves** | | |
+| [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md | |
+| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times, compares the runs | |
+| [`/velka`](skills/velka/SKILL.md) | Habits from your past sessions | |
+| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns | |
+
+Optional extras, used when present: Jira keys for ticket context in the review and spec skills, `voice.md` for `/humanize`, `work.json` for `/nicepr --create` reviewers, pandoc for documents in `/jira`, `/gadfly`, `/forge` and `/dialectic`.
 
 ## Example verdict
 

@@ -127,6 +127,6 @@ echo
 if [ "$todo" -eq 0 ]; then
     printf '%s✓ Ready.%s Restart Claude Code to pick up new skills.\n' "$GREEN$BOLD" "$OFF"
 else
-    printf '%s⚠ %s things to set up%s - see "Setup" in %s/README.md\n' "$YELLOW$BOLD" "$todo" "$OFF" "$REPO"
+    printf '%s⚠ %s things to set up%s - see "Install" in %s/README.md\n' "$YELLOW$BOLD" "$todo" "$OFF" "$REPO"
     printf 'Restart Claude Code to pick up new skills.\n'
 fi

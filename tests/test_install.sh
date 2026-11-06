@@ -32,7 +32,7 @@ check "first run flags the catalog as still the template" '[[ "$out" =~ services
 check "first run flags an unset \$WORKSPACE" '[[ "$out" =~ WORKSPACE\ +unset ]]'
 check "first run marks the optional files as optional, not missing" '[[ "$out" =~ ·\ voice\.md\ +optional ]] && [[ "$out" =~ ·\ work\.json\ +optional ]]'
 check "piped output carries no colour codes" '[[ "$out" != *$'"'"'\e['"'"'* ]]'
-check "setup notes point at the README section" '[[ "$out" == *"Setup\" in $REPO/README.md"* ]] && grep -q "^## Setup" "$REPO/README.md"'
+check "setup notes point at the README section" '[[ "$out" == *"Install\" in $REPO/README.md"* ]] && grep -q "^## Install" "$REPO/README.md"'
 
 check "every skill file is linked" '[ "$(find "$REPO/skills" -type f | wc -l)" -eq "$(find "$S" -type l -lname "$REPO/*" | wc -l)" ]'
 check "agent is linked to the repo" '[ "$(readlink "$H/.claude/agents/darkmoon-skeptic.md")" = "$REPO/agents/darkmoon-skeptic.md" ]'
