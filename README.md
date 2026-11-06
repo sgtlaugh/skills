@@ -23,25 +23,66 @@ git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/ski
 - Re-run `install.sh` after each pull.
 - Common usage is in [`CHEATSHEET.md`](CHEATSHEET.md); every flag is in each skill's `SKILL.md`.
 
-### Set up what you use
+## Setup
 
-Most skills work right after install. The rest need credentials, your service catalog or a clones directory; `install.sh` lists what is still missing every time it runs, and [Configuration](#configuration) explains each file.
+Most skills work right after install. `install.sh` lists what the rest still need each time it runs, and the tables below say what each thing unlocks.
 
-| Skill | Needs |
-|---|---|
-| `/occam`, `/kiln`, `/fathom`, `/bonfire`, `/solaire`, `/dialectic`, `/darkmoon`, `/jury`, `/velka` | nothing |
-| `/humanize` | nothing; `voice.md` for your own voice |
-| `/gadfly`, `/forge`, `/duck` | nothing for a local file; `jira*` credentials to read a ticket or Confluence page |
-| `/jira` | `jira*` credentials |
-| `/nicepr` | `gh auth login`; `jira*` credentials for ticket context; `work.json` for reviewers |
-| `/niceticket` | nothing; `gh auth login` to confirm a commit for its code links, `sentry*` credentials for a Sentry issue |
-| `/sentry` | `sentry*` credentials and `services.md` (Global and Services) |
-| `/triage` | `jira*` and `sentry*` credentials, `services.md`, `$WORKSPACE` and `gh auth login` |
-| `/sentry-fix` | `sentry*` credentials, `services.md` (Services and Fixes), `$WORKSPACE` and `gh auth login` |
-| `/firewatch` | `services.md`; `sentry*`, `datadog*`, `jenkins*` and `opsgenieApiKey` for those alert sources; `jira*` credentials to file tickets |
-| `/aristarchus` | `gh auth login` and `$WORKSPACE`; `jira*` credentials for ticket context; the `services.md` Fixes table for the mutation check |
+<details>
+<summary>What each skill needs</summary>
 
-`$WORKSPACE` is the directory holding your local clones: `export WORKSPACE=~/code` in your shell profile.
+| Set up | For | How |
+|---|---|---|
+| Nothing | `/occam`, `/kiln`, `/fathom`, `/bonfire`, `/solaire`, `/dialectic`, `/darkmoon`, `/jury`, `/velka`, `/humanize`, `/niceticket` | - |
+| `gh auth login` | `/aristarchus`, `/nicepr`, `/triage`, `/sentry`, `/sentry-fix`, `/firewatch`; a PR in `/darkmoon`, `/solaire`, `/niceticket` | [gh](https://cli.github.com/) |
+| Jira credentials | `/jira`; ticket context in `/nicepr`, `/aristarchus`, `/triage`, `/gadfly`, `/forge`, `/duck`; tickets from `/firewatch` | `jira*` keys below |
+| Sentry credentials | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`; a Sentry issue in `/niceticket` | `sentry*` keys below |
+| Datadog, Jenkins, Opsgenie | `/firewatch` alert sources | keys below |
+| `services.md` | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`; the `/aristarchus` mutation check | fill in the template `install.sh` writes |
+| `$WORKSPACE` | `/aristarchus`, `/triage`, `/sentry-fix` | `export WORKSPACE=~/code` in your shell profile: the directory holding your clones |
+| `voice.md` | `/humanize` in your own voice | your own file |
+| `work.json` | reviewers for `/nicepr --create` | `{"reviewers": [...]}` |
+| pandoc | document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` | [pandoc](https://pandoc.org/) |
+| python + pytest | `/bonfire`, `/duck --quack` | [pytest](https://pytest.org/) |
+
+Every skill needs [Claude Code](https://docs.claude.com/en/docs/claude-code); `install.sh` and the API skills need [jq](https://jqlang.github.io/jq/) and curl 7.76+. Linux and macOS, bash 3.2 or newer.
+
+</details>
+
+<details>
+<summary>Config files and credential keys</summary>
+
+Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the first two if they're missing, never overwrites them, and backs up anything in its way to `.bak`. Skills that need none of them work right after install.
+
+| File | Created by `install.sh` | Used by | Holds |
+|---|---|---|---|
+| `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
+| `services.md` | yes | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/aristarchus` | *Your* systems: repos, log search, alert patterns, test commands |
+| `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
+| `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
+
+- **`credentials.json`** lives elsewhere if `CLAUDE_SKILLS_CREDENTIALS` points there.
+- **`services.md`** says which repo each Sentry project lives in, your log search skill, your alert patterns and how to run each repo's tests. It starts as a template whose values read `<your ...>`; skills treat those as missing and ask, so fill in the sections your skills use.
+- **`voice.md`** holds how you suggest, push back and approve.
+- **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft.
+
+**`credentials.json` keys**
+
+| Key | Used by | Where to get it |
+|---|---|---|
+| `datadogPAT` | `/firewatch` | Datadog → Personal Access Tokens |
+| `datadogSite` | `/firewatch` | Your Datadog site, e.g. `datadoghq.com` |
+| `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
+| `jenkinsUser` | `/firewatch` | Your Jenkins username |
+| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
+| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch` | Your Atlassian email |
+| `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
+| `sentryAuthToken` | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/niceticket` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
+| `sentryOrg` | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/niceticket` | Your Sentry org slug |
+
+Skills that call `/jira` or `/sentry` use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
+
+</details>
 
 ## The skills
 
@@ -121,55 +162,6 @@ flowchart LR
     classDef verifier fill:#4c3a72,stroke:#2e2347,color:#fff
     class darkmoon,skeptic verifier
 ```
-
-## Configuration
-
-Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the first two if they're missing, never overwrites them, and backs up anything in its way to `.bak`. Skills that need none of them work right after install.
-
-| File | Created by `install.sh` | Used by | Holds |
-|---|---|---|---|
-| `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
-| `services.md` | yes | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/aristarchus` | *Your* systems: repos, log search, alert patterns, test commands |
-| `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
-| `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
-
-- **`credentials.json`** lives elsewhere if `CLAUDE_SKILLS_CREDENTIALS` points there.
-- **`services.md`** says which repo each Sentry project lives in, your log search skill, your alert patterns and how to run each repo's tests. It starts as a template whose values read `<your ...>`; skills treat those as missing and ask, so fill in the sections your skills use.
-- **`voice.md`** holds how you suggest, push back and approve.
-- **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft.
-
-<details>
-<summary><code>credentials.json</code> keys</summary>
-
-| Key | Used by | Where to get it |
-|---|---|---|
-| `datadogPAT` | `/firewatch` | Datadog → Personal Access Tokens |
-| `datadogSite` | `/firewatch` | Your Datadog site, e.g. `datadoghq.com` |
-| `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
-| `jenkinsUser` | `/firewatch` | Your Jenkins username |
-| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
-| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck` | Your Atlassian email |
-| `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
-| `sentryAuthToken` | `/sentry`, `/sentry-fix` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
-| `sentryOrg` | `/sentry`, `/sentry-fix` | Your Sentry org slug |
-
-Skills that call `/jira` or `/sentry` use these keys through them. Two optional keys: `opsgenieApiBase` for an EU Opsgenie account, `sentryApiBase` for a self-hosted Sentry.
-
-</details>
-
-## Requirements
-
-| Tool | Needed for |
-|---|---|
-| [Claude Code](https://docs.claude.com/en/docs/claude-code) | Everything |
-| [jq](https://jqlang.github.io/jq/) | `install.sh`, `/darkmoon`, `/velka` and the API skills, including `/sentry-fix` |
-| [gh](https://cli.github.com/) | `/aristarchus`, `/nicepr`, `/triage`, `/sentry`, `/firewatch`, `/darkmoon`; optional for `/solaire` |
-| curl 7.76+ | The API skills (they use `--fail-with-body`) |
-| [pandoc](https://pandoc.org/) | Document conversion in `/jira`, `/gadfly`, `/forge`, `/dialectic` |
-| python + [pytest](https://pytest.org/) | `/bonfire` and `/duck --quack` |
-
-Linux and macOS, bash 3.2 or newer.
 
 ## Tests
 
