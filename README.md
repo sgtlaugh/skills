@@ -15,10 +15,11 @@ Claude Code skills that make the agent prove it.
 
 ## Install
 
-1. Clone and run the installer:
+1. Clone the repo and run the installer:
 
    ```bash
-   git clone https://github.com/sgtlaugh/skills.git ~/Github/skills && ~/Github/skills/install.sh
+   git clone https://github.com/sgtlaugh/skills.git ~/Github/skills
+   ~/Github/skills/install.sh
    ```
 
 2. Read its checklist. Skills with nothing in their **Needs** column work now; each ⚠ line says what the rest are missing:
@@ -86,33 +87,33 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 
 | Skill | What it does | Needs |
 |---|---|---|
-| **Before you push** | | |
-| [`/occam`](skills/occam/SKILL.md) | Fresh-context review of your change | |
-| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review, every finding verified | gh, `$WORKSPACE` |
-| [`/nicepr`](skills/nicepr/SKILL.md) | PR title and description from the diff | gh |
-| [`/niceticket`](skills/niceticket/SKILL.md) | Short Jira bug ticket from the facts | |
-| **Checking claims** | | |
-| [`/darkmoon`](skills/darkmoon/SKILL.md) | A skeptic checks claims against the code | |
-| [`/solaire`](skills/solaire/SKILL.md) | Grounding checks before a research answer | |
-| **Building and debugging** | | |
-| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first build loop | pytest |
-| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck for your bug | |
-| [`/fathom`](skills/fathom/SKILL.md) | Is this module deep or shallow? | |
-| **Specs and decisions** | | |
-| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it's built | |
-| [`/forge`](skills/forge/SKILL.md) | A PRD to a grounded spec draft | |
-| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option, names the trade-off | |
+| **Review** | | |
+| [`/occam`](skills/occam/SKILL.md) | Fresh-context review of your uncommitted change | |
+| [`/aristarchus`](skills/aristarchus/SKILL.md) | Deep PR review, every finding verified by `/darkmoon` | gh, `$WORKSPACE` |
+| [`/nicepr`](skills/nicepr/SKILL.md) | PR title and description from the diff and ticket | gh |
+| [`/niceticket`](skills/niceticket/SKILL.md) | Short, well-formatted Jira bug ticket from the facts | |
+| **Verify** | | |
+| [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks claims against the code | |
+| [`/solaire`](skills/solaire/SKILL.md) | Grounding checks to run before a research answer | |
+| **Build** | | |
+| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: failing test, least code, refactor | pytest |
+| [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks until you see the bug | |
+| [`/fathom`](skills/fathom/SKILL.md) | Judges a module deep or shallow, and how to deepen it | |
+| **Design** | | |
+| [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it gets built | |
+| [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft | |
+| [`/dialectic`](skills/dialectic/SKILL.md) | Argues each option, then names the trade-off | |
 | **Production** | | |
-| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates a production alert | alert keys, `services.md` |
-| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue | Sentry, `services.md` |
-| [`/sentry-fix`](skills/sentry-fix/SKILL.md) | A Sentry issue to a tested fix | Sentry, gh, `services.md`, `$WORKSPACE` |
-| [`/triage`](skills/triage/SKILL.md) | A ticket to a root cause or an answer | Jira, Sentry, gh, `services.md`, `$WORKSPACE` |
-| [`/jira`](skills/jira/SKILL.md) | Jira tickets and Confluence pages | Jira |
-| **About skills themselves** | | |
-| [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md | |
-| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times, compares the runs | |
-| [`/velka`](skills/velka/SKILL.md) | Habits from your past sessions | |
-| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns | |
+| [`/firewatch`](skills/firewatch/SKILL.md) | Investigates a production alert, severity first | alert keys, `services.md` |
+| [`/sentry`](skills/sentry/SKILL.md) | Deep-dives a Sentry issue at the deployed release | Sentry, `services.md` |
+| [`/sentry-fix`](skills/sentry-fix/SKILL.md) | A Sentry issue to a tested fix on a branch | Sentry, gh, `services.md`, `$WORKSPACE` |
+| [`/triage`](skills/triage/SKILL.md) | A ticket to a proven root cause or an answer | Jira, Sentry, gh, `services.md`, `$WORKSPACE` |
+| [`/jira`](skills/jira/SKILL.md) | Creates, searches and updates Jira tickets and Confluence pages | Jira |
+| **Meta** | | |
+| [`/kiln`](skills/kiln/SKILL.md) | Lints a SKILL.md for rules that won't bind | |
+| [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and compares the runs | |
+| [`/velka`](skills/velka/SKILL.md) | Mines your past sessions for habits | |
+| [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text | |
 
 Optional extras, used when present: Jira keys for ticket context in the review and spec skills, `voice.md` for `/humanize`, `work.json` for `/nicepr --create` reviewers, pandoc for documents in `/jira`, `/gadfly`, `/forge` and `/dialectic`.
 
