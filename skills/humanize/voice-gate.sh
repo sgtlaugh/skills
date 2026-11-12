@@ -1,21 +1,25 @@
 #!/usr/bin/env bash
 # voice-gate.sh - mechanical gate for text about to be posted on GitHub (see references/github-voice.md)
 #
-# Usage: voice-gate.sh [--max-chars N] [file]   (stdin when no file)
+# Usage: voice-gate.sh [--max-chars N] [--max-sentences N] [file]   (stdin when no file)
+#   --max-sentences: a prose paragraph may run at most N sentences, whatever its length
 #   A JSON array of objects with a "body" (review comments) is checked per comment, plus the 5-comment cap.
 #   Anything else is one comment.
 # Exit 0 = clean (prints "voice-gate: clean"), 1 = violations (one per line on stdout), 2 = usage error.
 
-max=600
+max=600 maxs=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --max-chars) [ $# -ge 2 ] || { echo "voice-gate: --max-chars needs a number" >&2; exit 2; }; max="$2"; shift 2 ;;
         --max-chars=*) max="${1#*=}"; shift ;;
+        --max-sentences) [ $# -ge 2 ] || { echo "voice-gate: --max-sentences needs a number" >&2; exit 2; }; maxs="$2"; shift 2 ;;
+        --max-sentences=*) maxs="${1#*=}"; shift ;;
         -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
         *) break ;;
     esac
 done
 case "$max" in ''|*[!0-9]*) echo "voice-gate: --max-chars needs a number" >&2; exit 2 ;; esac
+case "$maxs" in ''|*[!0-9]*) echo "voice-gate: --max-sentences needs a number" >&2; exit 2 ;; esac
 
 input=$(cat "${1:-/dev/stdin}") || exit 2
 banned="$(dirname "$0")/references/banned-list.md"
@@ -34,7 +38,7 @@ emit() {
     if $json; then jq -j '.[] | .body + "\u0000"' <<<"$input"; else printf '%s\0' "$input"; fi
 }
 
-emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
+emit | MAX="$max" MAXS="$maxs" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
     BEGIN {
         our @phrases;
         open my $fh, "<:encoding(UTF-8)", $ENV{BANNED} or die "voice-gate: $ENV{BANNED}: $!\n";
@@ -156,7 +160,7 @@ emit | MAX="$max" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne '
         my $sentences = () = $flat =~ /[^.!?]+(?:[.!?]+(?=\s|$)|$)/g;
         $sentences-- while $flat =~ /\b(?:e\.g|i\.e|etc|vs)\.\s/gi && $sentences > 1;
         push @v, "paragraph $pn runs $sentences sentences / " . length($flat) . " characters - split it, or turn its parallel facts into bullets"
-            if length($flat) > 320 || ($sentences > 3 && length($flat) > 240);
+            if length($flat) > 320 || ($sentences > 3 && length($flat) > 240) || ($ENV{MAXS} > 0 && $sentences > $ENV{MAXS});
     }
 
     # Variety across one review: openings repeated comment to comment read as a template, and an

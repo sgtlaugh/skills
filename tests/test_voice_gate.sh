@@ -98,6 +98,10 @@ out=$(echo "hi" | perl -e 'alarm shift; exec @ARGV' 5 bash "$GATE" --max-chars 2
 if [ "$rc" = 2 ] && grep -q 'needs a number' <<<"$out"; then echo "  PASS: --max-chars with no value is a usage error, not a hang"; pass=$((pass+1)); else echo "  FAIL: --max-chars with no value (rc $rc)"; fail=$((fail+1)); fi
 out=$(printf -- '- The owl hoots twice at night.\n%.0s' $(seq 30) | bash "$GATE" --max-chars=2000 2>&1); rc=$?
 if [ "$rc" = 0 ]; then echo "  PASS: --max-chars=N raises the limit"; pass=$((pass+1)); else echo "  FAIL: --max-chars=N (rc $rc: $out)"; fail=$((fail+1)); fi
+out=$(printf 'The owl hoots. The barn wakes. The farmer sighs.\n' | bash "$GATE" --max-sentences 2 2>&1); rc=$?
+if [ "$rc" = 1 ] && grep -q 'paragraph 1 runs 3 sentences' <<<"$out"; then echo "  PASS: --max-sentences caps a short paragraph"; pass=$((pass+1)); else echo "  FAIL: --max-sentences (rc $rc: $out)"; fail=$((fail+1)); fi
+out=$(printf 'The owl hoots. The barn wakes.\n\nThe farmer sighs.\n' | bash "$GATE" --max-sentences=2 2>&1); rc=$?
+if [ "$rc" = 0 ]; then echo "  PASS: --max-sentences=N passes paragraphs within the cap"; pass=$((pass+1)); else echo "  FAIL: --max-sentences=N within the cap (rc $rc: $out)"; fail=$((fail+1)); fi
 check "per-comment numbering in JSON" 1 "comment 2: em dash" "[{\"body\":\"fine\"},{\"body\":\"hoot ${EM} hoot\"}]"
 
 echo "  --- $pass passed, $fail failed ---"
