@@ -147,7 +147,12 @@ For each file (or batch):
 | `warning` | Wrong behavior on a reachable path, or a risk the author should fix: a race, a missing guard, a deploy hazard, a failure-mode regression, changed logic with no test, a design or perf problem with a concrete cost | two jobs can run the same cleanup at once; retry on 4xx; new branch untested; a business rule enforced in one of two places |
 | `nit` | No behavior change: naming, style, comments, an optional refactor | rename for clarity; extract a helper; a docstring that repeats the code |
 
-A finding that changes behavior is never a `nit`, however small. One exception the other way: a comment or docstring that misstates what the code or a library does is a `warning` - it misleads the next person who trusts it. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure between critical and warning → warning. Design and necessity findings cap at `warning`.
+A finding that changes behavior is never a `nit`, however small, unless it only runs outside production (see **What earns a finding** below). One exception the other way: a comment or docstring that misstates what the code or a library does is a `warning` - it misleads the next person who trusts it. **A Critical must be `Confirmed`** (verified mechanism) - an `Inferred` finding caps at `warning`, however bad it would be if true. Unsure between critical and warning → warning. Design and necessity findings cap at `warning`.
+
+**What earns a finding.** Report what the author should change before merging: a definite bug, a regression this PR causes, a case the change misses, over-engineering (code the change does not need) or over-complication (a simpler way does the same). Before writing a finding up, name its trigger: the path that runs it and how often it runs (every request, some users or data, only during an outage, only in a sandbox, test or one-off script).
+- Code that only runs in a sandbox, dev or local environment makes the finding a `nit`, whatever it would break. Tests, CI and scripts guard or touch production code and data, so they are never that. A rare trigger (an outage, a deploy window) is not a reason to demote: those failures are what reviews exist to catch.
+- Asks to add observability, alerting, process or docs, or for a change that belongs in another repo, are `nit`s. A comment or docstring that misstates behavior stays a `warning` (above).
+- When the code, its comment or the PR says a behavior is deliberate, the finding must show why that reason is wrong. The cost of a deliberate choice is not a finding on its own.
 
 **Pre-existing is a flag, not a severity.** A finding on a line this diff does not change keeps its severity and gets the `pre-existing` flag in its header. It is still reported - a serious bug the PR's context exposes stays serious - in the Notes, or with the real findings when it is critical (Step 9).
 
@@ -317,16 +322,18 @@ gh api repos/<owner>/<repo>/issues/{number}/comments --paginate --jq '.[] | {use
 
 **Why this exists.** A reviewer cannot honestly grade its own findings - the same reasoning that produced the finding will rationalize it when asked to self-check. Verification runs in a **fresh, independent context** (darkmoon) that sees the findings + code but not the reviewer's reasoning chain.
 
-**Before writing output, use the `Skill` tool to invoke `/darkmoon --claims`** (NOT an Explore agent - Explore is for search, not verification; its skeptic reports back asynchronously, so wait for that result before integrating any verdict) with the findings formatted as verifiable claims. Each finding becomes a claim:
-> "In `file.py:42`, [what's wrong]. Consequence: [what breaks]."
+**Before writing output, use the `Skill` tool to invoke `/darkmoon --claims`** (NOT an Explore agent - Explore is for search, not verification; its skeptic reports back asynchronously, so wait for that result before integrating any verdict) with the findings formatted as verifiable claims. Each critical or warning finding becomes two numbered claims, a nit one:
+> "In `file.py:42`, [what's wrong]. Consequence: [what breaks]. Reached when: [its trigger, from **What earns a finding**]."
+> "Fix for #N: [the change the finding proposes] removes that consequence without breaking [the callers or behavior it touches]."
 
 **Always pass findings after the `--claims` flag** - without it darkmoon treats the text as a focus topic and extracts from the transcript (the review answer isn't in the transcript yet when darkmoon runs). Darkmoon runs in the worktree so it can verify against the actual source.
 
-**Integrate verdicts:**
+**Integrate verdicts:** the finding's verdict is its first claim's, by the rules below; the fix claim only changes the **Fix:** section. The **Verified** line counts the first claims only.
 - **Refuted** → drop the finding from the findings list; it survives only as a count in the header's **Verified** line.
 - **Upheld** → an `Inferred` finding becomes `Confirmed` (darkmoon's verdict is the evidence); end its verification line with `(verified)`.
 - **Weak** → keep its severity, since Weak is about the evidence, not the impact (a critical still drops to warning, below), add the skeptic's counter to the finding body, and end the verification line with `(weak)`. A Weak `nit` is dropped and counted under refuted in the **Verified** line.
 - **Can't-determine** → keep, but cap at `warning`, note what would settle it, and end the verification line with `(unresolved)`.
+- **A fix claim Refuted** (any other fix verdict changes nothing) → keep the finding at its severity and replace its fix with `**Fix:** unclear - <the skeptic's counter, one line>`. A fix that would break other callers is worse than none.
 
 **A Critical that darkmoon marks Weak or Can't-determine is downgraded to Warning.** Only Upheld findings may be Critical in verified output.
 
@@ -362,7 +369,7 @@ Header (6 lines + `---`):
 ---
 ```
 The **Agents** line records every agent step, so none can drop silently: `n/a` = not triggered, `skipped` = triggered but failed. With `--fast`: `lenses skipped (--fast)` and the same for the rest.
-The **Verified** counts come from Step 8's ledger and must sum to N, with a Weak nit (dropped from the findings) counted under refuted, so the `weak` count equals the findings marked `(weak)`; a review that ran Step 8 without this line is incomplete - the user should see verification happened without re-running `/darkmoon`.
+The **Verified** counts come from Step 8's ledger, counting each finding's first claim only (never its fix claim), and must sum to N, with a Weak nit (dropped from the findings) counted under refuted, so the `weak` count equals the findings marked `(weak)`; a review that ran Step 8 without this line is incomplete - the user should see verification happened without re-running `/darkmoon`.
 **What this PR does** - 1 sentence from YOUR reading of the diff, describing what the code changes actually do. Do NOT paraphrase the PR body - if your sentence resembles it, you're echoing. The PR body explains *why*; this sentence states *what changed* mechanically.
 
 **Findings summary** - two lines per finding, numbered like the detailed findings and severity-grouped, notes last after a `Notes:` line. Every finding has a line here and nothing else does. This is the at-a-glance triage list:
