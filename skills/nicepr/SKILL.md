@@ -1,7 +1,7 @@
 ---
 name: nicepr
 description: Generate short, human PR titles and descriptions from branch diff and JIRA context; with --create or --update, pushes to your fork and opens or edits the PR
-allowed-tools: Read, Write, Edit, Skill, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*)
+allowed-tools: Read, Write, Edit, Skill, Bash(git log:*), Bash(git diff:*), Bash(git branch:*), Bash(git remote:*), Bash(git symbolic-ref:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git merge-tree:*), Bash(git fetch:*), Bash(git push:*), Bash(gh api:*), Bash(gh pr create:*), Bash(gh pr view:*), Bash(gh pr edit:*), Bash(jq:*), Bash(cat:*), Bash(sed:*), Bash(grep:*), Bash(cd:*)
 ---
 
 # /nicepr - Generate PR Description
@@ -19,11 +19,14 @@ Generate a clean PR title + description from current branch changes and JIRA con
 /nicepr --create --reviewers acme/backend  # create + assign reviewers (users or org/team); default: work.json "reviewers", none on a draft
 /nicepr --update                       # regenerate description for existing PR
 /nicepr --create --yes                 # skip the "Look good?" wait: the caller already has your word (/ludleth --pr)
+/nicepr --dir <path> ...               # run in another checkout (a worktree a calling skill made)
 ```
 
 ## Step 0 - Gather Context
 
 Run detection steps separately - if a step fails, handle it before continuing. Don't chain dependent steps.
+
+With `--dir <path>`, every command block in this skill starts with `cd <path> && `: the shell does not keep a `cd` outside the session's working directories, so without it `git branch --show-current` reads, and Step 4 pushes, whatever checkout the session started in.
 
 **Step 0a: Branch, user, and remotes**
 ```bash

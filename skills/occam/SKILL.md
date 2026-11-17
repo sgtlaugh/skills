@@ -1,7 +1,7 @@
 ---
 name: occam
 description: Review the changes thoroughly - bugs, drift (leftover old logic, stale docs/tests/callers), simplifications, and whether the diff is the minimal change for the goal. Runs on your local uncommitted work by default (or a commit / the whole branch) in a fresh-context reviewer, so the author's reasoning can't wave its own work through. Read-only.
-allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git status:*), Bash(git ls-files:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git remote -v)
+allowed-tools: Read, Grep, Glob, Agent, Bash(git diff:*), Bash(git show:*), Bash(git log:*), Bash(git status:*), Bash(git ls-files:*), Bash(git rev-parse:*), Bash(git merge-base:*), Bash(git remote -v), Bash(git -C:*)
 ---
 
 # /occam - review your own change before it ships
@@ -16,6 +16,7 @@ The review you'd otherwise type by hand: *"review the changes thoroughly - any i
 /occam --staged            # only what's staged
 /occam --last              # the last commit
 /occam --branch            # everything on this branch vs its base
+/occam --dir <path> ...    # any of the above, in another checkout (a worktree a calling skill made)
 ```
 
 ## Step 1 - Scope and goal (main context)
@@ -29,6 +30,7 @@ The review you'd otherwise type by hand: *"review the changes thoroughly - any i
   | `--last` | `git show HEAD` |
   | `--branch` | `git diff <merge-base sha>..HEAD`, with the sha resolved here from `git merge-base HEAD <remote>/<base>`. `<remote>` = the remote this branch will be merged into (the org/upstream repo - `git remote -v` shows which URL that is); with several candidates, ask. Never pick a remote because it is listed first - in multi-fork repos that is often a colleague's fork. `<remote>/<base>` = `git rev-parse --abbrev-ref <remote>/HEAD` (prints e.g. `origin/main`), else `<remote>/main` or `<remote>/master` |
 
+  With `--dir <path>`, every scope command runs as `git -C <path> ...` and `<path>` is the repo path; the shell does not keep a `cd` outside the session's working directories, so a bare `git` would read the wrong checkout.
   Run them once: empty scope → "nothing to review" and stop.
 - **Goal** is the yardstick for scope creep and for "goal not met". `--last`/`--branch`: the commit messages. Local work: the stated `<goal>`, else the user's request from this conversation in one line. If neither exists, **ask in one line** - never infer the goal from the diff, because a goal reverse-engineered from a bloated diff silently absorbs the bloat.
 - Note the repo's `CLAUDE.md` (+ `.claude/CLAUDE.md`) path - its conventions are the bar for the convention check.
