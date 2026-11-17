@@ -29,7 +29,7 @@ Claude Code skills that make the agent prove it.
      ⚠ credentials.json  2 of 10 keys set
      ⚠ services.md       still the template
    Environment
-     ⚠ gh                not logged in - run gh auth login → /aristarchus, /nicepr, /triage, /sentry-fix
+     ⚠ gh                not logged in - run gh auth login → /aristarchus, /nicepr, /triage, /sentry-fix, /ludleth
    ```
 
 3. Set up only what your skills need:
@@ -55,7 +55,7 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | File | Created by `install.sh` | Used by | Holds |
 |---|---|---|---|
 | `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
-| `services.md` | yes | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/aristarchus` | *Your* systems: repos, log search, alert patterns, test commands |
+| `services.md` | yes | `/sentry`, `/sentry-fix`, `/ludleth`, `/triage`, `/firewatch`, `/aristarchus` | *Your* systems: repos, log search, alert patterns, test commands |
 | `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
 | `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
 
@@ -72,9 +72,9 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | `datadogSite` | `/firewatch` | Your Datadog site, e.g. `datadoghq.com` |
 | `jenkinsApiToken` | `/firewatch` | Jenkins → your user → Configure → API Token |
 | `jenkinsUser` | `/firewatch` | Your Jenkins username |
-| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
-| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
-| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch` | Your Atlassian email |
+| `jiraApiToken` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch`, `/ludleth` | [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens) |
+| `jiraBaseUrl` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch`, `/ludleth` | Your Atlassian site, e.g. `https://acme.atlassian.net` |
+| `jiraEmail` | `/jira`, `/gadfly`, `/forge`, `/duck`, `/nicepr`, `/aristarchus`, `/triage`, `/firewatch`, `/ludleth` | Your Atlassian email |
 | `opsgenieApiKey` | `/firewatch` | Opsgenie → Settings → API key management |
 | `sentryAuthToken` | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/niceticket` | Sentry → Settings → Auth Tokens (`org:read`, `project:read`, `event:read`) |
 | `sentryOrg` | `/sentry`, `/sentry-fix`, `/triage`, `/firewatch`, `/niceticket` | Your Sentry org slug |
@@ -98,6 +98,7 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 | **Build** | | |
 | [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: failing test, least code, refactor | pytest |
 | [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks until you see the bug | |
+| [`/ludleth`](skills/ludleth/SKILL.md) | A ticket to a tested change per repo, committed or opened as PRs on request | Jira, gh, `services.md`, `$WORKSPACE` |
 | **Design** | | |
 | [`/gadfly`](skills/gadfly/SKILL.md) | Attacks a tech spec before it gets built | |
 | [`/forge`](skills/forge/SKILL.md) | Turns a PRD into a grounded spec draft | |
@@ -145,6 +146,11 @@ flowchart LR
     firewatch["/firewatch"] --> sentry
     sentryfix["/sentry-fix"] --> sentry
     sentryfix -. opens PR .-> nicepr
+    ludleth["/ludleth"] --> jira
+    ludleth --> triage
+    ludleth --> bonfire["/bonfire"]
+    ludleth --> occam["/occam"]
+    ludleth -. drafts or opens PRs .-> nicepr
     niceticket["/niceticket"] --> sentry
     firewatch --> jira
     aristarchus["/aristarchus"] --> darkmoon

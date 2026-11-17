@@ -1,6 +1,6 @@
 # Service catalog
 
-Facts about your systems, read by the ops skills (sentry, sentry-fix, triage, firewatch, aristarchus) from
+Facts about your systems, read by the ops skills (sentry, sentry-fix, ludleth, triage, firewatch, aristarchus) from
 `~/.config/claude-skills/services.md` - `install.sh` copies this template there; fill it in.
 No secrets here - tokens live in `~/.config/claude-skills/credentials.json`.
 A skill that needs a value missing from this file asks; it never guesses a host, repo or org.
@@ -46,7 +46,7 @@ Read by `/firewatch`. Known patterns specific to your systems, checked after the
 
 ## Fixes
 
-Read by `/sentry` (noise and reporting patterns, for its Classify step), `/sentry-fix` (all of it) and `/aristarchus` (the repo table, for its mutation check): how to run each repo's tests, plus noise and reporting patterns specific to your projects.
+Read by `/sentry` (noise and reporting patterns, for its Classify step), `/sentry-fix` (all of it), `/ludleth` (the repo table: test commands, worktree setup, prerequisites) and `/aristarchus` (the repo table, for its mutation check): how to run each repo's tests, plus noise and reporting patterns specific to your projects.
 
 | Key | Value |
 |---|---|

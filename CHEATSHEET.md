@@ -14,6 +14,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 | Settle one claim against the code | `/darkmoon --claims <claim>` |
 | Research something without bluffing | `/solaire <question>` |
 | Build a feature test-first | `/bonfire <feature>` |
+| Take a ticket all the way to PRs | `/ludleth <TICKET-ID> --pr` |
 | Get unstuck on a bug, and learn why | `/duck <bug>` |
 | Find holes in a spec before it's built | `/gadfly <spec>` |
 | Turn a PRD into a spec | `/forge <prd>` |
@@ -92,6 +93,16 @@ Drafts only; `/jira` creates the ticket once you have read it.
 
 ```text
 /bonfire <feature>                        # red → green → refactor, one behavior at a time
+```
+
+**`/ludleth`**
+
+```text
+/ludleth PROJ-1234                         # plan, build test-first, review; work left uncommitted in worktrees
+/ludleth PROJ-1234 --plan                  # stop after the plan; reply "go" or a correction
+/ludleth PROJ-1234 --commit                # commit on each branch, list the PR drafts
+/ludleth PROJ-1234 --pr                    # open every PR in merge order and show the links
+/ludleth PROJ-1234 --no-run                # skip local tests (the summary and PR say so)
 ```
 
 **`/duck`**
