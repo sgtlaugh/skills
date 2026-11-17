@@ -54,7 +54,9 @@ Write the plan, then check it against the ticket line by line:
 3. **Build each criterion** by following `~/.claude/skills/bonfire/SKILL.md` from its Phase 0 on (repo conventions, test commands, tracer bullet, then one behavior at a time). The Phase 3 plan replaces only bonfire's confirmation gate, so it never stops to ask. A criterion that is a constant, a copy change or config gets a direct edit and the existing tests.
 4. **Tests** use the catalog's test command for the repo (Fixes table), else its `CLAUDE.md`, else its CI config. Start prerequisites only with the catalog's start command and stop what you started at the end. No known command, or `--no-run` → write the tests anyway and mark the repo `Tests: not run - <reason>`; a test result nobody ran is never reported.
 5. **Sibling sweep - a fixed step, not a judgment.** For every function the diff changes and every operation a criterion names (a model write, a call to another service, a status mapping), grep the repo for the other places that do the same thing: the other callers of the changed function, the other routes on the same resource, the other functions in the same file that call the same downstream. List each one as `handled` (in this diff), `already correct` (with the line that shows it) or `out of scope` (with the reason). A sibling left unlisted is WRONG; this is the step reviewers most often find missing.
-6. **Review** with `/occam --dir <dir>`, its goal the criteria lines verbatim. Fix every Bug and Goal finding, rerun the tests, and run `/occam --dir <dir>` once more if the fixes changed behavior. A finding you reject gets one line with the evidence in the summary.
+   **The defect is the scope, not the line.** A sibling that hits the same failure - the same downstream answer, the same missing record, the same unmapped status - is `handled` in this diff, whatever the ticket's title names. `out of scope` is valid only when the sibling cannot reach that failure, or the fix needs a decision that is the user's (then it is an open question, asked before the summary). "A different route", "another layer" or "decide whether it is live" is not a reason; a sibling you can't rule out is fixed.
+6. **Probe the inputs that point at nothing.** For each route or handler the change touches, add a test that calls it with an id that doesn't exist, and one with another org's id (when the code is multi-tenant), and assert a 4xx. A 500 there is a bug in this diff's scope.
+7. **Review** with `/occam --dir <dir>`, its goal the criteria lines verbatim. Fix every Bug and Goal finding, rerun the tests, and run `/occam --dir <dir>` once more if the fixes changed behavior. A finding you reject gets one line with the evidence in the summary.
 
 ## Phase 5 - Finish
 
@@ -78,6 +80,7 @@ Criteria
 - ✗ <criterion> - <why it is not done>
 
 Siblings: <N checked> - <each out-of-scope one with its reason, or "all handled">
+Probes: <each route probed with a missing and a foreign id - the status it returns>
 Merge order: <1 → 2, and why | independent>
 Follow-ups: <operational steps, bugs found on the way, or "none">
 ```
@@ -87,7 +90,7 @@ Then, with `--commit`, each repo's PR draft (title and body). The last line tell
 Completion contract - each of these appears, or the summary says why it can't:
 1. A row per repo with branch, worktree, diff and a test result that ran (or `not run - <reason>`).
 2. Every criterion from the plan, marked ✓ with its test or ✗ with the reason.
-3. The sibling count, with each out-of-scope sibling's reason.
+3. The sibling count, with each out-of-scope sibling's reason, and each probe's status.
 4. The merge order and its reason.
 5. With `--pr`, every PR link; with `--commit`, every draft.
 
