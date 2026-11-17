@@ -18,6 +18,7 @@ Generate a clean PR title + description from current branch changes and JIRA con
 /nicepr --create --draft               # push branch + create draft PR
 /nicepr --create --reviewers acme/backend  # create + assign reviewers (users or org/team); default: work.json "reviewers", none on a draft
 /nicepr --update                       # regenerate description for existing PR
+/nicepr --create --yes                 # skip the "Look good?" wait: the caller already has your word (/ludleth --pr)
 ```
 
 ## Step 0 - Gather Context
@@ -281,7 +282,7 @@ After every edit the user requests, re-save the file before showing the new prev
 
 Show the title separately above the body. Ask: "Look good? Edit anything?"
 
-Wait for user feedback before proceeding. Without `--create`/`--draft`, the run ends at the approved preview - "looks good" approves the text, it does NOT ask for a PR, unless the user then explicitly says to create it.
+Wait for user feedback before proceeding - except with `--yes`, which shows the preview and goes straight on (to Step 4 with `--create`, else the run ends there). Only a calling skill whose invocation is the user's word passes `--yes`. Without `--create`/`--draft`, the run ends at the approved preview - "looks good" approves the text, it does NOT ask for a PR, unless the user then explicitly says to create it.
 
 **Hard rules for preview:**
 - QA items MUST use `- [ ]` checkbox syntax. A QA item without `- [ ]` is WRONG. Self-check before showing.
@@ -301,7 +302,7 @@ Before pushing, check for merge conflicts with base. Three-argument `merge-tree`
 ```bash
 git merge-tree $(git merge-base $UPSTREAM/$BASE HEAD) $UPSTREAM/$BASE HEAD | grep -qE '^\+?<<<<<<<'
 ```
-If conflicts found, warn: "Branch has merge conflicts with $BASE. PR will show conflicts." Let user decide whether to proceed.
+If conflicts found, warn: "Branch has merge conflicts with $BASE. PR will show conflicts." Let user decide whether to proceed; with `--yes`, stop without pushing and report the conflict.
 
 ```bash
 git push -u $FORK_REMOTE $BRANCH
