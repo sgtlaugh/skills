@@ -1,7 +1,7 @@
 ---
 name: aristarchus
 description: Deep GitHub PR review - JIRA context, stack-aware traps, severity-tagged findings, 5 independent review lenses, a mutation check of the PR's tests, darkmoon verification. Use --fast to skip the agent steps (research, lenses, tracing, cross-repo check, mutation check, verification).
-allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(wc:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*), Bash(bash ~/.claude/skills/aristarchus/mutate.sh:*)
+allowed-tools: Read, Grep, Glob, Skill, Agent, EnterWorktree, ExitWorktree, Write(/tmp/aristarchus/**), Bash(bash ~/.claude/skills/aristarchus/render.sh:*), Bash(gh pr view:*), Bash(gh pr checkout:*), Bash(gh api repos/*), Bash(gh pr diff:*), Bash(gh auth status), Bash(git fetch:*), Bash(git diff:*), Bash(git cat-file:*), Bash(git checkout --detach:*), Bash(git remote -v), Bash(jq:*), Bash(date:*), Bash(printenv WORKSPACE), Bash(cd:*), Bash(grep:*), Bash(cut:*), Bash(ls:*), Bash(wc:*), Bash(bash ~/.claude/skills/aristarchus/parse-findings.sh:*), Bash(bash ~/.claude/skills/aristarchus/mutate.sh:*)
 ---
 
 # /aristarchus - GitHub PR Code Review
@@ -431,13 +431,17 @@ Rules:
 
 Pick one: ✅ Approve (nothing material), 💬 Comment (warnings/nits), ❌ Request Changes (any `critical` in this diff - a pre-existing critical is reported and named in the summary, but the PR did not cause it, so it does not request changes on its own). After the verdict block, add a `---` separator (blank line before it so markdown renders the rule), then the elapsed time on the next line: run `date +%s` and subtract the Step 1 start time - display as `**Time taken**: Xm Ys`.
 
-**Check the format before printing.** Pass the full draft review to the checker on stdin and fix every problem it prints, then re-run it until it prints `parse-findings: ok`:
+**Check the format before printing.** Write the full draft review with the Write tool to `/tmp/aristarchus/<owner>-<repo>-<number>.md` (a file on disk passes the shell's length limit; a heredoc of a long review does not), run the checker on it, fix every problem it prints in that file, and re-run it until it prints `parse-findings: ok`:
 ```bash
-bash ~/.claude/skills/aristarchus/parse-findings.sh --check <<'REVIEW'
-<the draft review>
-REVIEW
+bash ~/.claude/skills/aristarchus/parse-findings.sh --check /tmp/aristarchus/<owner>-<repo>-<number>.md
 ```
 It checks each finding header, that the emoji matches the severity word, that the summary list and the detailed findings carry the same numbers, and that the `(verified)`/`(weak)` counts match the **Verified** line. Printing a review that fails the check is WRONG: tools read findings through it, and a malformed review posts nothing or the wrong thing.
+
+**Print it for the reader.** The full review above is the record; the reader gets the short version. Run:
+```bash
+bash ~/.claude/skills/aristarchus/render.sh /tmp/aristarchus/<owner>-<repo>-<number>.md
+```
+and print its output exactly as it comes, then one last line: `Full review: /tmp/aristarchus/<owner>-<repo>-<number>.md`. The renderer only reorders and trims (verdict first, findings by what to do, how the review ran in a footer) and never drops a finding to fix. Rewording, shortening or adding to its output is WRONG: the full review's findings and severities are final before it runs. When the invocation asks for the full review (an automated reviewer does), print the full review instead and skip the render.
 
 **Completion contract - the review is NOT done until:**
 1. Every finding has `file:line` + severity + `Confirmed`/`Inferred` note
@@ -451,8 +455,9 @@ It checks each finding header, that the emoji matches the severity word, that th
 9. `parse-findings.sh --check` printed `parse-findings: ok` on the final review
 10. `ExitWorktree` ran with `action: "remove"`, and every prerequisite Step 6d started is stopped
 11. Every lens that ran appears in the lens section, with findings or `<Lens>: no findings`
+12. The printed answer is `render.sh`'s output followed by the `Full review:` line, or the full review when the invocation asked for it
 
 ## Guard Rails
 
-- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only. Step 6d is the one step that executes code: the PR's tests, only for an `OWNER`/`MEMBER`/`COLLABORATOR` author, in a scratch worktree `mutate.sh` creates and removes - the review worktree and your checkout are never edited. Its test and prerequisite commands come from the catalog, so they can fall outside the grants above and prompt on first use; that prompt is the tripwire, not a fault. Lens, tracer and cross-repo subagents have full tool access; for them the read-only guarantee is prompt-only unless deny rules cover Edit/Write in `$WORKSPACE`.
+- **Read-only by instruction.** aristarchus never modifies the reviewed codebase, never posts comments, never approves or requests changes. It writes only its own review file under `/tmp/aristarchus/`. It produces a review in the terminal - the user decides what to do with it. Note: `Bash(gh api repos/*)` is granted for reading PR comments and would match `gh api repos/... -X POST`, and `Bash(git diff:*)` can write any file through `git diff --output=<path>` (deny `Bash(*--output*)`) - add `permissions.deny` rules to your Claude Code settings to block gh writes (`gh api` with `-X`/`--method`/`--field`/`--raw-field`/`--input`, `gh pr review`, `gh pr comment`, and short `-f`/`-F` too: aristarchus reads PRs over REST, and its `gh api repos/*` grant never covers `gh api graphql`, so allowing `-f`/`-F` there only leaves a write open) even under `--dangerously-skip-permissions`. Without those deny rules the guarantee is prompt-only. Step 6d is the one step that executes code: the PR's tests, only for an `OWNER`/`MEMBER`/`COLLABORATOR` author, in a scratch worktree `mutate.sh` creates and removes - the review worktree and your checkout are never edited. Its test and prerequisite commands come from the catalog, so they can fall outside the grants above and prompt on first use; that prompt is the tripwire, not a fault. Lens, tracer and cross-repo subagents have full tool access; for them the read-only guarantee is prompt-only unless deny rules cover Edit/Write in `$WORKSPACE`.
 - **`gh` auth required** - if `gh auth status` fails, stop and tell the user to run `gh auth login`.
