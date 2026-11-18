@@ -37,6 +37,11 @@ assert "at most 3 small things, the rest counted" "**Small things (3)**:1:3" \
 assert "a pre-existing warning goes under Also worth knowing" "**Fix before merge (2)**|**Also worth knowing (1)**" \
     "$(grep -E '^\*\*(Fix before merge|Also worth knowing) \(' <<<"$out" | paste -sd'|' -)"
 
+# --fast: no independent check, so no marker symbol; the agent steps read as skipped review angles
+perl -0pe 's/\*\*Verified\*\*: [^\n]*/**Verified**: skipped (--fast)/; s/ \((verified|weak)\)//g; s/\*\*Agents\*\*: [^\n]*/**Agents**: lenses skipped (--fast) | mutation skipped (--fast)/' "$EX" > "$T/fast.md"
+out=$(bash "$R" "$T/fast.md")
+assert "--fast: the evidence keeps one dot and no marker; the lenses read as review angles" "1:0:1" \
+    "$(grep -c '^· read moon.py:80-95 and the timeout in client.py:12$' <<<"$out"):$(grep -c '· ·' <<<"$out"):$(grep -c '^\*\*Ran:\*\* review angles skipped (--fast) · mutation skipped (--fast)$' <<<"$out")"
 bash "$R" "$T/nope.md" >/dev/null 2>&1; assert "a missing file is a usage error" "2" "$?"
 rm -rf "$T"
 echo "  --- $pass passed, $fail failed ---"

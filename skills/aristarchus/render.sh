@@ -45,8 +45,8 @@ perl -CSD -0777 -ne '
         $ev =~ s/\s*\S*(?:darkmoon|lens)[^.]*(?:\.|$)//gi;
         $ev = plain($ev); $ev =~ s/\s+$//; $ev = substr($ev, 0, 140) . "..." if length $ev > 143;
         my %sym = (verified => "\x{2713} confirmed", weak => "~ weak", unresolved => "? unsure");
-        my $m = $v ? $sym{$v} : "\x{b7}";
-        return $ev eq "" ? $m : "$m \x{b7} $ev";
+        return $ev eq "" ? "" : "\x{b7} $ev" unless $v;
+        return $ev eq "" ? $sym{$v} : "$sym{$v} \x{b7} $ev";
     }
     # The reader never needs the names of the agents behind a finding, only what was checked
     sub plain {
@@ -113,7 +113,7 @@ perl -CSD -0777 -ne '
         $checked = "$1 points by an independent read - $2 confirmed, $3 weak, $4 unsure, $5 dropped as wrong";
     }
     my $ran = line_of("Agents");
-    $ran =~ s/\blenses (\d+\/\d+)/$1 review angles/; $ran =~ s/\s*\|\s*/ \x{b7} /g;
+    $ran =~ s/\blenses (\d+\/\d+)/$1 review angles/; $ran =~ s/\blenses\b/review angles/g; $ran =~ s/\s*\|\s*/ \x{b7} /g;
     my $comments = field("Existing comments");
     $comments =~ s/^(\d+) fetched \((\d+) deduped\)/$1 existing comments ($2 already raised)/ or $comments = $comments ne "" ? "$comments existing comments" : "";
     my @read = grep { $_ ne "" } (field("Conventions"), $comments, ($jira ne "" ? "ticket $jira" : ""), field("Filtered"));
