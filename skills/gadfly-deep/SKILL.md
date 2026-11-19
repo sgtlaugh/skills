@@ -1,3 +1,9 @@
+---
+name: gadfly-deep
+description: The deep review behind /gadfly - extract requirements, gate the blocking gaps, ground the design in the code it touches, stress-test through four adversarial lenses. Invoked by /gadfly and /forge; run /gadfly instead.
+user-invocable: false
+allowed-tools: Read, Write, Grep, Glob, Bash(curl:*), Bash(printf:*), Bash(echo:*), Bash(command:*), Bash(jq:*), Bash(pandoc:*), Bash(cat:*), Bash(grep:*), Bash(find:*), Bash(head:*), Bash(stat:*), Bash(mktemp:*), Bash(git rev-parse:*), Bash(cd:*), Bash(date:*), WebFetch, AskUserQuestion
+---
 
 # /gadfly - sting the design awake
 
@@ -173,6 +179,8 @@ Run all four against the design and its core model. Each lens lands a concrete f
    - **Scope boundary:** adjacent capabilities the design implies but doesn't address (bulk, recursive, containers, cycles).
    - **Concurrency:** two actors on the same entity at once.
    - **Cross-entity:** when the source changes, what happens to derived data?
+
+**Code and query snippets are claims.** For every code, query or config snippet in the spec, appendices included, check it against the engine, library or API it targets: its docs, its source in the repo, or a cheap run. A snippet that would be rejected, or that behaves differently from what the prose says, is a finding.
 
 ### Every finding
 - **Quote the spec** - the § it attacks. No spec citation → drop it.

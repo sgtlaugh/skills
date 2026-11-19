@@ -27,7 +27,7 @@ Forks go to a human through `AskUserQuestion`. **When no human can answer** - a 
 
 ## Phase 0 - Ingest the PRD
 
-Resolve the input to **PRD text + a version stamp**, recording what you could not read. Follow gadfly's Phase 0 (`~/.claude/skills/gadfly/references/deep-review.md`, "Phase 0 - Ingest the spec") step for step: Confluence fetch with the credentials preamble on every call, `.docx` via `pandoc -f docx -t gfm`, stamp = version or file mtime, diagrams downloaded and read with vision. List only what you genuinely couldn't parse as `Not analyzed`.
+Resolve the input to **PRD text + a version stamp**, recording what you could not read. Follow gadfly's Phase 0 (`~/.claude/skills/gadfly-deep/SKILL.md`, "Phase 0 - Ingest the spec") step for step: Confluence fetch with the credentials preamble on every call, `.docx` via `pandoc -f docx -t gfm`, stamp = version or file mtime, diagrams downloaded and read with vision. List only what you genuinely couldn't parse as `Not analyzed`.
 
 The PRD is the **WHY**. forge authors the **HOW** that satisfies it.
 
