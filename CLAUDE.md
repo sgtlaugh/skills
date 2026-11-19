@@ -9,3 +9,4 @@
 - A second kind of work goes in a separate agent: every gadfly variant that put the simplify review into the deep review's own instructions lost deep findings
 - A skill's core procedure lives in its own SKILL.md, or in another skill loaded with the Skill tool, never in a file it Reads: skill content arrives as instructions, a Read as a tool result, which Claude follows with more skepticism (Anthropic's guardrail docs), and every gadfly variant built that way lost deep findings
 - Rubric items are observable outcomes with no escape clause: "fails unless it gives a reason" lets the judge pass any output that gives one
+- When a helper costs the main pass a little, strengthen the main pass with one narrow rule instead of reshaping the helper: gadfly's simplify reviewer cost about 0.5 deep findings per run in every shape, and one rule (check code snippets in the spec) won it back
