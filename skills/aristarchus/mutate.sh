@@ -8,7 +8,8 @@
 # --budget is a hard deadline in seconds for the whole run, setup included; keep it under the caller's
 # own timeout so cleanup always runs.
 #
-# Never edits <dir>: mutants run in a scratch worktree of its HEAD, removed on exit. Always exits 0
+# Never edits <dir>: mutants run in a scratch worktree of its state, removed on exit.
+# Uncommitted work in <dir> counts as changed too, so a caller can check tests it has not committed yet. Always exits 0
 # and prints one `mutation:` summary line - a check that can't run reports why and never blocks a review.
 #
 # Runs from /tmp: a pyenv shim inside a repo whose .python-version names an uninstalled Python fails.
@@ -52,8 +53,33 @@ def git(*args, cwd):
     return subprocess.run(['git', *args], cwd=cwd, capture_output=True, text=True, stdin=subprocess.DEVNULL)
 
 
+def snapshot(wt):
+    # The working state as a commit no ref points to, so the diff and the scratch worktree see uncommitted work
+    if not git('status', '--porcelain', cwd=wt).stdout.strip():
+        return 'HEAD'
+    idx = os.path.join(tempfile.mkdtemp(prefix='aristarchus-mutate-index-'), 'index')
+    env = dict(os.environ, GIT_INDEX_FILE=idx, GIT_AUTHOR_NAME='mutate', GIT_AUTHOR_EMAIL='mutate@localhost',
+               GIT_COMMITTER_NAME='mutate', GIT_COMMITTER_EMAIL='mutate@localhost')
+
+    def g(*args):
+        return subprocess.run(['git', *args], cwd=wt, env=env, capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    try:
+        g('read-tree', 'HEAD')
+        g('add', '-A')
+        new = [f for f in g('diff', '--cached', '--name-only', '--diff-filter=A', 'HEAD').stdout.split('\n') if f]
+        # A new symlink is a worktree setup link (node_modules); the caller's --setup recreates it
+        links = [l.split('\t', 1)[1] for l in g('ls-files', '-s', '--', *new).stdout.splitlines()
+                 if l.startswith('120000')] if new else []
+        if links:
+            g('rm', '--cached', '-q', '--', *links)
+        tree = g('write-tree').stdout.strip()
+        return g('commit-tree', tree, '-p', 'HEAD', '-m', 'mutate snapshot').stdout.strip() or 'HEAD'
+    finally:
+        shutil.rmtree(os.path.dirname(idx), ignore_errors=True)
+
+
 def added_lines(wt):
-    out = git('diff', '-U0', '--no-color', '--no-ext-diff', f'{a.base}...HEAD', cwd=wt).stdout
+    out = git('diff', '-U0', '--no-color', '--no-ext-diff', f'{a.base}...{head}', cwd=wt).stdout
     res, f, n = [], None, 0
     for line in out.split('\n'):
         if line.startswith('+++ '):
@@ -67,6 +93,13 @@ def added_lines(wt):
 
 
 running = []
+
+
+def touch_later(path):
+    # Python's bytecode cache keys on size and whole-second mtime, so a same-length flip (== to !=) can run stale code.
+    # A later mtime forces the recompile.
+    t = max(time.time(), os.stat(path).st_mtime) + 1
+    os.utime(path, (t, t))
 
 
 def run(cmd, wt, timeout):
@@ -94,7 +127,8 @@ if git('cat-file', '-e', f'{a.base}^{{commit}}', cwd=worktree).returncode:
 if '{files}' not in a.test and '{dirs}' not in a.test:
     done('skipped - the test command has no {files} or {dirs} placeholder')
 
-changed = git('diff', '--name-only', '--no-renames', '--diff-filter=AM', f'{a.base}...HEAD', cwd=worktree).stdout.split()
+head = snapshot(worktree)
+changed = git('diff', '--name-only', '--no-renames', '--diff-filter=AM', f'{a.base}...{head}', cwd=worktree).stdout.split()
 tests = sorted(f for f in changed if TEST_RE.search(f) and SOURCE_RE.search(f))
 if not tests:
     done('skipped - the PR changes no test files, so there are no tests to run its mutants against')
@@ -129,12 +163,11 @@ def cleanup(*_):
             pass
     git('worktree', 'remove', '--force', wt, cwd=worktree)
     shutil.rmtree(scratch, ignore_errors=True)
-    git('worktree', 'prune', cwd=worktree)
 
 
 signal.signal(signal.SIGTERM, lambda *_: (cleanup(), done('stopped - terminated')))
 try:
-    if git('worktree', 'add', '--detach', wt, 'HEAD', cwd=worktree).returncode:
+    if git('worktree', 'add', '--detach', wt, head, cwd=worktree).returncode:
         done('skipped - could not create the scratch worktree')
     if a.setup:
         code, out = run(a.setup, wt, max(1, min(120, deadline - time.time())))
@@ -166,10 +199,12 @@ try:
             continue
         lines[n - 1] = text[:s] + rep + text[e:]
         open(path, 'w', encoding='utf-8').write('\n'.join(lines))
+        touch_later(path)
         try:
             code, _ = run(test_cmd, wt, cap)
         finally:
             open(path, 'w', encoding='utf-8').write(orig)
+            touch_later(path)
         results.append(('timed out' if cap < left else 'not run') if code is None else 'killed' if code else 'SURVIVED')
 
     counts = {k: results.count(k) for k in ('killed', 'SURVIVED', 'timed out', 'not run')}

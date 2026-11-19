@@ -117,6 +117,29 @@ g add . && g commit -qm 'test: a heist in the file name'
 HOME_MARK="$T/heist-ran" bash "$M" --worktree "$R" --base "$BASE" --test 'true {files}' --max 1 >/dev/null
 assert "a PR file name is passed to the test command as one quoted word, never run" "no" "$([ -e "$T/heist-ran" ] && echo yes || echo no)"
 g reset -q --hard HEAD~1
+
+# Uncommitted work counts: a caller checks tests it has not committed yet
+cat >> "$R/rules.py" <<'EOF'
+
+
+def is_vault_door(name):
+    return name == 'door'
+EOF
+cat > "$R/tests/test_door.py" <<'EOF'
+import os, sys
+sys.path.insert(0, os.getcwd())
+from rules import is_vault_door
+assert is_vault_door('door') and not is_vault_door('window')
+EOF
+ln -s "$T/shared_modules" "$R/node_modules"
+git -C "$R" worktree add -q --detach "$T/old-heist" HEAD && rm -rf "$T/old-heist"
+dirty=$(g status --porcelain)
+out=$(bash "$M" --worktree "$R" --base HEAD --test "$CMD")
+has "an uncommitted change and an untracked test are mutated and run" "mutation: 1 mutant: 1 killed, 0 survived | tests: tests/test_door.py" "$out"
+assert "the caller's uncommitted work is left exactly as it was" "$dirty" "$(g status --porcelain)"
+assert "no branch or tag is created for the snapshot" "master" "$(g for-each-ref --format='%(refname:short)' refs/heads refs/tags | tr '\n' ' ' | sed 's/ $//')"
+assert "an unrelated stale worktree record is left alone" 1 "$(g worktree list | grep -c old-heist)"
+git -C "$R" worktree remove --force "$T/old-heist"; rm -f "$R/node_modules" "$R/tests/test_door.py"; g checkout -q -- rules.py
 assert "nothing is left behind after all runs" "1|" "$(g worktree list | wc -l | tr -d ' ')|$(ls "$TMPDIR")"
 
 echo ""
