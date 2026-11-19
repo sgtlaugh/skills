@@ -19,7 +19,7 @@ An LLM drafts plausible-but-wrong architecture confidently, and a spec gets buil
 /forge <prd> --no-temper     # draft only - skip the gadfly temper pass
 ```
 
-Cost: ingest + ground + draft + a gadfly pass + revise, roughly 1.5-2x a gadfly run (measured $5.4-6.6 with the temper pass; gadfly alone $2.2-4.6). `--no-temper` skips gadfly. For a union of several critiques, run `/jury gadfly <forge-output> --prd <prd>` yourself on the finished draft.
+Cost: ingest + ground + draft + a gadfly pass + revise, roughly 1.5-2x a gadfly run (measured $5.4-6.6 with the temper pass). `--no-temper` skips gadfly (measured $2.2-4.1). For a union of several critiques, run `/jury gadfly <forge-output> --prd <prd>` yourself on the finished draft.
 
 ## Who answers the forks
 
@@ -46,6 +46,9 @@ Find and confirm the repo(s) (`--repo` hint, else `find` over `$PWD`, `$WORKSPAC
 
 - **Vantage.** Do the core decisions (data model, permissions, storage) live in the repo you're in? If it only mirrors a model owned elsewhere, say so up front and ground the owning repo, or draft only this layer and say why. Don't design a data model from a repo that can't see the stores that decide it.
 - **Comparable feature.** Search the product for a feature that solves a similar problem (an existing membership, collection, history or sharing mechanism). Study its data model and the decisions it already made, and record what the new feature should match and where it should diverge. **If extending that feature could satisfy the PRD, "extend `<feature>`" is a fork option in Step 4**, next to building new - with what the extension can't cover.
+- **Capability map (deletion test on the PRD).** For every PRD ask (each option, area, field, mode, panel), find what the product already has that does the same job: an existing filter, query syntax, endpoint, UI control or stored field (cite `path:line`). A PRD can be written fast, sometimes by an LLM, and re-lists existing features under new names. Start by listing what the user can already do on that surface, from the code: the params the API accepts (filters, facets, sort), the controls the UI renders, the input syntax (quotes, operators), the jobs and endpoints that do similar work. Then compare each PRD ask against that list, including combinations (a new option that equals "existing search + an existing filter" is covered). An ask an existing capability covers becomes a fork in Step 4 ("drop it / build it as a thin UI layer over `<existing>` / build new"), with the existing capability recommended unless the PRD gives a reason it can't serve. Listing a feature makes it a claim to test, not a fixed requirement.
+- **Every place it renders** (UI work only). A component or piece of state is often shared: list every screen that mounts the same component or reads the same context/store, and say how the new behavior acts there (shown, hidden, stale data). The PRD names one screen; the code decides where else it appears.
+- **"Unchanged" promises.** When the design promises an existing path stays the same (default requests, old clients, typed syntax), list the shared code paths the change touches and say for each whether behavior changes. A change to a shared builder usually reaches more than the new option.
 - **UI surface** (UI work only). Which frontend owns the surface, and is a migration between frontends in flight? An assumption about where the UI lives is often stale.
 - **Numbers.** When the design rests on a size or volume (rows, events, field sizes, growth), measure it with a read-only data skill or tool if the session has one. If none can run, the number is `[assumed]`; presenting an unmeasured size as measured misleads every decision downstream.
 - **Cross-service.** Never conclude what another service does from this repo's side; ground its repo, or mark it **Can't-determine (cross-service)**.
@@ -56,8 +59,10 @@ Name how the design represents its central entity/relationship in **every store*
 
 For each design choice (pagination, enforcement mechanism, schema column, data format), name the simpler alternative and take it unless it breaks under a realistic V1 scenario. A comparable feature that uses the simpler approach is strong evidence.
 
+**Count the branches.** List every special case the design adds: a split on a type field, a rule that depends on which options are picked, an "only on the first page" cache, a UI auto-switch, a new endpoint next to an existing one. Each must trace to a requirement that can't be met without it; otherwise drop it or make it a fork. Before replacing something with a "simpler" alternative, check the alternative's side effects (paging, aggregations that still run, fixed field lists between services, risk to the busiest code path) - a narrow fix to the actual problem often beats a structural change.
+
 ### Step 4 - Enumerate the forks, then ask
-List the genuine decisions the PRD and code leave open: the semantic fork from Step 1b, extend-vs-build from Step 2, the per-store model, what to defer, scope boundaries (containers? bulk? recursive? cycles?). Lay out each fork's options and trade-offs neutrally.
+List the genuine decisions the PRD and code leave open: the semantic fork from Step 1b, extend-vs-build and capability-map asks from Step 2, branches without a requirement from Step 3, the per-store model, what to defer, scope boundaries (containers? bulk? recursive? cycles?). Lay out each fork's options and trade-offs neutrally.
 
 Mark an option **Recommended** only if you grounded its trade-offs in the repo that decides it; a fork that hinges on an ungrounded repo gets options without a recommendation, flagged as such.
 
@@ -69,21 +74,27 @@ Order forks by dependency - the semantic fork is almost always upstream and coll
 
 ## Phase 2 - Draft the spec
 
-Write a spec that pre-answers what gadfly attacks. **Every design claim is tagged** `[grounded: path:line]` or `[assumed]`; a claim you can neither ground nor get decided becomes an open question. Tags certify premises, not that the design is right.
+The spec is the deliverable a team reads and reviews, so it must be **simple, clear, well-formatted and pleasant to read**, without being bloated, cluttered or over-engineered. Write for a reviewer who has 10 minutes: the high-level design and the decisions worth a second opinion, plus the traps that would otherwise bite. Still work through lifecycle, failure modes, scale and cross-service impact; print only the parts a reviewer needs, in Gotchas and Risks.
 
-Spec sections (omit one only with a stated reason):
-1. **Goal & scope** - what it does, non-goals, deferred items.
-2. **Requirements** - functional + NFR, with their tags.
-3. **Design** - the chosen per-store model and why, the rejected alternatives and why not.
-4. **Data model** - schema, fields, indices per store, grounded against what exists.
-5. **API / query changes** - endpoints and queries touched, with `path:line`.
-6. **Lifecycle & edges** - create / move / delete / soft-delete + restore / cascade, concurrency, cross-entity effects. An unresolved edge is an open question, not "handled".
-7. **Failure modes** - what breaks in prod, blast radius per seam.
-8. **Scale** - arithmetic against the NFR numbers; missing numbers are flagged, never invented.
-9. **Cross-service impact** - grounded or `Can't-determine`.
-10. **Open questions** - forks left to the human, every `[assumed]`, every unresolved edge. Investigate before listing: a question a grep, schema read or UI inspection can answer gets answered, not listed. Only questions that need product or organizational input belong here.
+Every claim about current code is grounded, but the evidence goes in **Appendix A: Evidence** (claim → `path:line`), not inline in the body. Inline, mark only assumptions: `[assumed]`. A claim you can neither ground nor get decided becomes an open question.
 
-**Cut what has no V1 consumer** before saving: schemas for features with no code yet, columns that duplicate another field, infrastructure for problems V1 scale doesn't have (note the trigger instead), abstractions with one implementation. Record it: `YAGNI: <what was cut>` or `YAGNI: nothing cut`.
+Spec body, in this order (skip a section silently when it has nothing to say):
+1. **Summary** - the problem, what changes, non-goals. Up to about 8 lines. Link the PRD instead of restating its requirement list; note only where the spec deviates from it.
+2. **How it works** - one Mermaid diagram (flowchart or sequence; avoid yellow) of the flow across services, then one annotated example of the central artifact (a request, a query, a record). Never ASCII-art diagrams.
+3. **Contract** - only what's new or changed: endpoints, fields, types, validation, and for every new field its behavior when **missing, empty and default**.
+4. **Design decisions** - a table: `Decision | Chosen | Rejected | Why`, one line per cell. Add a short paragraph below the table only for the one to three decisions that need an argument (a worked example beats prose).
+5. **Gotchas** - non-obvious traps that fail silently or change the design (an engine quirk, an ordering race, a limit). Skip anything an engineer would do anyway. One or two lines each.
+6. **Risks and open questions** - risks not already implied by a decision; questions that need product or org input; every `[assumed]` fork. Investigate before listing: a question a grep can answer gets answered.
+7. **Rollout and tickets** - deploy order, migrations/flags, the ticket split.
+
+Writing rules:
+- Describe existing behavior in one line with a link to the code; never re-tabulate what doesn't change (unchanged fields, weights, flows).
+- No step-by-step coding instructions (file paths, kwarg names, per-file edits) in the body; they belong in the tickets.
+- Section references are markdown links (`[Contract](#3-contract)`), never bare numbers.
+- Plain words; define any non-standard term on first use. Tables for comparisons, bullets for parallel facts, short paragraphs otherwise.
+- Before saving, re-read the body once and delete any sentence that restates another section. If the body runs past about 2,500 words, cut restated material first.
+
+**Cut what has no V1 consumer** before saving: schemas for features with no code yet, columns that duplicate another field, infrastructure for problems V1 scale doesn't have (note the trigger instead), abstractions with one implementation, and PRD asks an existing capability covers (unless the human chose to build them). Record it: `YAGNI: <what was cut>` or `YAGNI: nothing cut`.
 
 **Save** a new file at `~/.claude/reports/forge/<slug>.forge.<ts>.md` (absolute path; `<ts>` from running `date +%Y%m%d-%H%M%S`; never inside a repo; never overwrite a prior run), in the layout under "Report". `--no-temper` → stop after saving: print the chat echo, say the draft is unhardened, recommend `/gadfly`.
 
@@ -113,29 +124,36 @@ One pass only: a second author-fix loop polishes forge's own assumptions and run
 
 ## Report
 
-The saved file, updated after Phase 4:
+The saved file, updated after Phase 4. The spec comes first, so it can be pasted into a wiki as is; forge's own working notes go after it.
 
 ```markdown
-# <feature> - tech spec draft (forge)
-<PRD stamp> · repos: <repo @ sha, ...> · temper: <N fixed, N residuals | skipped (--no-temper) | failed: reason>
+# <Feature> - Tech Spec
+Draft · PRD: <link or stamp> · repos: <repo @ sha, ...>
 
-## Decisions for you
+## 1. Summary
+## 2. How it works
+## 3. Contract
+## 4. Design decisions
+## 5. Gotchas
+## 6. Risks and open questions
+## 7. Rollout and tickets
+
+---
+
+## Appendix A: Evidence
+- <claim> - `path:line`
+
+## Appendix B: Forge notes
+**Decisions for you**
 | # | Fork | Chosen | How | Why it matters |
 |---|---|---|---|---|
-| 1 | <grant vs navigation> | <option> | asked / [assumed] | <what flips if the other option wins> |
+| 1 | <fork> | <option> | asked / [assumed] | <what flips if the other option wins> |
 
 **Unresolved from gadfly:** <Sinks/Blockers forge could not fix, one line each - or "none">
-
-## Plan
-Goal · vantage · comparable feature (match / diverge / extend option) · UI surface · requirement counts · core model per store + alternative · Not analyzed
-
-## Spec
-<sections 1-10>
+**Capability map:** <PRD ask → existing capability `path:line` → dropped / thin layer / built new>
+**Core model per store** + alternative considered · comparable feature · vantage · Not analyzed
 YAGNI: <...>
-
-## Temper report
-Fixed: <finding → change, one line each>
-Residuals: <finding → why not fixed>
+**Temper report** - Fixed: <finding → change> · Residuals: <finding → why not fixed>
 
 Next: this draft survived one gadfly pass with <N> residuals. Before building, run a fresh `/gadfly <this file> --prd <prd>` (or `/jury gadfly ...`) - target: 0 unaddressed Sinks/Blockers.
 ```
@@ -146,15 +164,15 @@ forge: <feature> - <N> decisions for you, <N> [assumed] · temper <N fixed, N re
 Root fork: <fork> → <choice> (<asked | [assumed]>)
 Biggest residual: <the one most likely to sink the design>
 Draft → <absolute path>
-  (adds the decisions table, plan, 10-section spec, temper report)
+  (the spec first, then evidence and forge notes: decisions, capability map, temper report)
 Next: run a fresh /gadfly on the draft before building.
 ```
 
 ## Completion contract
 Done only when the saved file has all of these; for one that can't exist, say why:
-1. The **Decisions for you** table - every fork with its choice and asked/`[assumed]` - and the unresolved-from-gadfly line.
-2. The Plan with repos + SHAs, the comparable-feature result (or "none found" with what was searched), and the core model per store with an alternative.
-3. The 10 spec sections, every design claim tagged `[grounded: path:line]` or `[assumed]`, and the `YAGNI:` line.
+1. The spec body (sections 1-7, empty ones skipped) with a Mermaid diagram, the decisions table, missing/empty/default behavior for every new field, and, for new UI, its behavior on every screen that renders the same component or reads the same state (stated in the spec, not left implied by the design).
+2. Appendix A with a `path:line` for every claim about current code, and `[assumed]` marking every ungrounded premise in the body.
+3. Appendix B: the **Decisions for you** table, the capability map, the core model per store with an alternative, repos + SHAs, the `YAGNI:` line.
 4. The temper report (unless `--no-temper`) and the "Next: run a fresh /gadfly" line.
 
 ## Guard rails
