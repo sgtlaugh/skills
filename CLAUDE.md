@@ -6,6 +6,6 @@
 - The baseline arm runs the same day as the variant; an older baseline is stale, results drift between days, sometimes within one day: when a variant loses an item, run a fresh control of the original in the same hour before blaming the variant
 - Read the transcripts of a scorer's misses before trusting its numbers - a grep-based scorer miscounts
 - Retiring a skill needs two checks first: transcripts show no runtime loads of it, and a grep of every repo that references it (sandbox skill lists included) comes back clean
-- New review work goes in a separate agent, not the existing pass: every gadfly variant that added checks to the same context lost findings its existing checks used to catch
-- A skill runs shallower as a subagent, and when a parallel agent's result lands mid-run; keep depth-critical work top-level and start helpers after it finishes
+- A second kind of work goes in a separate agent: every gadfly variant that put the simplify review into the deep review's own instructions lost deep findings
+- A skill's core procedure lives in its own SKILL.md, or in another skill loaded with the Skill tool, never in a file it Reads: skill content arrives as instructions, a Read as a tool result, which Claude follows with more skepticism (Anthropic's guardrail docs), and every gadfly variant built that way lost deep findings
 - Rubric items are observable outcomes with no escape clause: "fails unless it gives a reason" lets the judge pass any output that gives one
