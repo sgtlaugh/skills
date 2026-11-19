@@ -112,6 +112,11 @@ has "an unknown base skips" "skipped - base 0123abcd is not in the repo" \
     "$(bash "$M" --worktree "$R" --base 0123abcd --test "$CMD")"
 has "a directory outside git skips" "is not a git worktree" \
     "$(bash "$M" --worktree "$T/tmp" --base "$BASE" --test "$CMD")"
+mkdir -p "$R/tests/\$(touch\${IFS}\$HOME_MARK)"; cp "$R/tests/test_rules.py" "$R/tests/\$(touch\${IFS}\$HOME_MARK)/test_heist.py"
+g add . && g commit -qm 'test: a heist in the file name'
+HOME_MARK="$T/heist-ran" bash "$M" --worktree "$R" --base "$BASE" --test 'true {files}' --max 1 >/dev/null
+assert "a PR file name is passed to the test command as one quoted word, never run" "no" "$([ -e "$T/heist-ran" ] && echo yes || echo no)"
+g reset -q --hard HEAD~1
 assert "nothing is left behind after all runs" "1|" "$(g worktree list | wc -l | tr -d ' ')|$(ls "$TMPDIR")"
 
 echo ""

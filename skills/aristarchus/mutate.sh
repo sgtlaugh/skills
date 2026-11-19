@@ -14,7 +14,7 @@
 # Runs from /tmp: a pyenv shim inside a repo whose .python-version names an uninstalled Python fails.
 export MUTATE_CALLER_PWD="$PWD"
 cd /tmp && exec python3 -I - "$@" <<'PY'
-import argparse, os, re, shutil, signal, subprocess, sys, tempfile, time
+import argparse, os, re, shlex, shutil, signal, subprocess, sys, tempfile, time
 
 TEST_RE = re.compile(r'(^|/)(TEST|tests?|__tests__)/|\.(spec|test)\.[cm]?[jt]sx?$|(^|/)test_[^/]*\.py$|_test\.py$')
 SOURCE_RE = re.compile(r'\.(py|[cm]?[jt]sx?)$')
@@ -99,7 +99,9 @@ tests = sorted(f for f in changed if TEST_RE.search(f) and SOURCE_RE.search(f))
 if not tests:
     done('skipped - the PR changes no test files, so there are no tests to run its mutants against')
 targets = sorted({os.path.dirname(f) + '/' for f in tests}) if '{dirs}' in a.test else tests
-test_cmd = a.test.replace('{files}', ' '.join(targets)).replace('{dirs}', ' '.join(targets))
+# The command runs in a shell, and a file name is the PR author's text
+quoted = ' '.join(shlex.quote(t) for t in targets)
+test_cmd = a.test.replace('{files}', quoted).replace('{dirs}', quoted)
 
 mutants = []
 for f, n, text in added_lines(worktree):
