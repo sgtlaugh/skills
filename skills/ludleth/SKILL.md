@@ -1,7 +1,7 @@
 ---
 name: ludleth
 description: Solve a Jira ticket end to end - read it, find the root cause of a bug, plan the change across every repo it touches (merge order included), build each acceptance criterion test-first with /bonfire in a worktree per repo, check sibling code paths, review with /occam, then leave the work uncommitted, commit it (--commit) or open the PRs through /nicepr (--pr). --plan stops for your approval before any code.
-allowed-tools: Read, Write, Edit, Grep, Glob, Skill, Bash(git:*), Bash(gh api:*), Bash(gh search:*), Bash(curl:*), Bash(jq:*), Bash(ls:*), Bash(mkdir:*), Bash(date:*), Bash(cd:*), Bash(ln:*), Bash(yarn:*), Bash(npm:*), Bash(npx:*), Bash(node:*), Bash(pytest:*), Bash(py.test:*), Bash(docker:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, Skill, Bash(git:*), Bash(gh api:*), Bash(gh search:*), Bash(curl:*), Bash(jq:*), Bash(ls:*), Bash(mkdir:*), Bash(date:*), Bash(cd:*), Bash(ln:*), Bash(yarn:*), Bash(npm:*), Bash(npx:*), Bash(node:*), Bash(pytest:*), Bash(py.test:*), Bash(docker:*), Bash(bash ~/.claude/skills/aristarchus/mutate.sh:*)
 argument-hint: "<TICKET-ID|jira-url|ticket-file> [--plan] [--commit|--pr] [--no-run]"
 ---
 
@@ -62,8 +62,10 @@ Write the plan, then check it against the ticket line by line:
 5. **Sibling sweep - a fixed step, not a judgment.** For every function the diff changes and every operation a criterion names (a model write, a call to another service, a status mapping), grep the repo for the other places that do the same thing: the other callers of the changed function, the other routes on the same resource, the other functions in the same file that call the same downstream. List each one as `handled` (in this diff), `already correct` (with the line that shows it), `follow-up` (same failure, outside the criteria) or `out of scope` (with the reason). A sibling left unlisted is WRONG; this is the step reviewers most often find missing.
    **The criteria are the scope.** A sibling the criteria cover that hits the same failure is `handled` in this diff - "a different route", "another layer" or "decide whether it is live" is no reason to skip it. A sibling with the same failure that the criteria don't cover is a follow-up: one line with `path:line` and the failure, nothing built. `out of scope` is valid only when the sibling cannot reach the failure.
 6. **Probe the bad inputs.** For each route or handler the change touches, call it with an id that doesn't exist, another org's id (when the code is multi-tenant), and a request body missing a required field, empty, or of the wrong type. Each must answer 4xx. A 500 on a route the criteria cover is a bug in this diff's scope; on any other route it is a follow-up. Keep a probe as a test only when it answers 5xx at the base (create a base worktree as in step 3, run the probes there, then remove it) - it now guards a fixed bug. A probe that answers 4xx at the base too was run and is not kept: it would only add test lines.
-7. **Size check - a gate.** Compare the changed code lines (tests apart) with the plan's estimate. Over 1.5x → cut every change outside the criteria (it becomes a follow-up) and every drive-by change, duplication or helper with one caller. What stays is the criteria's own work; name what made it bigger than planned in one line. Rerun the tests after any cut.
-8. **Review** with `/occam --dir <dir>`, its goal the criteria lines verbatim. Fix every Bug and Goal finding, rerun the tests, and run `/occam --dir <dir>` once more if the fixes changed behavior. A finding you reject gets one line with the evidence in the summary.
+7. **Mutation check.** Run `bash ~/.claude/skills/aristarchus/mutate.sh --worktree <dir> --base <base sha> --test '<the catalog test command, verbatim>' [--setup '<the catalog worktree setup>']` with the Bash timeout at 600000. It flips each condition the diff adds and reruns the changed tests. Each `SURVIVED` line gets a test that tells the two versions apart, or one line in the summary on why the flip can't change behavior (an equivalent mutant). No catalog test command → `Mutation: not run - <reason>`.
+8. **Size check - a gate.** Compare the changed code lines (tests apart) with the plan's estimate. Over 1.5x → cut every change outside the criteria (it becomes a follow-up) and every drive-by change, duplication or helper with one caller. What stays is the criteria's own work; name what made it bigger than planned in one line. Rerun the tests after any cut.
+9. **Review** with `/occam --dir <dir>`, its goal the criteria lines verbatim. Fix every Bug and Goal finding, rerun the tests, and run `/occam --dir <dir>` once more if the fixes changed behavior. A finding you reject gets one line with the evidence in the summary.
+10. **Wider test run.** Run the test directories of each top-level module the diff touches (the first two path levels, e.g. `server/orders/`), not only the changed tests. A failure the diff causes is fixed; one that also fails in a base worktree is reported as pre-existing and left alone.
 
 ## Phase 5 - Finish
 
@@ -89,6 +91,8 @@ Criteria
 Siblings: <N checked> - <each follow-up and out-of-scope one with its reason, or "all handled">
 Probes: <each route probed - the status each bad input returns; which were kept as tests>
 Decisions: <each "Chose X over Y because Z", or "none">
+Mutation: <N killed, M survived - the test added for each survivor | not run - reason>
+Wider run: <the module directories run - passed | N failures, each fixed or pre-existing>
 Merge order: <1 → 2, and why | independent>
 Follow-ups: <operational steps, bugs found on the way, or "none">
 ```
@@ -98,7 +102,7 @@ Then, with `--commit`, each repo's PR draft (title and body). The last line tell
 Completion contract - each of these appears, or the summary says why it can't:
 1. A row per repo with branch, worktree, diff and a test result that ran (or `not run - <reason>`).
 2. Every criterion from the plan, marked ✓ with its test or ✗ with the reason.
-3. The sibling count, with each out-of-scope sibling's reason, and each probe's status.
+3. The sibling count, with each out-of-scope sibling's reason, each probe's status, the mutation result and the wider run.
 4. The merge order and its reason, and every decision taken instead of asked.
 5. With `--pr`, every PR link; with `--commit`, every draft.
 
