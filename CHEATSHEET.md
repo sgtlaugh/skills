@@ -121,6 +121,7 @@ Drafts only; `/jira` creates the ticket once you have read it.
 /gadfly <confluence-url>                  # fetch + attack
 /gadfly <file.md>                         # a local spec (md, txt, pdf, docx)
 /gadfly <spec> --prd <prd>                # check the HOW against the WHY
+/gadfly <spec> --no-simplify              # deep review only, skip the cuts and readability pass
 ```
 
 **`/forge`**
@@ -235,8 +236,10 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/firewatch <alert>` (Sentry or Jenkins) | Opus 5.5 (1M) | $0.35-0.61 | 1-2 min | Nov 2026 |
 | `/triage <TICKET-ID>` | Opus 5.5 (1M) | $1.78-3.10 (`--fast` $0.84) | 8 min | Nov 2026 |
 | `/aristarchus <PR-URL>` (full, headless) | Opus 5.5 (1M) | $3.55-4.98 | 7-14 min (a slow test suite makes the mutation check the long pole) | Nov 2026 |
-| `/gadfly <spec>` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
+| `/gadfly <spec>` (6k words, 3-6 repos, with the simplify pass) | Opus 5.5 (1M) | $3.51-4.73 | 11-14 min | Nov 2026 |
+| `/gadfly <spec> --no-simplify` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
 | `/forge <prd>` (5 repos, with temper) | Opus 5.5 (1M) | $5.39-6.56 | 14-17 min | Nov 2026 |
+| `/forge <prd> --no-temper` (3-6 repos) | Opus 5.5 (1M) | $2.21-4.05 | 7-11 min | Nov 2026 |
 | `/jury <skill>` | the target's | N × the target | same as one run (parallel) | - |
 
 ## Habits that work
