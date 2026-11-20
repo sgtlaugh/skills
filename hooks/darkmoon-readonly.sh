@@ -20,6 +20,10 @@ cmd=$(jq -r '.tool_input.command // empty') || block "can't read the tool input"
 long() { local a n; for a in "${words[@]:1}"; do n="${a%%=*}"; [[ "$n" == --* ]] && [ ${#n} -ge "$2" ] && [[ "$1" == "$n"* ]] && return 0; done; return 1; }
 
 case "$cmd" in *'$('*|*'`'*) block "command substitution" ;; esac
+# Bash re-evaluates a stored value in $[...] and in ${...} forms (a[x], !x, x@P), so an escaped $(...) would run.
+# Only plain $name stays allowed.
+case "$cmd" in *'$['*) block "arithmetic expansion" ;; *'${'*) block "braced expansion (use plain \$name)" ;; esac
+
 # ANSI-C quoting ($'...') treats \' as a quote inside a quote; read differently from bash, it could hide a command
 case "$cmd" in *"\$'"*) block "\$'...' quoting" ;; esac
 case "$cmd" in *'system('*) block "awk system()" ;; esac
@@ -36,14 +40,15 @@ fi
 #   - an unquoted # at the start of a word comments out the rest of the line;
 #   - a heredoc's body (<<EOF, <<-'EOF', a delimiter of any word characters) is dropped; <<< is a here-string.
 stripped=$(printf '%s' "$cmd" | awk '
-    function meta(ch) { return (ch ~ /[|;&<>()`#$\n]/) ? "_" : ch }
+    # A quoted $ becomes \001 and an escape \002, so a write target holding either can be told apart
+    function meta(ch) { if (ch == "$") return "\001"; return (ch ~ /[|;&<>()`#\n]/) ? "_" : ch }
     { text = text (NR > 1 ? "\n" : "") $0 }
     END {
         n = length(text); i = 1; q = ""; out = ""; hn = 0; hdone = 0
         while (i <= n) {
             c = substr(text, i, 1)
             if (q == "\x27") { if (c == "\x27") q = ""; else out = out meta(c); i++; continue }
-            if (c == "\\") { out = out "_"; i += 2; continue }
+            if (c == "\\") { out = out "\002"; i += 2; continue }
             if (q == "\"") { if (c == "\"") q = ""; else out = out meta(c); i++; continue }
             if (c == "\x27" || c == "\"") { q = c; i++; continue }
             if (c == "#" && (i == 1 || substr(text, i - 1, 1) ~ /[ \t\n;|&(]/)) { while (i <= n && substr(text, i, 1) != "\n") i++; continue }
@@ -80,11 +85,36 @@ case "$stripped" in *'<('*|*'>('*) block "process substitution" ;; esac
 # Writes are allowed only into /tmp (throwaway fixtures) or /dev/null.
 while read -r target; do
     target="${target#&}"; target="${target#>}"; target="${target#>}"; target="${target#"${target%%[![:space:]]*}"}"
+    # A variable could expand to .. and lead out of /tmp
+    case "$target" in *'$'*|*$'\001'*|*$'\002'*) block "variable or escape in redirect target" ;; esac
     case "$target" in *..*) block "'..' in redirect target '$target'" ;; /tmp/*|/dev/null) ;; *) block "redirect to '$target' (only /tmp/ or /dev/null)" ;; esac
 done < <(printf '%s\n' "$stripped" | grep -oE '&?>>?[[:space:]]*[^[:space:]|;&<>]*')
 
 while read -r seg; do
     set -f; read -ra words <<< "$seg"; set +f
+    # A loop or branch keyword only frames the command after it, which is checked like any other
+    while [ ${#words[@]} -gt 0 ] && [[ "${words[0]}" =~ ^(do|done|then|else|elif|fi|if|while|until)$ ]]; do
+        words=("${words[@]:1}")
+    done
+    # An input redirect left after a keyword (done < /tmp/list) only reads
+    while [ ${#words[@]} -gt 0 ] && [[ "${words[0]}" == '<'* ]]; do
+        [ "${words[0]}" = '<' ] && words=("${words[@]:1}"); words=("${words[@]:1}")
+    done
+    [ ${#words[@]} -gt 0 ] || continue
+    # `for x in ...` assigns x, so x follows the bare-assignment name rule; the body arrives as its own segments
+    if [ "${words[0]}" = for ]; then
+        [[ "${words[1]:-}" =~ ^[A-Za-z_][A-Za-z0-9_]?$ ]] || block "loop variable '${words[1]:-}' (only 1-2 character names)"
+        continue
+    fi
+    # An exported PAGER, GIT_* or http_proxy changed by a bare assignment reaches every later command.
+    # So only names of 1-2 characters pass.
+    all=1; for a in "${words[@]}"; do [[ "$a" == *=* ]] || { all=0; break; }; done
+    if [ $all = 1 ]; then
+        for a in "${words[@]}"; do
+            [[ "${a%%=*}" =~ ^[A-Za-z_][A-Za-z0-9_]?$ ]] || block "assignment '${a%%=*}=' (only 1-2 character names)"
+        done
+        continue
+    fi
     # GIT_EXTERNAL_DIFF=, PAGER=, GIT_PAGER= etc. make an allowlisted command run arbitrary programs
     while [ ${#words[@]} -gt 0 ] && [[ "${words[0]}" == *=* ]]; do
         [[ "${words[0]}" =~ ^(LC_[A-Z]+|LANG|TZ)= ]] || block "env assignment '${words[0]}' (only LC_*, LANG, TZ)"
@@ -93,7 +123,11 @@ while read -r seg; do
     [ ${#words[@]} -gt 0 ] || continue
     w="${words[0]}"; rest=" ${words[*]:1} "
     case "$w" in
-        grep|egrep|jq|cat|head|tail|wc|ls|echo|printf|uniq|cut|tr|diff|stat|basename|dirname|realpath|readlink|pwd|cd|test|'['|true|false|date|nl|column) ;;
+        grep|egrep|jq|cat|head|tail|wc|ls|echo|uniq|cut|tr|diff|stat|basename|dirname|realpath|readlink|pwd|cd|true|false|date|nl|column|base64|printenv) ;;
+        # test -v NAME evaluates a subscript in the name, which runs a $(...) inside it
+        test|'[') [[ "$rest" =~ [[:space:]]-v[[:space:]] ]] && block "test -v evaluates a subscript" ;;
+        # printf -v assigns a variable, and bash evaluates a subscript in its name
+        printf) [[ "$rest" =~ [[:space:]]-[a-zA-Z]*v ]] && block "printf -v assigns a variable" ;;
         # A program from a file escapes every check on the command line
         awk) [[ "$rest" =~ [[:space:]]-[a-zA-Z]*f ]] && block "awk -f runs a program file"; long "--file" 4 && block "awk --file" ;;
         rg) [[ "$rest" =~ [[:space:]]--pre[=[:space:]] ]] && block "rg --pre runs a command" ;;
@@ -103,14 +137,22 @@ while read -r seg; do
             [[ "$rest" =~ [[:space:]]-[a-zA-Z]*f ]] && block "sed -f runs a script file (its e command runs programs)"; long "--file" 4 && block "sed --file" ;;
         file) [[ "$rest" =~ [[:space:]]-[a-zA-Z]*C ]] && block "file -C writes a compiled magic file"; long "--compile" 5 && block "file --compile writes a file" ;;
         mktemp)
-            set -- "${words[@]:1}"
+            [[ "${words[*]:1}" =~ [\$$'\001'$'\002'] ]] && block "variable or escape in a mktemp path"
+            set -- "${words[@]:1}"; indir=0; tmpl=()
+            tmpdir() { [[ "$1" == /tmp* && "$1" != *..* ]] || block "mktemp outside /tmp"; indir=1; }
+            # Each spelling of the directory option is checked (-p DIR, -dpDIR, --tmp=DIR); -t uses $TMPDIR.
+            # A template without / needs one of them.
             while [ $# -gt 0 ]; do
-                case "$1" in
-                    -p|--tmpdir) [[ "${2:-}" == /tmp* && "${2:-}" != *..* ]] || block "mktemp outside /tmp"; shift 2 ;;
-                    --tmpdir=*) [[ "${1#*=}" == /tmp* && "$1" != *..* ]] || block "mktemp outside /tmp"; shift ;;
-                    -*) shift ;;
-                    *) [[ ( "$1" != */* || "$1" == /tmp/* ) && "$1" != *..* ]] || block "mktemp outside /tmp"; shift ;;
-                esac
+                if [[ "$1" =~ ^--t[a-z]*=(.*)$ ]]; then tmpdir "${BASH_REMATCH[1]}"; shift
+                elif [[ "$1" =~ ^--t[a-z]*$ || "$1" =~ ^-[a-zA-Z]*p$ ]]; then tmpdir "${2:-}"; shift 2
+                elif [[ "$1" =~ ^-[a-zA-Z]*p(.+)$ ]]; then tmpdir "${BASH_REMATCH[1]}"; shift
+                elif [[ "$1" =~ ^-[a-zA-Z]*t[a-zA-Z]*$ ]]; then indir=1; shift
+                elif [[ "$1" == -* ]]; then shift
+                else tmpl+=("$1"); shift
+                fi
+            done
+            for a in "${tmpl[@]}"; do
+                [[ ( ( "$a" != */* && $indir = 1 ) || "$a" == /tmp/* ) && "$a" != *..* ]] || block "mktemp outside /tmp"
             done ;;
         find) [[ "$rest" =~ [[:space:]]-(delete|exec|execdir|ok|okdir|fprint|fprint0|fprintf|fls)[[:space:]] ]] && block "find -${BASH_REMATCH[1]}" ;;
         git)
@@ -118,7 +160,7 @@ while read -r seg; do
             while [ $# -gt 0 ]; do
                 case "$1" in -C) [ $# -ge 2 ] || block "git -C without a path"; shift 2 ;; --no-pager|-P) shift ;; *) break ;; esac
             done
-            case "${1:-}" in log|show|diff|blame|status|grep|rev-parse|ls-files|cat-file|shortlog|describe) ;; *) block "git ${1:-} (read subcommands only)" ;; esac
+            case "${1:-}" in log|show|diff|blame|status|grep|rev-parse|ls-files|ls-tree|cat-file|merge-base|shortlog|describe) ;; *) block "git ${1:-} (read subcommands only)" ;; esac
             # git takes bundled short flags (-iO<cmd>) and any unambiguous prefix of a long option (--outp=,
             # --open-f=), so each argument is checked for both, not matched against the full spelling
             for a in "${@:2}"; do
@@ -131,7 +173,7 @@ while read -r seg; do
             done ;;
         gh)
             case "${words[1]:-} ${words[2]:-}" in
-                "pr view"|"pr diff"|"pr checks"|"issue view"|"repo view"|search\ *) ;;
+                "pr view"|"pr diff"|"pr checks"|"pr list"|"issue view"|"repo view"|"run view"|"run list"|search\ *) ;;
                 # Short flags take attached values (-XPOST, -fbody=x), long ones take =value
                 # Bundled short flags count too: -iXPOST and -if title=x both POST
                 api\ *) [[ "$rest" =~ [[:space:]](-[a-zA-Z]*[XfF]|--method[=[:space:]]|--field[=[:space:]]|--raw-field[=[:space:]]|--input[=[:space:]]) ]] && block "gh api write flags" ;;
