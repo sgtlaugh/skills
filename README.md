@@ -96,7 +96,7 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 | [`/darkmoon`](skills/darkmoon/SKILL.md) | An independent skeptic checks claims against the code | |
 | [`/solaire`](skills/solaire/SKILL.md) | Grounding checks to run before a research answer | |
 | **Build** | | |
-| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: failing test, least code, refactor | pytest |
+| [`/bonfire`](skills/bonfire/SKILL.md) | Test-first loop: failing test, least code, refactor | pytest, mocha, jest or vitest |
 | [`/duck`](skills/duck/SKILL.md) | A sarcastic rubber duck that asks until you see the bug | |
 | [`/ludleth`](skills/ludleth/SKILL.md) | A ticket to a tested change per repo, committed or opened as PRs on request | Jira, gh, `services.md`, `$WORKSPACE` |
 | **Design** | | |
@@ -114,6 +114,8 @@ Skills that call `/jira` or `/sentry` use these keys through them. Two optional 
 | [`/jury`](skills/jury/SKILL.md) | Runs a skill N times and compares the runs | |
 | [`/velka`](skills/velka/SKILL.md) | Mines your past sessions for habits | |
 | [`/humanize`](skills/humanize/SKILL.md) | Strips AI writing patterns from text | |
+
+`/gadfly-deep` also shows under `/`: it is the deep review `/gadfly` and `/forge` run. Run `/gadfly` instead.
 
 Optional extras, used when present: Jira keys for ticket context in the review and spec skills, `voice.md` for `/humanize`, `work.json` for `/nicepr --create` reviewers, pandoc for documents in `/jira`, `/gadfly`, `/forge` and `/dialectic`.
 
@@ -156,6 +158,7 @@ flowchart LR
     aristarchus["/aristarchus"] --> darkmoon
     aristarchus --> jira
     forge["/forge"] --> gadfly["/gadfly"]
+    gadfly --> gadflydeep["/gadfly-deep"]
     forge -. jira creds .-> jira
     gadfly -. jira creds .-> jira
     duck["/duck"] -. jira creds .-> jira
