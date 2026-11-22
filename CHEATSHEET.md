@@ -29,7 +29,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 | Find habits worth fixing in my sessions | `/velka` |
 | Make text sound like a person wrote it | `/humanize` |
 
-## Before you push
+## Reviews and PRs
 
 **`/occam`**
 
@@ -47,16 +47,6 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 /aristarchus <PR-URL>                     # 5 lenses, mutation check, darkmoon verification
 /aristarchus <PR-URL> --fast              # quick pass, no agent steps
 ```
-
-**`/niceticket`**
-
-```text
-/niceticket <pasted report>               # draft a bug ticket from it
-/niceticket <Sentry issue URL>            # from the issue, through /sentry
-/niceticket                               # from the conversation so far
-```
-
-Drafts only; `/jira` creates the ticket once you have read it.
 
 **`/nicepr`**
 
@@ -141,7 +131,7 @@ Drafts only; `/jira` creates the ticket once you have read it.
 /dialectic <...> --criteria "cost, risk"  # pin what the judge scores
 ```
 
-## Production
+## Production and tickets
 
 **`/firewatch`**
 
@@ -175,6 +165,16 @@ Drafts only; `/jira` creates the ticket once you have read it.
 /triage <jira-url>                        # same, by URL
 /triage <TICKET-ID> --fast                # skip the darkmoon pass
 ```
+
+**`/niceticket`**
+
+```text
+/niceticket <pasted report>               # draft a bug ticket from it
+/niceticket <Sentry issue URL>            # from the issue, through /sentry
+/niceticket                               # from the conversation so far
+```
+
+Drafts only; `/jira` creates the ticket once you have read it.
 
 **`/jira`**
 
@@ -240,6 +240,7 @@ Rough numbers from a few runs; they vary with repo size. `-` means not recorded.
 | `/gadfly <spec> --no-simplify` (24k words, 6 repos) | Opus 5.5 (1M) | $2.24-4.62 | 5-10 min | Nov 2026 |
 | `/forge <prd>` (5 repos, with temper) | Opus 5.5 (1M) | $5.39-6.56 | 14-17 min | Nov 2026 |
 | `/forge <prd> --no-temper` (3-6 repos) | Opus 5.5 (1M) | $2.21-4.05 | 7-11 min | Nov 2026 |
+| `/ludleth <TICKET-ID>` (one repo, final version) | Opus 5.5 (1M) | $1.98-4.85 | 7-37 min | Nov 2026 |
 | `/jury <skill>` | the target's | N × the target | same as one run (parallel) | - |
 
 ## Habits that work
