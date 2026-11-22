@@ -110,8 +110,8 @@ fi
 
 if [ -e "$CONFIG_DIR/voice.md" ]; then ok voice.md "your voice for /humanize"
 else skip voice.md "optional: your voice for /humanize"; fi
-if [ -e "$CONFIG_DIR/work.json" ]; then ok work.json "reviewers for /nicepr --create"
-else skip work.json "optional: reviewers for /nicepr --create"; fi
+if [ -e "$CONFIG_DIR/work.json" ]; then ok work.json "reviewers for /nicepr --create, Jira board for /ludleth --pr"
+else skip work.json "optional: reviewers for /nicepr --create, Jira board for /ludleth --pr"; fi
 
 section "Environment"
 if [ -n "${WORKSPACE:-}" ]; then ok '$WORKSPACE' "$WORKSPACE"

@@ -57,12 +57,12 @@ Up to four files live in `~/.config/claude-skills/`. `install.sh` creates the fi
 | `credentials.json` | yes (mode 600) | the API skills | API tokens (keys below) |
 | `services.md` | yes | `/sentry`, `/sentry-fix`, `/ludleth`, `/triage`, `/firewatch`, `/aristarchus` | *Your* systems: repos, log search, alert patterns, test commands |
 | `voice.md` | no | `/humanize` | *Your* voice for GitHub text |
-| `work.json` | no | `/nicepr` | `{"reviewers": [...]}` for `--create` |
+| `work.json` | no | `/nicepr`, `/ludleth` | `{"reviewers": [...]}` for `--create`; `{"jira": {"board": <id>}}` for `/ludleth --pr` |
 
 - **`credentials.json`** lives elsewhere if `CLAUDE_SKILLS_CREDENTIALS` points there.
 - **`services.md`** says which repo each Sentry project lives in, your log search skill, your alert patterns and how to run each repo's tests. It starts as a template whose values read `<your ...>`; skills treat those as missing and ask, so fill in the sections your skills use.
 - **`voice.md`** holds how you suggest, push back and approve.
-- **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft.
+- **`work.json`**'s reviewers are asked to review a PR `/nicepr --create` opens, unless it's a draft. Its `jira` object tells `/ludleth --pr` how to claim a ticket once the PRs are open: `board` is the board whose active sprint you work in and whose estimation field gets the points; `points` (default 2) and `review_status` (default `Code Review`) are optional. Without `board`, the claim still assigns and moves the ticket, and skips the estimate and the sprint.
 
 **`credentials.json` keys**
 

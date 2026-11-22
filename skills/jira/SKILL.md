@@ -33,7 +33,7 @@ Every call uses `-sS --fail-with-body`: an HTTP error prints `curl: (22)` on std
 /jira confluence <url|id>         # fetch Confluence page (see Confluence section)
 ```
 
-**Every write needs a yes.** Create, update, assign, transition, comment and Confluence PUT all show the user a readable preview first (summary, fields, and descriptions or comments rendered as markdown - ADF JSON is unreadable; for a page, the checklist counts) and wait for an explicit yes in their reply. A write without a shown preview and a yes is WRONG, including when another skill asked for it.
+**Every write needs a yes.** Create, update, assign, transition, comment and Confluence PUT all show the user a readable preview first (summary, fields, and descriptions or comments rendered as markdown - ADF JSON is unreadable; for a page, the checklist counts) and wait for an explicit yes in their reply. A write without a shown preview and a yes is WRONG, including when another skill asked for it. The one exception is a caller whose invocation is itself the user's word for those writes: `/ludleth --pr` claiming its own ticket (assignee, estimate, status, sprint) reports each write afterwards instead.
 
 ## Operations
 

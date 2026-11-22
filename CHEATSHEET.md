@@ -92,7 +92,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 /ludleth PROJ-1234                         # plan, build test-first, review; work left uncommitted in worktrees
 /ludleth PROJ-1234 --plan                  # stop after the plan; reply "go" or a correction
 /ludleth PROJ-1234 --commit                # a commit per behavior on each branch, list the PR drafts
-/ludleth PROJ-1234 --pr                    # open every PR in merge order and show the links
+/ludleth PROJ-1234 --pr                    # open every PR in merge order, show the links, claim the ticket
 /ludleth PROJ-1234 --no-run                # skip local tests (the summary and PR say so)
 ```
 
