@@ -1,7 +1,7 @@
 ---
 name: bonfire
 description: Test-first build loop (TDD) - write a failing test, SEE it fail for the right reason (red), write minimal code to pass (green), refactor only when green. One behavior at a time, vertical slices, tested through the public interface. For building a feature with >=2 behaviors or a bug fix that needs a regression guard. Writes the test AND the minimal impl, runs the repo's test command each cycle. Python (pytest) and TypeScript/JavaScript (mocha, jest, vitest).
-allowed-tools: Read, Write, Edit, Grep, Glob, AskUserQuestion, Bash(pytest:*), Bash(python -m pytest:*), Bash(python3 -m pytest:*), Bash(npx mocha:*), Bash(npx jest:*), Bash(npx vitest:*), Bash(npm test:*), Bash(yarn test:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*)
+allowed-tools: Read, Write, Edit, Grep, Glob, AskUserQuestion, Bash(pytest:*), Bash(python -m pytest:*), Bash(python3 -m pytest:*), Bash(npx mocha:*), Bash(npx jest:*), Bash(npx vitest:*), Bash(npm test:*), Bash(yarn test:*), Bash(git log:*), Bash(git show:*), Bash(git diff:*), Bash(git add:*), Bash(git commit:*)
 ---
 
 # /bonfire - die, rest at the bonfire, venture again
@@ -14,9 +14,10 @@ The TDD loop *is* the Dark Souls loop: **red** (the flame's out - your test fail
 
 ## Usage
 ```
-/bonfire <feature or bug to build, test-first>
+/bonfire <feature or bug to build, test-first>            # leaves the work uncommitted for you to review
+/bonfire <feature or bug to build, test-first> --commit   # also commits each cycle as it goes green
 ```
-bonfire writes BOTH the test and the minimal impl (you review). Python (pytest) and TypeScript/JavaScript (mocha, jest, vitest); other stacks get the same loop with the repo's own runner, which isn't pre-approved.
+bonfire writes BOTH the test and the minimal impl (you review). `--commit` is your word to commit, for this run only; a caller passes it on for you (`/ludleth --commit` or `--pr`). Python (pytest) and TypeScript/JavaScript (mocha, jest, vitest); other stacks get the same loop with the repo's own runner, which isn't pre-approved.
 
 ## When to fire it (proportional - don't TDD a typo)
 - **Use it:** a feature with **>=2 behaviors**, or a **bug fix** that deserves a regression guard (write the failing repro first).
@@ -43,6 +44,12 @@ For each remaining behavior: **RED → GREEN**, one at a time.
 ## Phase 3 - Refactor (only at the bonfire)
 **Only when all tests are green** (never while red): extract duplication, deepen modules, apply judgment. **Re-run the tests after each refactor step** - they must stay green. A test that breaks on an internal refactor *with behavior unchanged* was testing implementation - rewrite it to the public interface.
 
+## Committing - only with `--commit`
+Each behavior is one commit, made the moment its cycle goes green, while its files hold only that behavior: two cycles that touch the same file can't be pulled apart afterwards.
+- **After each GREEN:** stage that cycle's test and code by path (`git add <paths>`, never `-A` or `.`), and commit them together with a subject naming the behavior in the repo's convention (its `CLAUDE.md`, recent `git log`): `feat: <behavior>` for a new one, `fix: <bug>` for a bug's regression cycle. A test never goes in a commit apart from the code it covers.
+- **Phase 3 refactor:** its own `refactor:` commit, once the re-run is green.
+- **A hook that blocks a commit stops the run:** leave the work as it is and name the hook. bonfire never amends, rewrites or pushes a commit.
+
 ## Output contract (show the work - a claim of "passes" without the red is invalid)
 A bonfire run is complete only when:
 1. The **plan** was stated: interface + prioritized behaviors + the **skip-list** (what's not tested).
@@ -51,6 +58,7 @@ A bonfire run is complete only when:
 4. Refactor (if any) happened **green-only**, with tests re-run.
 5. A **coverage line** names the behaviors tested vs deliberately skipped.
 6. The **existing suite** was run green at the end (the affected test directory, or all of it if it's fast), output shown. A minimal change that breaks another test isn't done.
+7. With `--commit`, each cycle names its commit (short sha and subject), and `git log --oneline <start>..` closes the run, `<start>` being the `git rev-parse --short HEAD` taken before the first test.
 
 ## Guard rails
 - **Real red or it doesn't count.** A test must be seen failing **on its asserted behavior** before the impl or fix exists; a failure from a setup/import error is a fake red - fix the test first. Skipping the red (test written after the code, or never run red) is the cardinal sin.
@@ -59,5 +67,5 @@ A bonfire run is complete only when:
 - **Minimal code to pass the current test.** No speculative features (`occam`). Refactor later, at the bonfire.
 - **Refactor only when green.** Never restructure while a test is red.
 - **Proportional.** Features/bug-fixes earn the full loop; trivial changes don't - don't make TDD into ceremony.
-- **Writes code + tests, runs the repo's tests; never commits/pushes.** You review and commit. (Run via the repo's documented test command and interpreter, per its `CLAUDE.md`. A containerized or env-prefixed runner like `docker exec` isn't pre-approved, so it asks first.)
+- **Writes code + tests, runs the repo's tests; never pushes, and commits only with `--commit`.** Without it you review and commit. (Run via the repo's documented test command and interpreter, per its `CLAUDE.md`. A containerized or env-prefixed runner like `docker exec` isn't pre-approved, so it asks first.)
 - **Not correctness, not design.** Proves tests catch their behavior + minimal code; bugs in untested paths still ship (`/aristarchus`), and design shape is a separate judgment.

@@ -83,6 +83,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 
 ```text
 /bonfire <feature>                        # red → green → refactor, one behavior at a time
+/bonfire <feature> --commit               # ... and a commit per behavior as it goes green
 ```
 
 **`/ludleth`**
@@ -90,7 +91,7 @@ Common usage by workflow. Each skill's flags are in its `SKILL.md`; what it does
 ```text
 /ludleth PROJ-1234                         # plan, build test-first, review; work left uncommitted in worktrees
 /ludleth PROJ-1234 --plan                  # stop after the plan; reply "go" or a correction
-/ludleth PROJ-1234 --commit                # commit on each branch, list the PR drafts
+/ludleth PROJ-1234 --commit                # a commit per behavior on each branch, list the PR drafts
 /ludleth PROJ-1234 --pr                    # open every PR in merge order and show the links
 /ludleth PROJ-1234 --no-run                # skip local tests (the summary and PR say so)
 ```
