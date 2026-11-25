@@ -199,6 +199,8 @@ All of these are banned:
 - **Not-just:** "Not just X, but Y" / "Not only X, but also Y"
 - **More-than:** "More than just X, it's Y"
 - **Question version:** "X? No. It's actually Y."
+- **Trailing foil:** "My worry now is scope, not bugs." (a comparison with no "is", such as "exact with long
+  double, not double", is a fact and stays)
 
 Fix: if you catch yourself writing "it's not," stop, delete the sentence, write what it
 actually is.

@@ -130,6 +130,10 @@ emit | MAX="$max" MAXS="$maxs" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne 
     # only the empty ones are flagged, since ", making it" or ", using" often carry a real fact
     push @v, "trailing \"$1\" clause (say what it does in its own sentence)" if $text =~ /,\s+((?:thereby\s+)?(?:ensuring|highlighting|underscoring|reflecting|showcasing|emphasizing|fostering|solidifying)\b)/i;
     push @v, "contrast framing \"$1\"" if $text =~ /\b(it.?s not\b[^.\n]{1,80}?[,;.]\s*it.?s\b|not (?:just|only)\b[^.\n]{1,80}?\bbut\b)/i;
+    # "X is A, not B." closes on a foil; without the "is" it is a comparison ("exact with long double, not double")
+    push @v, "contrast framing \"$1\" (say what it is and stop)"
+        if $text =~ /\b((?:is|are|was|were)\b[^,.!?\n]{1,40},\s+not\s+\w+(?:\s+\w+){0,2})[.!?](?=\s|$)/i
+        || $text =~ /\b(\w+.?s\b[^,.!?\n]{1,40},\s+not\s+\w+(?:\s+\w+){0,2})[.!?](?=\s|$)/i && $1 =~ /^(?:that|it|this|there|what|here)\x27s/i;
     # Product names spelled in camel case (iOS, macOS, eBay) are words, not identifiers
     for my $id ($text =~ /(?<![\w.\/-])([a-z][a-z0-9]*_[a-z0-9_]+|[a-z]+[A-Z][A-Za-z0-9]*|\w+\(\)|[\w\/-]+\.(?:py|ts|tsx|js|go|rb|sh|md|json|ya?ml|toml|sql))(?![\w\/-])/g) {
         next if $id =~ /^(?:iOS|macOS|iPadOS|watchOS|tvOS|visionOS|iPhone|iPad|iPod|iCloud|iTunes|iMessage|eBay|eCommerce|jQuery|gRPC|pH)$/;
@@ -161,6 +165,13 @@ emit | MAX="$max" MAXS="$maxs" COUNT="$count" BANNED="$banned" perl -CSD -0 -ne 
         $sentences-- while $flat =~ /\b(?:e\.g|i\.e|etc|vs)\.\s/gi && $sentences > 1;
         push @v, "paragraph $pn runs $sentences sentences / " . length($flat) . " characters - split it, or turn its parallel facts into bullets"
             if length($flat) > 320 || ($sentences > 3 && length($flat) > 240) || ($ENV{MAXS} > 0 && $sentences > $ENV{MAXS});
+    }
+
+    # Once the comment has asked, a closing line that sums up or softens the ask says it twice
+    my @paras = grep { /\S/ && !/^\s*([-*>|]|\d+\.)\s/ } split /\n\s*\n/, $prose =~ s/\[([^\]\n]*)\]\([^)\s]*\)/$1/gr;
+    if (@paras > 1 && join("\n", @paras[0 .. $#paras - 1]) =~ /\?/
+        && $paras[-1] =~ /\b(hard stance|main ask|to sum up|in short|in summary|leave it as is|that\x27s all from me)\b/i) {
+        push @v, "closing line restates the ask (\"$1\") - stop at the last fact";
     }
 
     # Variety across one review: openings repeated comment to comment read as a template, and an

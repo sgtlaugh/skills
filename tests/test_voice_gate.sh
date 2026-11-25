@@ -42,6 +42,20 @@ check "code does not count toward the cap" 0 "" "$(printf 'Repro:\n```text\n'; p
 check "severity tag" 1 "severity tag" "**Critical:** the owl escapes."
 check "praise filler" 1 "praise filler" "Great job on this, the cache works."
 check "contrast framing" 1 "contrast framing" "It's not a cache, it's a leak."
+check "a trailing \"X, not Y\" after is is contrast framing" 1 "contrast framing" "My worry now is scope, not bugs."
+check "a trailing \"X, not Y\" after 's is contrast framing" 1 "contrast framing" "That's a leak, not a cache."
+check "a factual comparison with no is stays" 0 "" "The owl count stays exact with long double, not double."
+check "a closing \"main ask\" after the ask restates it" 1 "restates the ask" "Can we cap the retries at 3?
+
+Don't have a hard stance on the rest though, the cap is the main ask."
+check "links in earlier paragraphs don't hide a restating close" 1 "restates the ask" "Can we cap the retries?
+
+- [\`moon.py\`](https://github.com/acme/owl/blob/$SHA/owl/moon.py#L42) retries forever.
+
+Most of the barn is fine.
+
+Don't have a hard stance though, the cap is the main ask."
+check "a hard stance line with no ask before it is a real move" 0 "" "Disagreed, the barn door needs the lock. Don't have a hard stance though."
 check "banned phrase from the list" 1 "banned phrase" "It's worth noting that the owl hoots at 3am."
 check "self-narration from the list" 1 "banned phrase" "This highlights a race in the scheduler."
 check "a chatbot opener" 1 "banned phrase \"Absolutely!\"" "Absolutely! The owl roosts at dusk."
