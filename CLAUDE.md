@@ -2,6 +2,7 @@
 
 - A wording change (trim, reformat, new rule, examples table, effort bump) ships only after an A/B shows it helps - most measured so far regressed or changed nothing (forge's reader-first spec layout is the exception)
 - A mechanical bug fix (wrong path, broken parse, missed case) ships without an A/B - these have helped every time
+- humanize's github-voice: an overview recipe (evidence in a `text` block, "So"/"And" openers), a "what's allowed" list and length-by-stakes all lost or tied a blinded judge over 3 rounds and 36 drafts (11/2026) - a prescribed connective reads formulaic, so voice comes from examples in voice.md
 - A/B runs are headless (`claude -p --output-format stream-json`), at least 3 per arm, with pass rules written down before the first run
 - The baseline arm runs the same day as the variant; an older baseline is stale, results drift between days, sometimes within one day: when a variant loses an item, run a fresh control of the original in the same hour before blaming the variant
 - Read the transcripts of a scorer's misses before trusting its numbers - a grep-based scorer miscounts
