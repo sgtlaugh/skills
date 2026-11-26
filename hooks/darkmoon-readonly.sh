@@ -151,7 +151,8 @@ while read -r seg; do
                 else tmpl+=("$1"); shift
                 fi
             done
-            for a in "${tmpl[@]}"; do
+            # bash 3.2 under set -u calls an empty "${tmpl[@]}" unbound; mktemp -d has no template
+            for a in ${tmpl[@]+"${tmpl[@]}"}; do
                 [[ ( ( "$a" != */* && $indir = 1 ) || "$a" == /tmp/* ) && "$a" != *..* ]] || block "mktemp outside /tmp"
             done ;;
         find) [[ "$rest" =~ [[:space:]]-(delete|exec|execdir|ok|okdir|fprint|fprint0|fprintf|fls)[[:space:]] ]] && block "find -${BASH_REMATCH[1]}" ;;
